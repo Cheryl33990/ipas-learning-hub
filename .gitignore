@@ -38,6 +38,9 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# 原始教材、勘誤表、試題與由其產生的索引（著作權屬原權利人，不進版控）
+data/
+
 # 模型 / 大型輸出
 *.pkl
 *.pt
