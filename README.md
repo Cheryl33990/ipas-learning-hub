@@ -8,11 +8,11 @@ updated: 2026-11-16
 
 iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到教材出處，之後再提供選項解析。
 
-目前在第一輪探索，只供作者本人自用，還沒有可執行的程式。範圍與成功條件見 [brief](docs/project/brief.md)，目前進度與下一步見 [progress](docs/project/progress.md)。
+目前在第一輪探索，只供作者本人自用。程式只有探索用的檢索比較，還沒有可以拿來查題目的介面。範圍與成功條件見 [brief](docs/project/brief.md)，目前進度與下一步見 [progress](docs/project/progress.md)。
 
 ## 第一輪做什麼
 
-- 探索一：一份初級試題 50 題，人工分成「找不到／找到但要自己推理／教材沒有」三類，並記下依據頁碼。
+- 探索一：一份初級試題 50 題，分成「找不到／找到但要自己推理／教材沒有」三類，並記下依據頁碼。答案由作者填，依據頁碼與分類由 AI 代填。
 - 探索二：同一批題目比較關鍵字檢索與向量檢索。
 
 LLM 解析、web search、中級教材、模擬考介面與公開上線都不在本輪範圍，理由見 brief。
@@ -24,8 +24,9 @@ LLM 解析、web search、中級教材、模擬考介面與公開上線都不在
 ├── README.md
 ├── AGENTS.md                   AI 協作規則入口
 ├── .github/                    PR 格式
-├── src/                        程式碼（尚無內容）
-├── tests/                      可執行測試（尚無內容）
+├── pyproject.toml              Python 專案與相依套件
+├── src/ipas_hub/               程式碼
+├── tests/                      單元測試
 ├── data/                       不進版控，需自行下載
 │   ├── raw/                    官方教材、勘誤表與試題 PDF
 │   └── index/                  切塊與檢索索引
@@ -33,6 +34,18 @@ LLM 解析、web search、中級教材、模擬考介面與公開上線都不在
     ├── project/                本專案的紀錄：brief、progress 與按需建立的文件
     └── workflow/               工作指南、規則與空白範本
 ```
+
+## 執行探索二
+
+需要 [uv](https://docs.astral.sh/uv/)。先把教材、試題各一個 PDF 放到 data/raw/guide/ 與 data/raw/exam/，然後：
+
+```text
+uv sync
+uv run pytest
+uv run python -m ipas_hub.explore2
+```
+
+第一次執行會從 Hugging Face 下載 BAAI/bge-m3 模型（約 2 GB），之後在本機 CPU 上跑。結果寫到 data/index/explore2_results.json。勘誤的替換字串放在 data/index/errata_patches.json，這個檔含教材原文所以沒有收錄，沒有它程式照樣能跑，只是不套用勘誤。
 
 ## 資料來源與使用限制
 
