@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "chunk_size": 400,
+  "chunk_stride": 300,
+  "sources": [
+    {
+      "id": "subject1",
+      "name": "初級科目 1 人工智慧基礎概論",
+      "version": "2025 年版，官方檔名 1141203",
+      "pdf": "data/raw/guide/初級-學習指引-科目1_人工智慧基礎概論1141203.pdf",
+      "sha256": "11eec1f79617aee49989e9e2f1c54c7a33dcaedc5f21d375a9dba5a393ca216c",
+      "patches": "data/index/errata_patches.json"
+    },
+    {
+      "id": "subject2",
+      "name": "初級科目 2 生成式 AI 應用與規劃",
+      "version": "官方檔名 114123，時間戳 20251222172159",
+      "pdf": "data/raw/guide-subject2/初級-學習指引-科目2_生成式AI應用與規劃114123_20251222172159.pdf",
+      "sha256": "142d9dadbbfd35020875a640beaa15f6e7ad86b3fe91920048df59123fd7ea5f",
+      "patches": "data/index/subject2-errata-patches.json"
+    }
+  ]
+}

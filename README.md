@@ -43,11 +43,56 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
 
 ```text
 uv sync
+uv sync --extra embeddings
 uv run pytest
 uv run python -m ipas_hub.explore2
 ```
 
 第一次執行會從 Hugging Face 下載 BAAI/bge-m3 模型（約 2 GB），之後在本機 CPU 上跑。結果寫到 data/index/explore2_results.json。勘誤的替換字串放在 data/index/errata_patches.json，這個檔含教材原文所以沒有收錄，沒有它程式照樣能跑，只是不套用勘誤。
+
+## 第三輪：Docker 雙科檢索原型
+
+目前交付範圍、最新驗證與三組試用方式見[交付與試用入口](docs/project/validation/2026-11-16-handoff-readiness.md)。
+
+目前先完成檢索，LLM 下一步再選型，尚無自動解題的品質驗收或網頁介面。[設計與限制](docs/project/design/rag-prototype.md)記錄執行契約，[驗證紀錄](docs/project/validation/2026-11-16-docker-retrieval.md)區分本機、容器與尚未執行的 CI／LLM 測試。
+
+Docker Desktop 使用 Linux containers。來源清單是 config/knowledge-base.json：兩份 PDF、版本與 SHA-256 都明列；所有勘誤必須套用成功才建立索引。另需本機的 data/index/errata_patches.json（科目 1）與 data/index/subject2-errata-patches.json（科目 2）。這兩份含原文、不進版控；新環境應依官方勘誤表建立陣列，每筆欄位為 id、old、new。缺檔或未命中更正字串會明確失敗，不略過。
+
+PowerShell 操作：
+
+```powershell
+docker compose build app
+$built = docker compose run --rm app index | ConvertFrom-Json
+$kbIndex = $built.index
+docker compose run --rm app search --index $kbIndex --query "差分隱私" --k 5
+```
+
+要貼完整題目，先儲存為 data/review/question.txt，再執行：
+
+```powershell
+docker compose run --rm app search --index $kbIndex --query-file data/review/question.txt
+docker compose run --rm app evaluate --index $kbIndex --cases data/evaluation/rag-retrieval-cases.json
+```
+
+評估案例需另建在 data/，格式是陣列，每筆有 id、query、expected；expected 是 source 與 page 的陣列。頁碼與科目一起比對，不能只比對相同頁碼。程式不自動把現有解析視為完整正確答案。
+
+向量與混合檢索另需 embedding 相依與本機快取：
+
+```text
+uv sync --extra embeddings
+uv run python -m ipas_hub.cli index --embedding-model BAAI/bge-m3
+```
+
+索引指令會回傳 index.json 路徑；後續 search／evaluate 使用該路徑，指定 --method vector 或 --method hybrid。原型只使用已快取模型，未快取時不自動下載。容器的可選 embedding 建置使用 `docker compose build --build-arg EMBEDDINGS=true app`；需另外將本機 HF 快取複製進 hf-cache volume，預設不傳送模型。此大型映像尚未實測，不把主機向量測試當作容器向量測試。
+
+基本映像不含教材、題目、索引、模型或 Git，只在執行時掛載 data/；每次索引另存內容版本目錄，查詢及評估紀錄寫入 data/runs/。可指定舊 index.json 回復資料版本，模型 revision 與索引不符會拒絕向量查詢。
+
+## CI/CD 與 MLOps 邊界
+
+- CI：PR／main 推送時，用合成資料跑 Python 測試、Compose 設定驗證、容器測試及斷網啟動；官方原文與模型不送到 hosted runner。
+- CD：手動 delivery workflow 重建測試與 commit 標籤映像、記錄 image ID；不推送 registry、不部署，屬交付檢查而非生產 CD。
+- MLOps：索引保存來源／勘誤雜湊、切塊設定、程式及 lockfile 識別、embedding snapshot 與向量雜湊；執行紀錄保存方法、版本、結果與延遲。尚未引入模型註冊、漂移監控或自動重訓平台。
+- 可選 llm Compose profile 與 Ollama adapter 僅為後續連接草案；本輪沒有選用或啟動 LLM，不動既有其他專案服務。
 
 ## 檢查與產生解析
 

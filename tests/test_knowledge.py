@@ -1,0 +1,131 @@
+import copy
+import json
+
+import numpy as np
+import pytest
+
+from ipas_hub.cli import evaluate, main
+from ipas_hub.guide import Page
+from ipas_hub.knowledge import KnowledgeBase, build_index, canonical, data_path, digest
+from ipas_hub.rag import answer, ollama_generate
+
+
+def payload(embedding=None):
+    data = {"schema_version": 1, "embedding": embedding,
+            "sources": [{"id": "s1", "name": "科目一", "version": "v1"},
+                        {"id": "s2", "name": "科目二", "version": "v2"}],
+            "chunks": [{"id": "s1:3-1:0", "source": "s1", "page": "3-1", "text": "合成例子：分類模型辨識圖像"},
+                       {"id": "s2:3-1:0", "source": "s2", "page": "3-1", "text": "合成例子：差分隱私加入雜訊保護資料"}]}
+    return {"index_id": digest(canonical(data)), **data}
+
+
+def test_cross_subject_search_returns_correct_source_and_no_zero_score_hits():
+    kb = KnowledgeBase(payload())
+    hits = kb.search("差分隱私")
+    assert len(hits) == 1
+    assert hits[0]["source"] == "s2" and hits[0]["page"] == "3-1"
+    assert hits[0]["version"] == "v2"
+    assert kb.search("zzzz_unknown") == []
+
+
+def test_modified_index_is_rejected():
+    data = payload()
+    data["chunks"][0]["text"] = "被修改"
+    with pytest.raises(ValueError, match="雜湊"):
+        KnowledgeBase(data)
+
+
+def test_vector_artifact_mismatch_and_missing_model_are_rejected():
+    vectors = np.eye(2, dtype=np.float32)
+    meta = {"dimensions": 2, "sha256": digest(vectors.tobytes())}
+    with pytest.raises(ValueError, match="向量檔"):
+        KnowledgeBase(payload(meta), vectors[:, :1])
+    with pytest.raises(ValueError, match="向量模型"):
+        KnowledgeBase(payload()).search("差分", method="hybrid")
+
+
+def test_hybrid_retrieval_routes_to_matching_vector_and_lexical_source():
+    class Encoder:
+        def encode(self, texts, **kwargs):
+            return [[0.0, 1.0]]
+    vectors = np.eye(2, dtype=np.float32)
+    meta = {"dimensions": 2, "sha256": digest(vectors.tobytes())}
+    kb = KnowledgeBase(payload(meta), vectors, Encoder())
+    assert kb.search("差分隱私", method="hybrid")[0]["source"] == "s2"
+
+
+def test_original_text_outputs_cannot_escape_data_directory(tmp_path):
+    with pytest.raises(ValueError, match="data/"):
+        data_path(tmp_path, "docs/leak.json")
+    with pytest.raises(ValueError, match="data/"):
+        data_path(tmp_path, "data/../../leak.json")
+
+
+def test_build_records_patches_and_fails_if_patch_does_not_apply(tmp_path, monkeypatch):
+    (tmp_path / "data").mkdir()
+    pdf = tmp_path / "data/fake.pdf"
+    pdf.write_bytes(b"synthetic_pdf")
+    patch = tmp_path / "data/patch.json"
+    patch.write_text(json.dumps([{"id": "fix", "old": "舊詞", "new": "新詞"}]), encoding="utf-8")
+    (tmp_path / "uv.lock").write_text("synthetic lock")
+    config = {"schema_version": 1, "chunk_size": 40, "chunk_stride": 30,
+              "sources": [{"id": "s1", "name": "合成", "version": "v1", "pdf": "data/fake.pdf",
+                           "sha256": digest(pdf.read_bytes()), "patches": "data/patch.json"}]}
+    file = tmp_path / "config.json"
+    file.write_text(json.dumps(config), encoding="utf-8")
+    monkeypatch.setattr("ipas_hub.knowledge.read_pages", lambda _: [Page("3-1", "合成舊詞")])
+    path = build_index(tmp_path, file, tmp_path / "data/index")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["chunks"][0]["text"] == "合成新詞"
+    assert data["sources"][0]["patch_report"][0]["applied_on"] == ["3-1"]
+    monkeypatch.setattr("ipas_hub.knowledge.read_pages", lambda _: [Page("3-1", "無法套用")])
+    with pytest.raises(ValueError, match="勘誤"):
+        build_index(tmp_path, file, tmp_path / "data/index")
+
+
+def test_no_evidence_does_not_call_model():
+    def unexpected(_):
+        pytest.fail("不應呼叫模型")
+    assert answer("合成問題", [], unexpected)["status"] == "insufficient"
+
+
+@pytest.mark.parametrize("output", [
+    {"status": "supported", "answer": "合成回答", "citations": ["fake"]},
+    {"status": "supported", "answer": "合成回答", "citations": []},
+    {"status": "supported", "answer": "", "citations": ["s2:3-1:0"]},
+])
+def test_invalid_model_citations_and_empty_answers_are_rejected(output):
+    hits = KnowledgeBase(payload()).search("差分隱私")
+    with pytest.raises(ValueError):
+        answer("合成問題", hits, lambda _: {"output": output})
+
+
+def test_valid_response_is_labelled_as_structural_not_semantic_verification():
+    hits = KnowledgeBase(payload()).search("差分隱私")
+    result = answer("合成問題", hits, lambda _: {"model": "fake-test-only", "output": {
+        "status": "supported", "answer": "合成回答 [s2:3-1:0]", "citations": ["s2:3-1:0"]}})
+    assert result["prompt_sha256"]
+    assert result["validation"] == "citation_ids_only_not_semantic_verification"
+
+
+def test_remote_llm_endpoint_is_rejected_before_network_access():
+    with pytest.raises(ValueError, match="本機"):
+        ollama_generate("prompt", "model", "https://paid.example.com")
+
+
+def test_evaluation_matches_subject_and_page_together():
+    kb = KnowledgeBase(payload())
+    cases = [{"id": "a", "query": "差分隱私", "expected": [{"source": "s1", "page": "3-1"}]}]
+    assert evaluate(kb, cases, "bm25", 1)["hits"] == 0
+    cases[0]["expected"][0]["source"] = "s2"
+    assert evaluate(kb, cases, "bm25", 1)["hits"] == 1
+
+
+def test_cli_search_persists_run_only_under_data(tmp_path, capsys):
+    folder = tmp_path / "data/index"
+    folder.mkdir(parents=True)
+    (folder / "index.json").write_bytes(canonical(payload()))
+    assert main(["--root", str(tmp_path), "search", "--index", "data/index/index.json", "--query", "差分隱私"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["hits"][0]["source"] == "s2"
+    assert (tmp_path / result["run_file"]).is_file()

@@ -1,0 +1,32 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test-and-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.11"
+      - run: uv sync --locked --python 3.12
+      - run: uv run --no-sync pytest -p no:cacheprovider
+      - name: 確認原始資料未追蹤
+        run: test -z "$(git ls-files data)"
+      - name: 驗證 Compose 設定
+        run: docker compose --profile llm config --quiet
+      - name: 容器內跑合成測試
+        run: docker build --build-arg CODE_VERSION=${{ github.sha }} --target test -t ipas-hub:test .
+      - name: 建立不含資料的執行映像
+        run: docker build --build-arg CODE_VERSION=${{ github.sha }} --target runtime -t ipas-hub:ci .
+      - name: 容器啟動檢查
+        run: docker run --rm --network none ipas-hub:ci --help
