@@ -1,38 +1,43 @@
 ---
-title: problem-def-template
-status: in-review
+title: ipas-learning-hub
+status: draft
 updated: 2026-11-16
 ---
 
-# problem-def-template
+# ipas-learning-hub
 
-協助你從自然語言描述的困擾開始，逐步釐清問題、範圍與成功條件，再進行實作、驗證與 review。
+iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到教材出處，之後再提供選項解析。
 
-**先讀 [使用指南](docs/workflow/guide.md)。** 不需先知道怎麼寫 PRD，也不需先安裝程式。AI 的共同入口為 [AGENTS.md](AGENTS.md)。
+目前在第一輪探索，只供作者本人自用，還沒有可執行的程式。範圍與成功條件見 [brief](docs/project/brief.md)，目前進度與下一步見 [progress](docs/project/progress.md)。
+
+## 第一輪做什麼
+
+- 探索一：一份初級試題 50 題，人工分成「找不到／找到但要自己推理／教材沒有」三類，並記下依據頁碼。
+- 探索二：同一批題目比較關鍵字檢索與向量檢索。
+
+LLM 解析、web search、中級教材、模擬考介面與公開上線都不在本輪範圍，理由見 brief。
 
 ## 專案配置
 
 ```text
 .
 ├── README.md
-├── AGENTS.md
-├── .github/                    PR 格式與專案自己的 CI
-├── src/                        程式碼（目前只有空目錄標記）
-├── tests/                      可執行測試（目前只有空目錄標記）
+├── AGENTS.md                   AI 協作規則入口
+├── .github/                    PR 格式
+├── src/                        程式碼（尚無內容）
+├── tests/                      可執行測試（尚無內容）
+├── data/                       不進版控，需自行下載
+│   ├── raw/                    官方教材、勘誤表與試題 PDF
+│   └── index/                  切塊與檢索索引
 └── docs/
-    ├── project/
-    │   ├── brief.md            問題、範圍、AC；開始時可未知
-    │   └── progress.md         當前進度、路徑對照與下一步
-    ├── workflow/
-    │   ├── guide.md            唯一使用入口
-    │   ├── reference/          需要時查閱的詳細規則
-    │   ├── templates/          按需複製的空白範本
-    │   └── examples/           教學示例
-    └── template-maintenance/   模板自身的歷史與維護資料
+    ├── project/                本專案的紀錄：brief、progress 與按需建立的文件
+    └── workflow/               工作指南、規則與空白範本
 ```
 
-只有兩份專案紀錄預先建立：[brief](docs/project/brief.md)、[progress](docs/project/progress.md)。其他文件依實際問題建立；範本庫不是專案待辦，不用逐一填完。
-既有專案保留原本 app、packages、src、tests 等框架慣例，以 progress 記實際路徑。
+## 資料來源與使用限制
 
-模板目前提供文件與 PR 格式，沒有應用程式、測試執行器或 CI。真實可用性仍待案例驗證。
-模板維護者查看 [維護入口](docs/template-maintenance/README.md)；衍生專案可按使用指南移除這一區。
+教材、勘誤表與試題來自經濟部產業發展署的 [iPAS AI 應用規劃師學習資源頁](https://ipd.nat.gov.tw/ipas/certification/AIAP/learning-resources)。這些檔案的著作權屬原權利人，本 repo 不收錄也不再散布原始檔與由其產生的索引；需要的人請自行到官方頁下載，放到 data/raw/。各檔案內的聲明原文與授權確認進度記在 progress。
+
+## 工作方式
+
+本專案沿用 problem-def-template 的流程：先讀 [使用指南](docs/workflow/guide.md)，AI 工具的共同規則在 [AGENTS.md](AGENTS.md)。
