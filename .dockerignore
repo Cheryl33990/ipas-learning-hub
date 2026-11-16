@@ -1,0 +1,13 @@
+# 採 allowlist；教材、題目、索引、模型、Git、.env 與執行紀錄均不進 build context。
+**
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!src/
+!src/**
+!config/
+!config/**
+!tests/
+!tests/**
+**/__pycache__/
+**/*.pyc

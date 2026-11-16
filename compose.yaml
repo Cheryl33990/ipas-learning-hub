@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+    image: ipas-hub:local
+    environment:
+      OLLAMA_URL: http://ollama:11434
+    volumes:
+      - ./data/raw:/app/data/raw:ro
+      - ./data/index:/app/data/index
+      - ./data/runs:/app/data/runs
+      - ./data/evaluation:/app/data/evaluation:ro
+      - ./data/review:/app/data/review:ro
+      - hf-cache:/models/huggingface
+    command: ["--help"]
+  ollama:
+    image: ollama/ollama:0.13.0
+    profiles: [llm]
+    environment:
+      OLLAMA_NO_CLOUD: "1"
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+volumes:
+  hf-cache:
+  ollama-models:
