@@ -103,9 +103,9 @@ def test_invalid_model_citations_and_empty_answers_are_rejected(output):
 def test_valid_response_is_labelled_as_structural_not_semantic_verification():
     hits = KnowledgeBase(payload()).search("差分隱私")
     result = answer("合成問題", hits, [], lambda *_: {"model": "fake-test-only", "output": {
-        "status": "supported", "answer": "合成回答 [s2:3-1:0]", "citations": ["s2:3-1:0"]}})
+        "status": "supported", "segments": [{"text": "合成回答", "citations": ["s2:3-1:0"]}]}})
     assert result["prompt_sha256"]
-    assert result["validation"] == "citation_ids_only_not_semantic_verification"
+    assert result["validation"] == "citation_ids_and_lexical_check_not_semantic_verification"
 
 
 def test_evaluation_matches_subject_and_page_together():
