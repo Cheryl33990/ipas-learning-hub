@@ -1,10 +1,10 @@
 """逐選項解析：檢查資料檔、產生閱讀用文件與人工複核清單。
 
 用法：uv run python -m ipas_hub.explain
-- 讀 docs/project/explanations/115-3-subject1.json
+- 讀 docs/internal/project/explanations/115-3-subject1.json
 - 檢查：題號齊全、四個選項都有說明、答案與試題答案欄及紀錄表一致、
   「對／錯」的開頭與答案一致、引用的頁碼存在且該頁真的有引用的詞
-- 產生 docs/project/explanations/115-3-subject1.md（不含題目原文，進版控）
+- 產生 docs/internal/project/explanations/115-3-subject1.md（不含題目原文，進版控）
 - 產生 data/review/115-3-subject1-review.md（含題目原文，不進版控，給人複核時對照）
 """
 from __future__ import annotations
@@ -124,11 +124,11 @@ def render_question(q: dict, question_text: str | None = None) -> str:
 
 def render_public(data: dict) -> str:
     head = [
-        "---",
+        "<!--",
         "title: 逐選項解析：115 年第三次初級科目 1",
         "status: draft",
         "updated: 2026-11-16",
-        "---",
+        "-->",
         "",
         "# 逐選項解析：115 年第三次初級科目 1",
         "",
@@ -148,7 +148,7 @@ def render_public(data: dict) -> str:
 def render_review(data: dict, texts: dict[int, str]) -> str:
     must, sample = review_set(data)
     by_n = {q["n"]: q for q in data["questions"]}
-    out = ["# 複核對照（含題目原文，不進版控）", "", "判定請填在 docs/project/validation/2026-11-16-explanation-review.md。",
+    out = ["# 複核對照（含題目原文，不進版控）", "", "判定請填在 docs/internal/project/validation/2026-11-16-explanation-review.md。",
            "引用明列科目與教材頁尾頁碼，屬學習依據，未認定實際命題出處。", ""]
     for title, numbers in (("必看", must), ("抽查", sample)):
         out += [f"## {title}", ""]
@@ -170,7 +170,7 @@ def write_review(path: Path, content: str) -> Path:
 
 def main() -> None:
     root = Path.cwd()
-    src = root / "docs/project/explanations/115-3-subject1.json"
+    src = root / "docs/internal/project/explanations/115-3-subject1.json"
     data = json.loads(src.read_text(encoding="utf-8"))
 
     from .exam import read_questions
@@ -180,7 +180,7 @@ def main() -> None:
     from .explore2 import EXAM_PDF, GUIDE_PDF  # 同一份試題與科目 1 教材
     exam_pdf = [root / EXAM_PDF] if (root / EXAM_PDF).is_file() else []
     guide_pdf = [root / GUIDE_PDF] if (root / GUIDE_PDF).is_file() else []
-    record = parse_record((root / "docs/project/discovery/exploration-1-record.md").read_text(encoding="utf-8"))
+    record = parse_record((root / "docs/internal/project/discovery/exploration-1-record.md").read_text(encoding="utf-8"))
     official = {n: g.answer for n, g in record.items()}
     texts: dict[int, str] = {}
     if exam_pdf:
