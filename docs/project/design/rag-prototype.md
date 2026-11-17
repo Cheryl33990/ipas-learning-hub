@@ -69,6 +69,19 @@ updated: 2026-11-17
 - 未採用：以 bge-m3 計算結果與題目的相似度來篩選。實測每題多約 19 秒載入、3 秒計算，且有用條目（平均絕對誤差 0.52）與掛錯條目（RANSAC 0.54）分數交錯。
 - 已知限制：中文二元組規則仍會放過部分無關頁（如「k-匿名化」配到「匿名者（黑客組織）」）；請求變多後較易遇到 HTTP 429，本機連續實跑時曾發生；User-Agent 已附 repo 網址作為聯絡方式（使用者 2026-11-17 同意），是否因此減少 429 尚未驗證。
 
+## 聊天介面端點 v0.5：OpenAI 相容 /v1/chat/completions（2026-11-17）
+
+使用者選定 AnythingLLM（MIT）當介面；本專案以 `serve` 指令提供端點，平台把它當成一個模型。生成契約 v0.3 與外部搜尋 v0.4 不變。
+
+- 介面：`python -m ipas_hub.cli serve --index <index.json> [--port 8100] [--served-name rag]`，參數與 `ask` 相同（--method、--k、--web、--web-k、--model、--llm-url）。只綁 127.0.0.1，不提供改綁選項。提供 GET /v1/models 與 POST /v1/chat/completions（含 stream；回答一次產生，整段放在一個 chunk）。
+- 輸入：取最後一則 role 為 user 的訊息當題目；平台附帶的系統提示、歷史對話與其他參數不使用，所以目前每題獨立、沒有多輪記憶。
+- 輸出：`render_text` 的文字原樣回傳。流程重用 cli.ask() 與 rag.answer()（cli.answer_text），每次請求照樣寫 data/runs/。
+- 失敗顯示：LLM 無法連線、模型輸出格式或引用不合格、索引讀取失敗等，以 HTTP 200 回一則以「⚠ 無法產生有依據的解答」開頭並附原因的訊息，讓聊天畫面直接顯示，不冒充解答。外部搜尋失敗（如維基 429）時仍回答，文末加「⚠ 外部搜尋未完整」。依據不足沿用 render_text 的「狀態：依據不足」。請求沒有使用者訊息或不是 JSON 時回 HTTP 400。
+- 通用性：server.py 不含教材或考試專用邏輯，只接受一個「題目 → 文字」的函式；模型名稱預設為 rag。勘誤、頁碼等教材專屬處理仍在索引與 rag 模組內。
+- 平台：compose.yaml 的 `ui` 服務（--profile ui），以環境變數把 LLM 指到 host.docker.internal 的端點。工作區不上傳文件，平台自己的檢索就不會介入；若上傳文件，平台會改用它內建的嵌入模型（需下載）並把片段塞進提示，本專案端點會忽略那些片段。
+- 測法：合成測試（tests/test_server.py）涵蓋取題、分段內容、缺題回 400、成功格式、三種失敗顯示為警示、串流格式、實際 HTTP 來回（只綁迴路位址）、cli.answer_text 重用 ask／render 與搜尋失敗提示。實機以 vLLM＋AnythingLLM 跑少量題目，結果見 progress。
+- 已知限制：沒有多輪對話；回答要等整段完成才顯示（3–22 秒）；引用仍只有章節頁碼；畫面上的排版（換行、⚠ 行）未經檢視；平台若另外送出產生標題之類的輔助請求，也會被當成題目執行。
+
 ## CI 與交付
 
 CI 使用合成資料跑單元／流程測試、Compose config、Docker test stage 與 runtime --help，不把官方 PDF 或模型送到 hosted runner。手動 delivery workflow 只重建測試與 commit 標籤映像並記 image ID，不推送、不部署，尚不是生產 CD。Python 與 uv 基底映像已固定實際建置取得的 digest；vLLM 映像已以 digest 固定、模型以 revision 固定；hosted CI 不啟動模型。容器實測與真實 LLM 執行必須各有證據，不能從 YAML 存在推定通過。

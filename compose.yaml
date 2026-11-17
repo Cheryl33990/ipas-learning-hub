@@ -47,7 +47,28 @@ services:
       - --tool-call-parser=hermes
       - --host=0.0.0.0
       - --port=8000
+  # 聊天介面（AnythingLLM，MIT 授權）。只在 --profile ui 啟動。
+  # 把主機上 `ipas_hub.cli serve` 的端點當成模型；工作區不要上傳文件，檢索與外部搜尋都由本專案負責。
+  ui:
+    image: mintplexlabs/anythingllm:latest@sha256:be5f75b6744e0e6697162dfd2c14b0351514f2b3f8cb1a71bbd349488383e0d2
+    profiles: [ui]
+    ports:
+      - "127.0.0.1:3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      STORAGE_DIR: /app/server/storage
+      DISABLE_TELEMETRY: "true"
+      LLM_PROVIDER: generic-openai
+      GENERIC_OPEN_AI_BASE_PATH: http://host.docker.internal:${RAG_PORT:-8100}/v1
+      GENERIC_OPEN_AI_MODEL_PREF: ${RAG_SERVED_NAME:-rag}
+      GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT: "6144"
+      GENERIC_OPEN_AI_API_KEY: local
+      VECTOR_DB: lancedb
+    volumes:
+      - ui-storage:/app/server/storage
 volumes:
+  ui-storage:
   hf-cache:
   llm-models:
     external: true
