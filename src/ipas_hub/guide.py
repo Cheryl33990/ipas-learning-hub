@@ -26,21 +26,25 @@ class Chunk:
     pdf_page: int | None = None
 
 
-def parse_page(raw: str, pdf_page: int | None = None) -> Page | None:
-    """從一頁的原始擷取文字取出頁碼與內文；沒有頁碼的頁（封面、序、目錄）回傳 None。"""
+def parse_page(raw: str, pdf_page: int | None = None, running_head: str | None = None) -> Page | None:
+    """從一頁的原始擷取文字取出頁碼與內文；沒有頁碼的頁（封面、序、目錄）回傳 None。
+
+    running_head 是該份教材頁首（每頁重複的章名等）的正規表示式，逐行比對後移除；未提供時用初級科目 1 的規則。
+    """
     labels = _LABEL_LINE.findall(raw)
     if not labels:
         return None
-    body = _RUNNING_HEAD.sub("", _LABEL_LINE.sub("", raw))
+    head = re.compile(running_head, re.M) if running_head else _RUNNING_HEAD
+    body = head.sub("", _LABEL_LINE.sub("", raw))
     return Page(labels[-1], normalize(body), pdf_page)
 
 
-def read_pages(pdf_path: Path) -> list[Page]:
+def read_pages(pdf_path: Path, running_head: str | None = None) -> list[Page]:
     from pypdf import PdfReader
 
     pages = []
     for number, p in enumerate(PdfReader(str(pdf_path)).pages, 1):
-        page = parse_page(p.extract_text() or "", number)
+        page = parse_page(p.extract_text() or "", number, running_head)
         if page:
             pages.append(page)
     return pages

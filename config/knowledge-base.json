@@ -2,22 +2,49 @@
   "schema_version": 1,
   "chunk_size": 400,
   "chunk_stride": 300,
+  "_comment": "勘誤替換檔含教材原文、不在 repo 內。中級科目 2 的勘誤只在沒有頁碼的職能基準頁，該頁不進知識庫，因此沒有替換檔，索引會標示 errata: not_applied。",
   "sources": [
     {
       "id": "subject1",
       "name": "初級科目 1 人工智慧基礎概論",
       "version": "2025 年版，官方檔名 1141203",
-      "pdf": "data/raw/guide/初級-學習指引-科目1_人工智慧基礎概論1141203.pdf",
+      "pdf": "data/raw/beginner/guides/AI應用規劃師(初級)-學習指引-科目1_人工智慧基礎概論1141203_20251222172144.pdf",
       "sha256": "11eec1f79617aee49989e9e2f1c54c7a33dcaedc5f21d375a9dba5a393ca216c",
-      "patches": "data/index/errata_patches.json"
+      "patches": "data/index/errata/beginner-subject1.json"
     },
     {
       "id": "subject2",
       "name": "初級科目 2 生成式 AI 應用與規劃",
       "version": "官方檔名 114123，時間戳 20251222172159",
-      "pdf": "data/raw/guide-subject2/初級-學習指引-科目2_生成式AI應用與規劃114123_20251222172159.pdf",
+      "pdf": "data/raw/beginner/guides/AI應用規劃師(初級)-學習指引-科目2_生成式AI應用與規劃114123_20251222172159.pdf",
       "sha256": "142d9dadbbfd35020875a640beaa15f6e7ad86b3fe91920048df59123fd7ea5f",
-      "patches": "data/index/subject2-errata-patches.json"
+      "patches": "data/index/errata/beginner-subject2.json"
+    },
+    {
+      "id": "intermediate1",
+      "name": "中級科目 1 人工智慧技術應用規劃",
+      "version": "官方檔名時間戳 20251222101833",
+      "pdf": "data/raw/intermediate/guides/AI應用規劃師(中級)-學習指引-科目1人工智慧技術應用規劃_20251222101833.pdf",
+      "sha256": "7b1c67e3280600fbeca893bc1c13421d5aa44841272c34b456f1346731bf3812",
+      "running_head": "^\\s*\\uf07d+\\s*第.{1,3}章.*$",
+      "patches": "data/index/errata/intermediate-subject1.json"
+    },
+    {
+      "id": "intermediate2",
+      "name": "中級科目 2 大數據處理分析與應用",
+      "version": "官方檔名時間戳 20251222101850",
+      "pdf": "data/raw/intermediate/guides/AI應用規劃師(中級)-學習指引-科目2大數據處理分析與應用_20251222101850.pdf",
+      "sha256": "cae491470cb756ed4323b11e19459465383e2d93ee5f0e4abfcd8f4983b49933",
+      "running_head": "^\\s*\\uf07d+\\s*第.{1,3}章.*$"
+    },
+    {
+      "id": "intermediate3",
+      "name": "中級科目 3 機器學習技術與應用",
+      "version": "官方檔名時間戳 20251222101907",
+      "pdf": "data/raw/intermediate/guides/AI應用規劃師(中級)-學習指引-科目3機器學習技術與應用_20251222101907.pdf",
+      "sha256": "cc4300a4133276509f34750313f65fd02e4bd1960366fc604f236f057719247a",
+      "running_head": "^\\s*\\uf07d+\\s*第.{1,3}章.*$",
+      "patches": "data/index/errata/intermediate-subject3.json"
     }
   ]
 }
