@@ -73,10 +73,12 @@ def test_build_records_patches_and_fails_if_patch_does_not_apply(tmp_path, monke
                            "sha256": digest(pdf.read_bytes()), "patches": "data/patch.json"}]}
     file = tmp_path / "config.json"
     file.write_text(json.dumps(config), encoding="utf-8")
-    monkeypatch.setattr("ipas_hub.knowledge.read_pages", lambda _: [Page("3-1", "合成舊詞")])
+    monkeypatch.setattr("ipas_hub.knowledge.read_pages", lambda _: [Page("3-1", "合成舊詞", 9)])
     path = build_index(tmp_path, file, tmp_path / "data/index")
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["chunks"][0]["text"] == "合成新詞"
+    assert data["chunks"][0]["pdf_page"] == 9 and data["sources"][0]["pdf"] == "data/fake.pdf"
+    assert KnowledgeBase.load(path).search("合成新詞")[0]["pdf_page"] == 9
     assert data["sources"][0]["patch_report"][0]["applied_on"] == ["3-1"]
     monkeypatch.setattr("ipas_hub.knowledge.read_pages", lambda _: [Page("3-1", "無法套用")])
     with pytest.raises(ValueError, match="勘誤"):

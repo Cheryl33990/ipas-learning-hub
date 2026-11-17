@@ -8,7 +8,7 @@ import time
 import uuid
 from pathlib import Path
 
-from .knowledge import KnowledgeBase, build_index, data_path
+from .knowledge import KnowledgeBase, build_index, data_path, digest
 from .llm import LLMConfig, chat_json, check_config
 from .rag import answer, gather_external, plan_web_queries, render_text
 from .websearch import make_search
@@ -55,15 +55,45 @@ def ask(question: str, hits: list[dict], args) -> dict:
     return record
 
 
-def answer_text(kb: KnowledgeBase, question: str, args, root: Path) -> str:
-    """serve 用：與 ask 指令走同一流程，回傳給人看的文字；外部搜尋失敗時在文末說明。"""
+def source_files(root: Path, sources: list[dict]) -> dict:
+    """serve 可提供的教材檔：只收索引列出、位於 data/ 且雜湊與索引相同的檔案。"""
+    files = {}
+    for source in sources:
+        if not source.get("pdf"):  # 舊索引沒有記錄檔案位置
+            continue
+        try:
+            path = data_path(root, source["pdf"])
+            same = digest(path.read_bytes()) == source["sha256"]
+        except (ValueError, OSError):
+            same = False
+        if same:
+            files[f"{source['id']}{path.suffix.lower()}"] = path
+        else:
+            print(f"提醒：{source['id']} 的教材檔不存在或與索引版本不同，引用不提供連結", file=sys.stderr)
+    return files
+
+
+def textbook_link(base: str, files: dict):
+    """回傳「來源 → 網址」的函式：教材連到本機提供的檔案該頁，外部沿用自帶網址。"""
+    def link(source: dict) -> str | None:
+        if source.get("source_type") != "textbook":
+            return source.get("url")
+        name = next((n for n in files if n.rsplit(".", 1)[0] == source.get("source")), None)
+        if not name or not source.get("pdf_page"):
+            return None
+        return f"{base.rstrip('/')}/files/{name}#page={source['pdf_page']}"
+    return link
+
+
+def answer_text(kb: KnowledgeBase, question: str, args, root: Path, link_for=None) -> str:
+    """serve 用：與 ask 指令走同一流程，回傳給人看的文字（依據清單為 Markdown 連結）；外部搜尋失敗時在文末說明。"""
     started = time.perf_counter()
     result = {"index_id": kb.index_id, "method": args.method, "question": question,
               "hits": kb.search(question, args.k, args.method)}
     result.update(ask(question, result["hits"], args))
     result["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
     save_run(root, result)
-    text = render_text(result["generation"])
+    text = render_text(result["generation"], link_for, markdown=True)
     if result["web"]["error"]:
         text += f"\n\n⚠ 外部搜尋未完整（{result['web']['error']}），本次可能只依教材回答。"
     return text
@@ -87,6 +117,7 @@ def main(argv=None) -> int:
         elif name == "serve":
             cmd.add_argument("--port", type=int, default=8100, help="只綁 127.0.0.1")
             cmd.add_argument("--served-name", default="rag", help="聊天介面看到的模型名稱")
+            cmd.add_argument("--link-base", help="引用連結的網址開頭（給瀏覽器開，不是給容器）；預設 http://127.0.0.1:<port>")
         else:
             query = cmd.add_mutually_exclusive_group(required=True)
             query.add_argument("--query")
@@ -112,7 +143,10 @@ def main(argv=None) -> int:
             if args.command == "serve":
                 from .server import HOST, make_server
                 check_config(LLMConfig.from_env(args.llm_url, args.model, args.allow_remote))  # 設定錯誤在啟動時就報
-                server = make_server(lambda q: answer_text(kb, q, args, root), args.port, args.served_name)
+                files = source_files(root, kb.payload["sources"])
+                link_for = textbook_link(args.link_base or f"http://{HOST}:{args.port}", files)
+                server = make_server(lambda q: answer_text(kb, q, args, root, link_for), args.port,
+                                     args.served_name, files)
                 print(f"OpenAI 相容端點：http://{HOST}:{server.server_address[1]}/v1（模型名稱 {args.served_name}）；Ctrl+C 結束",
                       flush=True)
                 try:

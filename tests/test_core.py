@@ -81,3 +81,19 @@ def test_hit_at_k_counts_only_the_first_k_results():
     assert hit_at_k(ranked, {"3-13"}, 3)
     assert first_hit_rank(ranked, {"3-13"}) == 3
     assert first_hit_rank(ranked, {"3-50"}) is None
+
+
+def test_read_pages_keeps_pdf_page_order_even_when_unlabelled_pages_are_skipped(monkeypatch):
+    import pypdf
+    from ipas_hub.guide import apply_patches, read_pages
+
+    class FakeReader:
+        def __init__(self, path):
+            raw = ["封面沒有頁碼", "序", "第一頁內文\n1-1\n", "第二頁舊詞\n1-2\n"]
+            self.pages = [type("P", (), {"extract_text": lambda self, t=t: t})() for t in raw]
+    monkeypatch.setattr(pypdf, "PdfReader", FakeReader)
+    pages = read_pages("fake.pdf")
+    assert [(p.label, p.pdf_page) for p in pages] == [("1-1", 3), ("1-2", 4)]
+    patched, _ = apply_patches(pages, [{"id": "x", "old": "舊詞", "new": "新詞"}])
+    assert [p.pdf_page for p in patched] == [3, 4]  # 套用勘誤不能弄丟 PDF 頁序
+    assert {c.pdf_page for c in chunk_pages(patched, 4, 3) if c.label == "1-2"} == {4}

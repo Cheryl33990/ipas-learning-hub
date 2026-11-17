@@ -166,6 +166,7 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
     template = ANSWER_PROMPT.read_text(encoding="utf-8")
     user = json.dumps({"question": question, "evidence": evidence}, ensure_ascii=False)
     by_id = {e["id"]: e for e in evidence}
+    located = {h["id"]: h for h in textbook}  # 來源識別與 PDF 頁只給程式顯示用，不送進模型
     generated = generate(template, user)
     problems = _check_output(generated["output"], by_id)
     repairs = 0
@@ -197,7 +198,9 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
                          "check": check_segment(text, [by_id[c]["text"] for c in cited]) if cited else None})
     citations = list(markers)
     sources = [{"id": c, "marker": markers[c], "source_type": by_id[c]["source_type"], "label": by_id[c]["label"],
-                **({"url": by_id[c]["url"]} if by_id[c].get("url") else {})} for c in citations]
+                **({"url": by_id[c]["url"]} if by_id[c].get("url") else {}),
+                **{key: located[c][key] for key in ("source", "pdf_page") if located.get(c, {}).get(key)}}
+               for c in citations]
     labels = [s["label"] for s in sources]
     for s in sources:  # 同頁多個片段時標出第幾段，避免兩個標記看起來指向同一處
         if labels.count(s["label"]) > 1 and s["id"].rsplit(":", 1)[-1].isdigit():
@@ -217,8 +220,12 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
             "validation": "citation_ids_and_lexical_check_not_semantic_verification"}
 
 
-def render_text(result: dict) -> str:
-    """給人看的版本：每句後標明教材或外部，可能掛錯的引用加 ⚠。"""
+def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
+    """給人看的版本：每句後標明教材或外部，可能掛錯的引用加 ⚠。
+
+    教材引用把章節頁碼與 PDF 頁並列。link_for(來源) 回傳可開啟的網址或 None，未提供時只用來源自帶的網址；
+    markdown 為真時依據清單寫成 Markdown 連結，供會渲染 Markdown 的聊天介面使用。
+    """
     basis = {"textbook_only": "只用教材", "external_only": "只用外部資料（教材未涵蓋）",
              "mixed": "教材＋外部資料", "none": "無依據"}[result["basis"]]
     lines = [f"狀態：{'有依據' if result['status'] == 'supported' else '依據不足'}（{basis}）", ""]
@@ -228,7 +235,13 @@ def render_text(result: dict) -> str:
             lines.append("  ⚠ 引用可能不支持此句：" + "；".join(s["check"]["reasons"]))
     lines += ["", "依據："]
     for s in result["sources"]:
-        lines.append(f"- [{s['marker']}] {s['label']}" + (f"  {s['url']}" if s.get("url") else ""))
+        label = s["label"] + (f"（PDF 第 {s['pdf_page']} 頁）" if s.get("pdf_page") else "")
+        url = (link_for(s) if link_for else None) or s.get("url")
+        if url and markdown:
+            label = "[" + label.replace("[", "\\[").replace("]", "\\]") + f"]({url})"
+        elif url:
+            label += f"  {url}"
+        lines.append(f"- [{s['marker']}] {label}")
     if not result["sources"]:
         lines.append("- （無）")
     cited = sum(1 for s in result["segments"] if s["citations"])
