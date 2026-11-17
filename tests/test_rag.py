@@ -9,7 +9,7 @@ import pytest
 from ipas_hub.cli import ask
 from ipas_hub.llm import LLMConfig, chat_json, check_config
 from ipas_hub.rag import answer, build_evidence, gather_external, plan_web_queries, render_text
-from ipas_hub.websearch import NoSearch, WikipediaSearch, make_search
+from ipas_hub.websearch import NoSearch, WikipediaSearch, WikipediaWithFallback, make_search, relevant
 
 BOOK = [{"id": "subject1:3-36:0", "source": "subject1", "name": "科目一", "page": "3-36",
          "text": "合成教材：迴歸預測連續數值"}]
@@ -101,6 +101,15 @@ def test_low_chinese_overlap_is_flagged_and_uncited_segments_are_not_checked():
     assert second["check"] is None
 
 
+def test_chinese_sentence_citing_english_source_only_checks_terms():
+    en = [{**WEB[0], "id": "wiki-en:5", "provider": "wikipedia-en", "text": "LIME approximates a model locally"}]
+    result = answer("題目", [], en, reply(status="supported", segments=[
+        seg("LIME 在局部建立簡化模型", "wiki-en:5"), seg("SHAP 用於全局解釋", "wiki-en:5")]))
+    first, second = (s["check"] for s in result["segments"])
+    assert first["overlap"] is None and not first["flagged"]
+    assert second["missing_terms"] == ["SHAP"] and second["flagged"]
+
+
 def test_terms_and_numbers_match_case_insensitively():
     book = [{**BOOK[0], "text": "Transformer 使用 self-attention，於 2017 年提出"}]
     result = answer("題目", book, [], reply(status="supported", segments=[
@@ -171,38 +180,172 @@ def test_prompt_marks_question_and_evidence_as_data():
 # ---- 搜尋詞規劃與外部搜尋 ----
 
 def test_query_plan_is_cleaned_and_capped():
-    out = plan_web_queries("題目", reply(queries=[" MAE ", "MAE", "", "迴歸", "分類", "準確率", "x" * 41]))
-    assert out == ["MAE", "迴歸", "分類"]
+    out = plan_web_queries("題目", reply(queries=[
+        {"zh": " MAE ", "en": "mean absolute error"}, {"zh": "MAE"}, {"zh": ""}, "迴歸",
+        {"zh": "分類", "en": " "}, {"zh": "準確率"}, {"zh": "x" * 41}]))
+    blank = {"domain_zh": None, "domain_en": None}
+    assert out == [{"zh": "MAE", "en": "mean absolute error", **blank}, {"zh": "迴歸", "en": None, **blank},
+                   {"zh": "分類", "en": None, **blank}]
     with pytest.raises(ValueError):
         plan_web_queries("題目", reply(queries="MAE"))
+    with pytest.raises(ValueError):
+        plan_web_queries("題目", reply(queries=[{"en": "only english"}]))
 
 
 def test_gather_external_round_robins_dedupes_and_limits():
     class Fake:
-        def search(self, q, k):
+        def search(self, q, k, **_):
             return [{**WEB[0], "id": "wiki:shared"}, {**WEB[0], "id": f"wiki:{q}-2"}]
-    hits = gather_external(["a", "b", "c"], Fake(), 2, 3)
+    qs = [{"zh": q, "en": None} for q in "abc"]
+    hits = gather_external(qs, Fake(), 2, 3)
     assert [h["id"] for h in hits] == ["wiki:shared", "wiki:a-2", "wiki:b-2"]
 
     class ByQuery:
-        def search(self, q, k):
+        def search(self, q, k, **_):
             return [{**WEB[0], "id": f"wiki:{q}{i}"} for i in range(k)]
     # 每個詞的第一筆先入選，第三個詞不會被前兩個詞擠掉
-    assert [h["id"] for h in gather_external(["a", "b", "c"], ByQuery(), 2, 3)] == ["wiki:a0", "wiki:b0", "wiki:c0"]
+    assert [h["id"] for h in gather_external(qs, ByQuery(), 2, 3)] == ["wiki:a0", "wiki:b0", "wiki:c0"]
+
+
+def test_gather_external_passes_domain_and_english_fallback():
+    seen = []
+    class Spy:
+        def search(self, q, k, **kw):
+            seen.append((q, kw))
+            return []
+    gather_external([{"zh": "LIME", "en": "LIME", "domain_zh": "機器學習", "domain_en": "machine learning"}],
+                    Spy(), 2, 4)
+    assert seen == [("LIME", {"context": "機器學習", "fallback_query": "LIME",
+                              "fallback_context": "machine learning"})]
+
+
+def test_one_failing_query_does_not_drop_the_others():
+    class Flaky:
+        def search(self, q, k, **_):
+            if q == "壞":
+                raise ValueError("維基百科搜尋失敗：HTTP 429")
+            return [{**WEB[0], "id": f"wiki:{q}"}]
+    errors = []
+    hits = gather_external([{"zh": "壞"}, {"zh": "好"}], Flaky(), 2, 4, errors)
+    assert [h["id"] for h in hits] == ["wiki:好"] and errors == ["壞：維基百科搜尋失敗：HTTP 429"]
+    with pytest.raises(ValueError):
+        gather_external([{"zh": "壞"}], Flaky(), 2, 4)
+
+
+def test_relevance_needs_every_query_token():
+    assert relevant("平均絕對誤差", "平均絕對誤差", "MAE 是……")
+    assert relevant("監督式學習", "監督學習", "監督學習是機器學習的一種")  # 一半二元組即可
+    assert not relevant("人在迴圈", "時間迴圈", "時間迴圈是一種情節")
+    assert relevant("LIME machine learning", "Explainable AI", "LIME is a technique in Machine Learning")
+    assert not relevant("LIME 機器學習", "青檸", "萊姆（lime）是柑橘屬植物")
+    assert not relevant("LIME", "ChromiumOS", "release timeline and sublime text")  # 須是完整的字
+    assert relevant("k-anonymity", "K-anonymity", "k-anonymity is a property")
+
+
+def search_page(pageid, title, extract, **extra):
+    return {"pageid": pageid, "index": pageid, "title": title, "lastrevid": pageid * 10, "extract": extract, **extra}
+
+
+def scripted_opener(*payloads, seen=None):
+    queue = list(payloads)
+    def opener(req, timeout):
+        if seen is not None:
+            seen.append(req)
+        return FakeResponse(json.dumps(queue.pop(0)).encode())
+    return opener
+
+
+def test_wikipedia_skips_disambiguation_and_unrelated_pages():
+    payload = {"query": {"pages": [
+        search_page(1, "Lime (消歧義)", "LIME 亦可指：", pageprops={"disambiguation": ""}),
+        search_page(2, "平均絕對誤差", "平均絕對誤差是迴歸指標")]}}
+    hits = WikipediaSearch(opener=scripted_opener(payload)).search("平均絕對誤差", 2)
+    assert [h["title"] for h in hits] == ["平均絕對誤差"]
+
+
+def test_domain_words_must_appear_in_intro_or_chosen_paragraph():
+    payload = {"query": {"pages": [
+        search_page(1, "ChromiumOS", "Chromium OS Lime 是開發代號"),
+        search_page(2, "可解釋人工智慧", "LIME 是機器學習中常見的局部解釋方法")]}}
+    hits = WikipediaSearch(opener=scripted_opener(payload)).search("LIME", 2, context="機器學習")
+    assert [h["title"] for h in hits] == ["可解釋人工智慧"]
+
+
+def test_wikipedia_focuses_on_paragraph_with_query_terms_when_intro_lacks_them():
+    seen = []
+    search = {"query": {"pages": [search_page(5, "Explainable artificial intelligence", "XAI intro only")]}}
+    full = {"query": {"pages": [{"pageid": 5, "extract":
+            "XAI intro, interpretable machine learning\n\nHistory\n\nLIME fits a local surrogate model in machine learning."}]}}
+    hits = WikipediaSearch(host="en.wikipedia.org", provider="wikipedia-en", id_prefix="wiki-en",
+                           opener=scripted_opener(search, full, seen=seen),
+                           sleep=lambda s: None).search("LIME", 2, context="machine learning")
+    assert hits[0]["text"] == "LIME fits a local surrogate model in machine learning."
+    assert hits[0]["query"] == "LIME machine learning" and "LIME+machine+learning" in seen[0].full_url
+    assert hits[0]["id"] == "wiki-en:5" and hits[0]["provider"] == "wikipedia-en"
+    assert "pageids=5" in seen[1].full_url and "exintro" not in seen[1].full_url
+
+
+def test_fallback_to_english_only_when_chinese_has_nothing_relevant():
+    class Fixed:
+        def __init__(self, hits):
+            self.hits, self.calls = hits, []
+        def search(self, q, k, context=None):
+            self.calls.append((q, context))
+            return self.hits
+    zh, en = Fixed([]), Fixed([{**WEB[0], "id": "wiki-en:5"}])
+    both = WikipediaWithFallback(zh, en)
+    assert [h["id"] for h in both.search("LIME", 2, context="機器學習", fallback_query="LIME",
+                                         fallback_context="machine learning")] == ["wiki-en:5"]
+    assert en.calls == [("LIME", "machine learning")]
+    zh.hits = [WEB[0]]
+    assert both.search("平均絕對誤差", 2, fallback_query="mean absolute error") == [WEB[0]]
+    assert en.calls == [("LIME", "machine learning")]  # 中文有結果就不查英文
+    zh.hits = []
+    assert both.search("x", 2) == []  # 沒有英文詞就不查
+
+
+def test_fallback_retries_english_without_domain_and_survives_chinese_errors():
+    class Script:
+        def __init__(self, answers):
+            self.answers, self.calls = answers, []
+        def search(self, q, k, context=None):
+            self.calls.append((q, context))
+            answer = self.answers.pop(0)
+            if isinstance(answer, Exception):
+                raise answer
+            return answer
+    zh = Script([[]])
+    en = Script([[], [{**WEB[0], "id": "wiki-en:9"}]])
+    hits = WikipediaWithFallback(zh, en).search("人在迴圈", 2, context="人工智慧",
+                                               fallback_query="human-in-the-loop", fallback_context="AI")
+    assert [h["id"] for h in hits] == ["wiki-en:9"]
+    assert en.calls == [("human-in-the-loop", "AI"), ("human-in-the-loop", None)]
+    assert zh.calls == [("人在迴圈", "人工智慧")]  # 中文不重試無領域詞
+
+    zh = Script([ValueError("維基百科搜尋失敗：HTTP 429")])
+    en = Script([[{**WEB[0], "id": "wiki-en:1"}]])
+    assert WikipediaWithFallback(zh, en).search("MAE", 2, fallback_query="mean absolute error")[0]["id"] == "wiki-en:1"
+    with pytest.raises(ValueError):
+        WikipediaWithFallback(Script([ValueError("x")]), Script([])).search("MAE", 2)
+
+
+def test_english_wikipedia_is_labelled():
+    en = [{**WEB[0], "id": "wiki-en:5", "provider": "wikipedia-en", "title": "Explainable AI"}]
+    assert build_evidence([], en)[0]["label"] == "外部 英文維基百科：Explainable AI"
 
 
 def test_wikipedia_parses_variant_title_and_pins_revision():
     seen = []
     payload = {"query": {"pages": [
-        {"pageid": 2, "index": 2, "title": "误差", "varianttitles": {"zh-tw": "誤差"}, "lastrevid": 7, "extract": "第二"},
+        {"pageid": 2, "index": 2, "title": "误差", "varianttitles": {"zh-tw": "誤差"}, "lastrevid": 7, "extract": "第二：平均絕對誤差"},
         {"pageid": 1, "index": 1, "title": "平均绝对误差", "varianttitles": {"zh-tw": "平均絕對誤差"},
-         "lastrevid": 9, "extract": "第一"},
+         "lastrevid": 9, "extract": "第一：平均絕對誤差"},
         {"pageid": 3, "index": 3, "title": "空", "extract": ""}]}}
     hits = WikipediaSearch(opener=opener_returning(payload, seen)).search("平均絕對誤差", 3)
     assert [h["title"] for h in hits] == ["平均絕對誤差", "誤差"]
     assert hits[0]["url"].endswith("curid=1&oldid=9") and hits[0]["source_type"] == "external"
     assert seen[0].get_header("Accept-language") == "zh-TW"
-    assert "ipas-learning-hub" in seen[0].get_header("User-agent")
+    assert "github.com/Cheryl33990/ipas-learning-hub" in seen[0].get_header("User-agent")
 
 
 def test_wikipedia_failure_and_bad_input_raise():
@@ -220,7 +363,7 @@ def test_wikipedia_failure_and_bad_input_raise():
 def test_wikipedia_rate_limit_waits_and_retries_once():
     from urllib.error import HTTPError
     calls, waits = [], []
-    ok = {"query": {"pages": [{"pageid": 1, "index": 1, "title": "t", "lastrevid": 2, "extract": "x"}]}}
+    ok = {"query": {"pages": [{"pageid": 1, "index": 1, "title": "MAE", "lastrevid": 2, "extract": "MAE x"}]}}
     def opener(req, timeout):
         calls.append(req)
         if len(calls) == 1:
@@ -278,10 +421,10 @@ def test_ask_records_web_failure_and_still_answers_from_textbook(monkeypatch):
     def fake_chat(cfg, system, user):
         calls.append(system)
         if "維基百科" in system:
-            return {"output": {"queries": ["MAE"]}}
+            return {"output": {"queries": [{"zh": "MAE", "en": "mean absolute error"}]}}
         return {"output": {"status": "supported", "segments": [{"text": "迴歸預測連續數值", "citations": ["subject1:3-36:0"]}]}}
     class Broken:
-        def search(self, q, k):
+        def search(self, q, k, **_):
             raise ValueError("維基百科搜尋失敗：offline")
     monkeypatch.setattr("ipas_hub.cli.chat_json", fake_chat)
     monkeypatch.setattr("ipas_hub.cli.make_search", lambda name: Broken())
@@ -289,6 +432,6 @@ def test_ask_records_web_failure_and_still_answers_from_textbook(monkeypatch):
     args = SimpleNamespace(llm_url="http://127.0.0.1:8000/v1", model="qwen", allow_remote=False,
                            web="wikipedia", web_k=4)
     record = ask("題目", BOOK, args)
-    assert record["web"]["error"].startswith("維基百科") and record["external_hits"] == []
+    assert record["web"]["error"] == "MAE：維基百科搜尋失敗：offline" and record["external_hits"] == []
     assert record["generation"]["basis"] == "textbook_only" and len(calls) == 2
     assert record["llm"] == {"base_url": "http://127.0.0.1:8000/v1", "model": "qwen", "remote": False}
