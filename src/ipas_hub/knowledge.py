@@ -14,6 +14,7 @@ from .guide import apply_patches, chunk_pages, read_pages
 from .text import tokenize
 
 SCHEMA_VERSION = 1
+VECTOR_POOL = 20  # k 上限與混合檢索各取前 20；外部向量儲存只需回傳這麼多
 
 
 def digest(value: bytes) -> str:
@@ -59,8 +60,11 @@ def build_index(root: Path, config_path: Path, output: Path,
         sha = digest(pdf.read_bytes())
         if sha != spec["sha256"]:
             raise ValueError(f"教材版本雜湊不一致：{source}")
-        patch_bytes = data_path(root, spec["patches"]).read_bytes()
-        patches = json.loads(patch_bytes)
+        if spec.get("patches"):
+            patch_bytes = data_path(root, spec["patches"]).read_bytes()
+            patches, patch_sha = json.loads(patch_bytes), digest(patch_bytes)
+        else:  # 勘誤替換檔含教材原文、不進版控；他人重現時可能沒有，此時明確記錄未套用
+            patches, patch_sha = [], None
         pages, report = apply_patches(read_pages(pdf), patches)
         if not pages or any(not p["applied_on"] for p in report):
             raise ValueError(f"教材頁面或勘誤套用失敗：{source}")
@@ -68,8 +72,8 @@ def build_index(root: Path, config_path: Path, output: Path,
         if len(labels) != len(set(labels)):
             raise ValueError(f"教材頁碼重複：{source}")
         sources.append({"id": source, "name": spec["name"], "version": spec["version"], "pdf": spec["pdf"],
-                        "sha256": sha, "patch_sha256": digest(patch_bytes),
-                        "patch_report": report, "pages": len(pages)})
+                        "sha256": sha, "patch_sha256": patch_sha, "patch_report": report,
+                        "errata": "applied" if patches else "not_applied", "pages": len(pages)})
         for chunk in chunk_pages(pages, size, stride):
             chunks.append({"id": f"{source}:{chunk.label}:{chunk.index}", "source": source,
                            "page": chunk.label, "text": chunk.text,
@@ -109,7 +113,8 @@ def build_index(root: Path, config_path: Path, output: Path,
 
 
 class KnowledgeBase:
-    def __init__(self, payload: dict, vectors=None, encoder=None):
+    def __init__(self, payload: dict, vectors=None, encoder=None, vector_search=None):
+        """vector_search(查詢向量, n) 回傳最近片段的序號；未提供時用記憶體中的向量計算（檔案索引）。"""
         payload = dict(payload)
         self.index_id = payload.pop("index_id")
         if digest(canonical(payload)) != self.index_id:
@@ -119,7 +124,7 @@ class KnowledgeBase:
         self.payload, self.chunks = payload, payload["chunks"]
         self.sources = {s["id"]: s for s in payload["sources"]}
         self.bm25 = BM25([tokenize(c["text"]) for c in self.chunks])
-        self.vectors, self.encoder = vectors, encoder
+        self.vectors, self.encoder, self.vector_search = vectors, encoder, vector_search
         meta = payload["embedding"]
         if vectors is not None:
             if (not meta or vectors.shape != (len(self.chunks), meta["dimensions"])
@@ -133,11 +138,17 @@ class KnowledgeBase:
         vectors = np.load(path.with_name("vectors.npy"), allow_pickle=False) if vector else None
         kb = cls(payload, vectors)
         if vector:
-            meta = payload["embedding"]
-            kb.encoder, revision = local_encoder(meta["name"], meta["revision"])
-            if revision != meta["revision"]:
-                raise ValueError("查詢模型 revision 與索引不同")
+            kb.attach_encoder()
         return kb
+
+    def attach_encoder(self) -> None:
+        """載入索引記錄的嵌入模型（只用本機快取，revision 須相同）。"""
+        meta = self.payload["embedding"]
+        if not meta:
+            raise ValueError("此索引沒有向量，無法使用向量或混合檢索")
+        self.encoder, revision = local_encoder(meta["name"], meta["revision"])
+        if revision != meta["revision"]:
+            raise ValueError("查詢模型 revision 與索引不同")
 
     def search(self, query: str, k: int = 5, method: str = "bm25") -> list[dict]:
         if not query.strip() or not (1 <= k <= 20):
@@ -149,13 +160,16 @@ class KnowledgeBase:
                          key=lambda i: (-lexical[i], i))
         ranks = keyword
         if method in {"vector", "hybrid"}:
-            if self.vectors is None or self.encoder is None:
+            if (self.vectors is None and self.vector_search is None) or self.encoder is None:
                 raise ValueError("本索引或查詢未載入向量模型")
             qv = np.asarray(self.encoder.encode([query], normalize_embeddings=True))[0]
-            if qv.shape != (self.vectors.shape[1],) or not np.isfinite(qv).all():
+            if qv.shape != (self.payload["embedding"]["dimensions"],) or not np.isfinite(qv).all():
                 raise ValueError("查詢向量維度不符或數值無效")
-            similarities = self.vectors @ qv
-            vector_rank = sorted(range(len(self.chunks)), key=lambda i: (-similarities[i], i))
+            if self.vector_search is not None:
+                vector_rank = self.vector_search(qv, VECTOR_POOL)
+            else:
+                similarities = self.vectors @ qv
+                vector_rank = sorted(range(len(self.chunks)), key=lambda i: (-similarities[i], i))
             if method == "vector":
                 ranks = vector_rank
             else:

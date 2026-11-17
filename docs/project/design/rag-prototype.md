@@ -105,6 +105,24 @@ updated: 2026-11-17
 - 測法：合成測試涵蓋缺答案時修正一次、修正後仍缺的註記、非選擇題與依據不足不要求、題目用詞的註記、圓括號 id 的清除。實機以相同 8 題重跑，結果見 progress。
 - 已知限制：答案選項以字串比對讀取，模型寫成其他格式就讀不到；題目用詞的 ⚠ 數量沒有減少，只是說明來源。
 
+## 向量儲存 v0.7：PostgreSQL＋pgvector（2026-11-17）
+
+使用者決定加入 PostgreSQL＋pgvector，讓他人可依 repo 重現，並保持通用以便日後用於其他主題或公司文件。設計經使用者確認：檔案索引為版本來源、資料庫路徑預設混合檢索、BM25 計算留在程式內。三種方法的比較見 progress 第五十九筆。
+
+- 流程：`index`（PDF → 檔案索引，index_id 與雜湊）→ `pg-load --index <index.json>`（或 `index --to-pg` 一次做完）→ `search／ask／evaluate／serve --store pg`。`--store` 預設 file，既有用法不變。
+- 資料表（src/ipas_hub/pgstore.py）：
+  - `kb_index`：index_id、載入時間、嵌入模型與 revision、維度、manifest（jsonb：切塊設定、程式與 lockfile 版本、向量雜湊等）。
+  - `kb_source`：index_id、順序、source_id、name、version、sha256、metadata（jsonb：PDF 路徑、勘誤報告、是否套用勘誤、頁數）。
+  - `kb_chunk`：index_id、順序、chunk_id、source_id、勘誤後文字、metadata（jsonb：章節頁碼、PDF 頁）、embedding（vector，可為空）。
+  - 章節頁碼、PDF 頁、勘誤都在 jsonb，不是固定欄位；其他文件換 metadata 內容即可，不必改表。
+- 驗證：載入前與讀回時都重組成與檔案索引相同的內容，重算 index_id 與向量雜湊；資料庫內容被改過就拒絕使用。驗證後不把向量留在記憶體。
+- 檢索：BM25 在程式內計算（Postgres 內建全文檢索不切中文，排序方式也不是 BM25）；向量近鄰在資料庫以餘弦距離計算，距離相同依片段順序，取前 20 筆。KnowledgeBase 的向量來源可替換（記憶體或資料庫），排序與合併邏輯共用。
+- 預設：兩種儲存都預設 hybrid（使用者 2026-11-17 決定，取代先前 file 維持 bm25 的做法）。未指定 --method 而索引沒有向量時，自動改用 bm25 並在 stderr 提醒，結果的 method 欄記實際使用的方法；明確指定 vector／hybrid 時不退回，照常報錯。`--store pg` 未指定 `--index` 時取最近載入且含向量的索引。
+- 連線：只讀環境變數 PG_DSN，密碼放 PGPASSWORD；不寫入執行紀錄。Compose 的 `db` 服務（--profile db）映像以 digest 固定，只綁 127.0.0.1:5433（PG_PORT 可改），資料在 volume pg-data，密碼來自 .env 的 PG_PASSWORD，未設定時容器拒絕啟動。
+- 勘誤可選：設定檔的來源可不指定勘誤檔，索引記錄 `errata: not_applied`，供沒有勘誤替換檔（含教材原文、不在 repo）的人重現；config/knowledge-base.no-errata.json 為此用途。
+- 測法：不需資料庫的測試涵蓋資料列互轉、竄改與部分向量拒絕、向量來源替換、依儲存的預設方法、缺 PG_DSN 與缺 --index 的錯誤、無勘誤檔建索引；需資料庫的測試（PG_TEST_DSN）涵蓋重複載入略過、讀回內容相同、取最近含向量的索引、資料庫與檔案索引排序相同、載入後被改即拒絕，CI 以 service container 執行。實機結果見 progress 第六十筆。
+- 已知限制：每次整份重建與載入，不支援增量更新；大量文件時 BM25 需改在資料庫內做（例如存程式切好的二元組），尚未實作；未建 HNSW 等近似索引（目前 266 塊用精確搜尋）；serve 的多執行緒共用一條資料庫連線，請求會排隊。
+
 ## CI 與交付
 
 CI 使用合成資料跑單元／流程測試、Compose config、Docker test stage 與 runtime --help，不把官方 PDF 或模型送到 hosted runner。手動 delivery workflow 只重建測試與 commit 標籤映像並記 image ID，不推送、不部署，尚不是生產 CD。Python 與 uv 基底映像已固定實際建置取得的 digest；vLLM 映像已以 digest 固定、模型以 revision 固定；hosted CI 不啟動模型。容器實測與真實 LLM 執行必須各有證據，不能從 YAML 存在推定通過。

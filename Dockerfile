@@ -8,16 +8,16 @@ ENV PYTHONUNBUFFERED=1 PYTHONIOENCODING=utf-8 UV_LINK_MODE=copy \
     HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HOME=/models/huggingface \
     PATH="/app/.venv/bin:$PATH" IPAS_CODE_VERSION=$CODE_VERSION
 COPY pyproject.toml uv.lock ./
-RUN if [ "$EMBEDDINGS" = "true" ]; then uv sync --locked --extra embeddings --no-dev --no-install-project; \
-    else uv sync --locked --no-dev --no-install-project; fi
+RUN if [ "$EMBEDDINGS" = "true" ]; then uv sync --locked --extra pg --extra embeddings --no-dev --no-install-project; \
+    else uv sync --locked --extra pg --no-dev --no-install-project; fi
 COPY src ./src
 COPY config ./config
-RUN if [ "$EMBEDDINGS" = "true" ]; then uv sync --locked --extra embeddings --no-dev --no-editable; \
-    else uv sync --locked --no-dev --no-editable; fi
+RUN if [ "$EMBEDDINGS" = "true" ]; then uv sync --locked --extra pg --extra embeddings --no-dev --no-editable; \
+    else uv sync --locked --extra pg --no-dev --no-editable; fi
 
 FROM base AS test
 COPY tests ./tests
-RUN uv sync --locked --group dev --no-editable \
+RUN uv sync --locked --extra pg --group dev --no-editable \
     && python -m pytest -p no:cacheprovider
 
 FROM base AS runtime

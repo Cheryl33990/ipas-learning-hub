@@ -37,6 +37,61 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
     └── workflow/               工作指南、規則與空白範本
 ```
 
+## 從零重現：教材 → PostgreSQL＋pgvector → 聊天介面（Windows PowerShell）
+
+教材、試題、索引與模型都不在 repo 內，需自行下載。以下步驟只在本機執行，所有服務只綁 127.0.0.1。需要：Docker Desktop、[uv](https://docs.astral.sh/uv/)、約 10 GB 顯存的 NVIDIA 顯示卡（本機 LLM 用）、約 6 GB 磁碟（嵌入模型 4.3 GB 加映像）。
+
+1. 下載兩份初級學習指引到設定檔指定的位置（來源：[官方學習資源頁](https://ipd.nat.gov.tw/ipas/certification/AIAP/learning-resources)）。建索引時會比對 config/knowledge-base.json 的 SHA-256，檔案版本不同就會停止。
+
+   ```powershell
+   $base = 'https://www.ipas.org.tw/api/proxy/uploads/certification_resource/bf93f438f7be48d295c1b40a34d79f3d/'
+   New-Item -ItemType Directory -Force data/raw/guide, data/raw/guide-subject2 | Out-Null
+   Invoke-WebRequest ($base + 'AI應用規劃師(初級)-學習指引-科目1_人工智慧基礎概論1141203_20251222172144.pdf') -OutFile 'data/raw/guide/初級-學習指引-科目1_人工智慧基礎概論1141203.pdf'
+   Invoke-WebRequest ($base + 'AI應用規劃師(初級)-學習指引-科目2_生成式AI應用與規劃114123_20251222172159.pdf') -OutFile 'data/raw/guide-subject2/初級-學習指引-科目2_生成式AI應用與規劃114123_20251222172159.pdf'
+   ```
+
+2. 勘誤：官方勘誤要先整理成替換字串檔（data/index/errata_patches.json 等）才能套用。這些檔含教材原文，不在 repo 內。沒有的話，改用 `config/knowledge-base.no-errata.json` 建索引：索引會記錄 `errata: not_applied`，勘誤頁的回答會依更正前的文字。
+3. 安裝相依並下載嵌入模型（BAAI/bge-m3，約 4.3 GB，只需一次；程式之後只讀本機快取、不自動下載）：
+
+   ```powershell
+   uv sync --extra pg --extra embeddings
+   uv run hf download BAAI/bge-m3
+   ```
+
+4. 在 repo 根目錄的 `.env`（不進版控）設定資料庫密碼與 LLM 模型所在的 volume，例如：
+
+   ```text
+   PG_PASSWORD=自行設定的密碼（英數字）
+   LLM_MODEL_VOLUME=存放 Hugging Face 快取的 Docker volume 名稱
+   ```
+
+5. 啟動資料庫，建索引並載入：
+
+   ```powershell
+   docker compose --profile db up -d db
+   $env:PG_DSN = 'host=127.0.0.1 port=5433 dbname=ipas user=ipas'
+   $env:PGPASSWORD = (Select-String '^PG_PASSWORD=(.*)' .env).Matches[0].Groups[1].Value
+   uv run python -m ipas_hub.cli index --embedding-model BAAI/bge-m3 --to-pg            # 有勘誤替換檔
+   # uv run python -m ipas_hub.cli index --config config/knowledge-base.no-errata.json --embedding-model BAAI/bge-m3 --to-pg   # 沒有時
+   ```
+
+   `index` 先在 data/index/kb/<index_id>/ 建檔案索引（版本來源，可保留舊版回復），`--to-pg` 再驗證後載入資料庫；也可分開執行 `pg-load --index <index.json>`。同一份索引重複載入會略過。
+
+6. 啟動本機 LLM 與聊天介面，提問：
+
+   ```powershell
+   docker compose --profile llm up -d vllm      # 首次約 2 分鐘
+   docker compose --profile ui up -d ui
+   $env:LLM_MODEL = 'qwen3-vl-8b-fp8'
+   uv run python -m ipas_hub.cli serve --store pg
+   ```
+
+   開 http://localhost:3001 建立工作區後提問（不要上傳文件）。預設混合檢索（關鍵字＋向量）；`--store pg` 未指定 `--index` 時用最近載入且含向量的索引。也可以只在終端機問：`uv run python -m ipas_hub.cli ask --store pg --query "題目" --format text`。
+
+用完：`docker compose --profile llm stop vllm` 釋放顯存；資料庫資料留在 volume `pg-data`。
+
+不想裝資料庫或不想下載嵌入模型時：略過步驟 3 的 `hf download` 與步驟 5 的資料庫，`index` 不加 `--embedding-model`、`--to-pg`，提問時加 `--index <index.json>`（預設 `--store file`）。這樣建出的索引沒有向量，程式會自動改用 BM25 關鍵字檢索並在終端機提醒；明確指定 `--method hybrid` 或 `vector` 時則會報錯。
+
 ## 執行探索二
 
 需要 [uv](https://docs.astral.sh/uv/)。先把教材、試題各一個 PDF 放到 data/raw/guide/ 與 data/raw/exam/，然後：

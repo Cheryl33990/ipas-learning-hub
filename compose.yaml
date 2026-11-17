@@ -7,6 +7,9 @@ services:
     environment:
       LLM_BASE_URL: http://vllm:8000/v1
       LLM_MODEL: ${LLM_SERVED_NAME:-qwen3-vl-8b-fp8}
+      # 只在使用 --store pg 時用到；資料庫服務見下方 db
+      PG_DSN: host=db port=5432 dbname=ipas user=ipas
+      PGPASSWORD: ${PG_PASSWORD:-}
     volumes:
       - ./data/raw:/app/data/raw:ro
       - ./data/index:/app/data/index
@@ -67,7 +70,26 @@ services:
       VECTOR_DB: lancedb
     volumes:
       - ui-storage:/app/server/storage
+  # PostgreSQL＋pgvector（--profile db）。存放已驗證的索引片段與向量，資料在 pg-data volume；只綁本機。
+  # 密碼由 .env 的 PG_PASSWORD 提供；未設定時容器會拒絕啟動，不使用預設密碼。
+  db:
+    image: pgvector/pgvector:0.8.6-pg17@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f
+    profiles: [db]
+    environment:
+      POSTGRES_USER: ipas
+      POSTGRES_DB: ipas
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-}
+    ports:
+      - "127.0.0.1:${PG_PORT:-5433}:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ipas -d ipas"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 volumes:
+  pg-data:
   ui-storage:
   hf-cache:
   llm-models:
