@@ -54,7 +54,7 @@ uv run python -m ipas_hub.explore2
 
 目前交付範圍、最新驗證與三組試用方式見[交付與試用入口](docs/project/validation/2026-11-16-handoff-readiness.md)。
 
-目前先完成檢索，LLM 下一步再選型，尚無自動解題的品質驗收或網頁介面。[設計與限制](docs/project/design/rag-prototype.md)記錄執行契約，[驗證紀錄](docs/project/validation/2026-11-16-docker-retrieval.md)區分本機、容器與尚未執行的 CI／LLM 測試。
+第三輪先完成檢索；生成見下方第四輪。尚無自動解題的品質驗收或網頁介面。[設計與限制](docs/project/design/rag-prototype.md)記錄執行契約，[驗證紀錄](docs/project/validation/2026-11-16-docker-retrieval.md)區分本機、容器與尚未執行的 CI／LLM 測試。
 
 Docker Desktop 使用 Linux containers。來源清單是 config/knowledge-base.json：兩份 PDF、版本與 SHA-256 都明列；所有勘誤必須套用成功才建立索引。另需本機的 data/index/errata_patches.json（科目 1）與 data/index/subject2-errata-patches.json（科目 2）。這兩份含原文、不進版控；新環境應依官方勘誤表建立陣列，每筆欄位為 id、old、new。缺檔或未命中更正字串會明確失敗，不略過。
 
@@ -87,12 +87,31 @@ uv run python -m ipas_hub.cli index --embedding-model BAAI/bge-m3
 
 基本映像不含教材、題目、索引、模型或 Git，只在執行時掛載 data/；每次索引另存內容版本目錄，查詢及評估紀錄寫入 data/runs/。可指定舊 index.json 回復資料版本，模型 revision 與索引不符會拒絕向量查詢。
 
+## 第四輪：端到端 RAG（教材＋維基百科＋本機 vLLM）
+
+`ask` 指令把題目同時送去教材檢索與外部搜尋，再由本機 LLM 產生帶引用的解答。每個引用都由程式標明是教材（科目、頁碼）還是外部（維基百科條目與固定版本網址）；模型引用不存在的片段時給一次修正機會，仍錯就拒絕顯示。程式只檢查引用確實存在，不保證解答正確。
+
+1. 準備模型：vLLM 從一個 Docker volume 唯讀載入 Hugging Face 快取，離線執行、不自動下載。在 repo 根目錄建立 `.env`（不進版控）指定 volume 名稱，例如 `LLM_MODEL_VOLUME=dev_infra_qwen_trial_cache`。預設模型為 Qwen/Qwen3-VL-8B-Instruct-FP8（只載入文字部分）。
+2. 啟動與提問（PowerShell）：
+
+```powershell
+docker compose --profile llm up -d vllm      # 首次載入約 2 分鐘，GPU 需約 10 GB
+docker compose run --rm app ask --index $kbIndex --query-file data/review/question.txt --format text
+docker compose --profile llm stop vllm       # 用完釋放顯存
+```
+
+不用 Docker 時，主機也可直接執行：`$env:LLM_MODEL='qwen3-vl-8b-fp8'; .venv/Scripts/python.exe -m ipas_hub.cli ask --index <index.json> --query-file <題目檔> --format text`。
+
+- 外部搜尋：`--web wikipedia`（預設）或 `--web none`。搜尋介面在 src/ipas_hub/websearch.py，新增提供者只要回傳相同欄位。
+- 換成 OpenAI 等遠端 API：設定 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY`，並加 `--allow-remote`。預設拒絕本機以外的端點，避免誤用付費服務；金鑰不寫入執行紀錄。
+- 執行紀錄（含題目、片段、搜尋詞、模型與耗時）寫入 data/runs/。
+
 ## CI/CD 與 MLOps 邊界
 
 - CI：PR／main 推送時，用合成資料跑 Python 測試、Compose 設定驗證、容器測試及斷網啟動；官方原文與模型不送到 hosted runner。
 - CD：手動 delivery workflow 重建測試與 commit 標籤映像、記錄 image ID；不推送 registry、不部署，屬交付檢查而非生產 CD。
 - MLOps：索引保存來源／勘誤雜湊、切塊設定、程式及 lockfile 識別、embedding snapshot 與向量雜湊；執行紀錄保存方法、版本、結果與延遲。尚未引入模型註冊、漂移監控或自動重訓平台。
-- 可選 llm Compose profile 與 Ollama adapter 僅為後續連接草案；本輪沒有選用或啟動 LLM，不動既有其他專案服務。
+- llm Compose profile 為本機 vLLM，映像以 digest 固定、模型以 revision 固定；CI 只驗證 Compose 設定，不在 hosted runner 啟動模型。
 
 ## 檢查與產生解析
 

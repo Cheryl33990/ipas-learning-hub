@@ -5,7 +5,8 @@ services:
       target: runtime
     image: ipas-hub:local
     environment:
-      OLLAMA_URL: http://ollama:11434
+      LLM_BASE_URL: http://vllm:8000/v1
+      LLM_MODEL: ${LLM_SERVED_NAME:-qwen3-vl-8b-fp8}
     volumes:
       - ./data/raw:/app/data/raw:ro
       - ./data/index:/app/data/index
@@ -14,15 +15,37 @@ services:
       - ./data/review:/app/data/review:ro
       - hf-cache:/models/huggingface
     command: ["--help"]
-  ollama:
-    image: ollama/ollama:0.13.0
+  # 本機生成模型。只在 --profile llm 啟動；模型從既有 volume 唯讀載入、離線執行，不自動下載。
+  # 以 .env 的 LLM_MODEL_VOLUME 指定存放模型的 volume（例如電腦上已下載好的 Hugging Face 快取）。
+  vllm:
+    image: vllm/vllm-openai:v0.26.0@sha256:ffb2d59b1c059a5bd8d781320c9f5189de8293693b7d95da54befddaa54abf52
     profiles: [llm]
+    gpus: all
     environment:
-      OLLAMA_NO_CLOUD: "1"
-    ports:
-      - "127.0.0.1:11434:11434"
+      HF_HOME: /hf
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      # WSL2（Docker Desktop）預設關閉 pinned memory，此版 vLLM 需要它才能啟動
+      VLLM_WSL2_ENABLE_PIN_MEMORY: "1"
     volumes:
-      - ollama-models:/root/.ollama
+      - llm-models:/hf:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    command:
+      - ${LLM_HF_MODEL:-Qwen/Qwen3-VL-8B-Instruct-FP8}
+      - --revision=${LLM_HF_REVISION:-9cdc6310a8cb770ce18efaf4e9935334512aee45}
+      - --served-model-name=${LLM_SERVED_NAME:-qwen3-vl-8b-fp8}
+      # 16 GB 顯示卡、桌面程式共用顯存時的保守設定：只載入文字模型、限制上下文與並行數
+      - --language-model-only
+      - --max-model-len=6144
+      - --kv-cache-dtype=fp8
+      - --gpu-memory-utilization=${LLM_GPU_UTIL:-0.62}
+      - --max-num-seqs=4
+      - --enforce-eager
+      - --host=0.0.0.0
+      - --port=8000
 volumes:
   hf-cache:
-  ollama-models:
+  llm-models:
+    external: true
+    name: ${LLM_MODEL_VOLUME:-ipas-llm-models}
