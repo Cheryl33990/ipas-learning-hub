@@ -14,6 +14,10 @@ updated: 2026-11-16
 
 目前進度（第三十八筆）：使用者已批准最終 29 檔 diff 的 commit／push／Draft PR；已提交並推送 b38e031，建立 [Draft PR #3](https://github.com/Cheryl33990/ipas-learning-hub/pull/3)。目前為程式審查與雲端 CI 待確認階段；三組試用已回覆，本輪先前 Windows／Docker 各37項測試通過。上方及歷史紀錄按當時狀態保留，最新動作以此與末筆為準。本筆交付紀錄為提交後補記，尚未提交。
 
+目前進度（第四十九筆）：LibreChat 與 AnythingLLM 內建 RAG 已用相同 6 題加勘誤探針實測並與本專案並排，見末筆；等使用者決定是否保留自建檢索、補 PDF 頁碼及第二步的平台。compose.yaml 與本筆未提交。
+
+目前進度（第四十八筆）：第四十七筆補記經 PR #8 合併為 cac0f1c，main CI success；網頁介面平台的授權已查證並提出候選比較，等使用者選定實測平台與同意下載映像。本筆尚未提交，見末筆。
+
 目前進度（第四十七筆）：PR #7 已合併為 7ecb211，main CI success；下一步在新對話做網頁介面選型（現成平台＋本專案 RAG 端點）。本筆補記與 brief 修訂尚未提交。
 
 目前進度（第四十六筆）：PR #6 已合併為 877feb4；在 feat/web-search-context 實作外部搜尋前後文與英文維基備援，未提交，見末筆。
@@ -56,7 +60,7 @@ updated: 2026-11-16
 
 | 任務／本輪範圍 | 目前階段 | 已有最小產出／證據連結與版本 | 未達條件／待確認或風險 | 前進判斷 | 下一個最小動作／負責人 |
 |---|---|---|---|---|---|
-| 第七輪：網頁介面（現成平台＋本專案 RAG 端點） | 選擇前（使用者 2026-11-17 決定在新對話進行） | brief 第四輪「網頁介面」列 | 平台未選；授權須可商用且無人數限制；與平台內建 RAG 的比較未做 | 使用者已選定方向 | 新對話：先提交第四十七筆補記，再釐清網頁介面範圍 |
+| 第七輪：網頁介面（現成平台＋本專案 RAG 端點） | 選擇（第一步：平台選型與並排比較） | brief 第四輪「網頁介面」列；授權查證見第四十八筆、並排實測見第四十九筆 | 平台畫面上的引用呈現未驗證；樣本僅 6 題加 1 題探針且平台未調參；使用者尚未決定 | 並排結果見第四十九筆：平台內建 RAG 無勘誤、無外部來源、依據不足仍作答；LibreChat 有 PDF 頁序 | 使用者決定是否保留自建檢索、補 PDF 頁碼及第二步平台／使用者 |
 | 第六輪：外部搜尋前後文＋英文維基備援（v0.4） | 已合併（2026-11-17，PR #7 → 7ecb211） | 分支 feat/web-search-context（基於 877feb4）；[設計 v0.4](design/rag-prototype.md)；77 passed（Windows）；同 6 題實跑見第四十六筆 | 6 題結果不代表泛化，第 15 題前後結果不穩；維基 429 限流；中文相關性規則仍放過部分無關頁；Docker 未跑 | 同 6 題由 3 對／1 錯／2 不足變為 6 題皆選出官方答案 | 無（已合併；限制保留於第四十六筆） |
 | 第五輪：逐句引用＋字詞核對（生成契約 v0.3） | 已合併（2026-11-17，PR #6 → 877feb4） | 分支 feat/sentence-citations（基於 637944a）；[設計 v0.3](design/rag-prototype.md)；67 passed（Windows）；vLLM 實跑 6 題（第 28 題＋8 題以外 5 題），見第四十五筆 | 字詞核對會漏標（第 15 題掛到 RANSAC 條目未被標出）；檢索／維基搜尋對 LIME 等詞找不到依據，2 題回依據不足；1 題證據在手仍推理錯（第 15 題）；Docker 未跑 | 逐句標示已可用；核對只是輔助提示 | 無（已合併；限制轉入第六輪） |
 | 第四輪：端到端 RAG（教材＋維基百科＋vLLM） | 已合併（2026-11-17） | PR #4：ef67cea → 合併提交 7c74cbe；PR CI 與 main CI（run 44004961566）皆 success；57 passed；8 題實跑與使用者試用見第四十一、四十二筆 | 引用只檢查 id、不檢查內容是否支持該句；8 題不代表泛化；向量／混合檢索未做端到端；pgvector 未做；無獨立真人程式審查 | 合併完成，不等於品質驗收或結案 | 新對話接續：先提交本筆補記，再選下一項（建議引用逐句化與內容核對） |
@@ -576,3 +580,46 @@ updated: 2026-11-16
 - AI 回顧（供參考，未經使用者確認）：勘誤、教材頁碼、來源區分、中英維基備援與依據不足處理是平台內建 RAG 不易提供的部分；多輪 8 題人工判定、支持範圍 v2、同頁上限實驗與 MAE 登錄偏研究性質，對好用貢獻小。從未以相同題目比較平台內建 RAG，自建是否較好尚無證據。
 - 使用者指出：引用直接給 PDF 第幾頁最好用，教材章節頁碼（如 3-36）不算亮點。查證：索引只存章節頁碼，未存 PDF 頁序（guide.read_pages 未保留）。使用者決定先不補，併入下一輪：並排比較以「引用能否對回 PDF 頁碼」為首要項目，比較後再決定是否保留自建檢索及補 PDF 頁碼（兩者並列，並可連到 檔案.pdf#page=N）。
 - 下一步：使用者將開新對話進行網頁介面選型；建議先以小 PR 提交本筆補記與 brief 修訂。
+
+
+### 2026-11-17 第四十八筆（版本：main cac0f1c；平台授權查證與候選比較）
+
+- 接手核對：PR #5–#7 皆 MERGED，本機與 origin main 同為 7ecb211，main CI（run 44010228232）success。本輪未跑 pytest、vLLM 或任何題目。
+- 使用者同意後：第四十七筆補記與 brief 修訂提交為 8ffe2d5，開 [PR #8](https://github.com/Cheryl33990/ipas-learning-hub/pull/8)，PR CI（run 44025786830）pass，以 merge commit 合併，mergedAt 2026-11-17T05:41:47Z，合併提交 cac0f1c；合併後 main CI（run 44025899215）success。
+- 授權查證（2026-11-17，以 GitHub API 讀各 repo 預設分支的 LICENSE 原文）：
+  - 通過：AnythingLLM v1.19.0（MIT）、LibreChat v0.8.8（MIT）、RAGFlow v1.0.0（Apache-2.0）、Kotaemon v0.12.0（Apache-2.0，最後 commit 2026-05-30）。Onyx v5.1.3 為 ee 目錄企業授權、其餘 MIT。
+  - 不通過：Open WebUI v0.13.3（第 4 條：30 天內使用者超過 50 人不得移除或更改品牌）、Dify 1.19.0（多租戶需授權、不得移除 LOGO）、LobeHub v2.3.3（衍生作品需商業授權）、FastGPT v4.17.4（多租戶 SaaS 需授權、不得移除 LOGO）。Chainlit repo 已封存，排除。
+- 功能（只讀原始碼與 README，未實跑）：AnythingLLM 匯入 PDF 時把各頁合併、不保留頁碼；LibreChat 檔案引用帶 pages 並顯示頁碼，原始碼找不到 `#page=` 連結，且檔案檢索是 agent 工具，需要 tool calling；Open WebUI 的引用視窗會連到 `檔案#page=N`（授權不通過，僅供參考做法）；RAGFlow 官方建議 4 核／16 GB RAM／50 GB 磁碟；所有平台的內建 RAG 都需要嵌入模型。
+- 環境查證：compose.yaml 的 vLLM 未開 tool calling，max-model-len 為 6144；本機 Hugging Face 快取有 models--BAAI--bge-m3。
+- 映像壓縮後大小（docker manifest inspect，尚未下載）：LibreChat 0.99 GB、其 RAG API lite 0.59 GB、mongo 8.0.20 0.31 GB、meilisearch v1.35.1 0.11 GB、pgvector 0.8.0-pg15 0.16 GB；AnythingLLM 1.19 GB。
+- 使用者決定：嵌入模型用本機已快取的 bge-m3，不下載新模型。
+- AI 建議（待使用者確認）：實測 LibreChat 與 AnythingLLM，兩者是分開實測、並排比較的兩個候選，不是合併使用；最後只留一個當介面。
+- 結束階段：選擇（第一步）。下一步：使用者選定實測平台並同意映像下載與 vLLM 開 tool calling。
+
+
+### 2026-11-17 第四十九筆（版本：分支 chore/platform-compare，cac0f1c 加未提交變更；平台內建 RAG 並排實測）
+
+- 使用者同意：實測 LibreChat 與 AnythingLLM、下載六個映像、替 vLLM 加 tool calling。compose.yaml 的 vllm 新增 `--enable-auto-tool-choice`、`--tool-call-parser=hermes`（未提交）。
+- 環境：vLLM（Qwen3-VL-8B-Instruct-FP8）與本專案相同；嵌入用本機快取 bge-m3，以臨時腳本包成只綁 127.0.0.1 的 /v1/embeddings（CPU，不下載）。臨時腳本、平台設定與全部輸出只在 data/evaluation/platform-compare/ 與 data/platforms/librechat/，不進版控。
+- 平台版本與設定：AnythingLLM `mintplexlabs/anythingllm:latest`（預設工作區設定：topN 4、相似度門檻 0.25、chat 模式）；LibreChat `librechat:latest`＋rag-api lite＋mongo＋pgvector（未啟用 meilisearch），agent 只開 file_search，temperature 0。兩者皆用預設切塊，未調參。映像解壓後大小：AnythingLLM 5.15 GB、LibreChat 4.3 GB、rag-api 2.52 GB、mongo 1.28 GB。記憶體約 AnythingLLM 0.64 GB、LibreChat 四個容器合計約 0.84 GB。
+- 題目：與第四十五、四十六筆相同的 6 題（28、7、15、22、36、45），各跑一次；另加一題勘誤探針（平均差定義，科目 1 頁 3-25）。本專案 6 題沿用 data/evaluation/e2e-v04/out/ 的既有輸出，本輪只重跑勘誤探針（--web none）。
+- 結果（AI 依官方答案與字串比對判讀，未經人工逐題核對）：
+  1. PDF 頁碼：LibreChat 每個來源帶 PDF 頁序（如 3-36 回報第 42 頁，已用 pypdf 核對相符）；介面上是否能點開到該頁只讀過原始碼（顯示頁碼、無 `#page=`），未在畫面驗證。AnythingLLM 來源只有檔名，無頁碼。本專案只有章節頁碼。
+  2. 選項：AnythingLLM 6／6 與官方一致，但 5 題只回一行選項、沒有理由。LibreChat 4／6 一致（7、22、36、45）；第 28、15 題把問題改寫成檢索詞後寫成概念說明，沒有選出選項。本專案 v0.4 為 6／6（既有結果）。
+  3. 教材與外部來源：兩個平台都沒有外部來源，也沒有行內引用標記（LibreChat 的回答 0 個引用錨點）；本專案逐句標 [教材n]／[外部n]。
+  4. 依據不足：兩個平台取回的片段多半不含題目關鍵詞（MAE、Human-in-the-loop、LIME、Permutation、半監督、k-匿名皆 0 個片段命中），仍直接作答且未說明依據不足；LibreChat 第 15 題還寫「ipas-subject1.pdf 提到 k-匿名化技術」，但取回片段沒有這個詞。本專案對同樣缺口改查維基並標為外部。
+  5. 勘誤：AnythingLLM 回答勘誤前的舊定義（片段為舊文字）；LibreChat 取回舊文字片段，回答只有「根據教材內容，」即中斷（原因未查）；本專案回答勘誤後文字並標 3-25。
+  - 耗時：AnythingLLM 1–10 秒；LibreChat 3–21 秒；本專案 3–22 秒（既有紀錄）。
+- 限制：只有 6 題加 1 題探針、各跑一次；平台用預設設定，未嘗試調整提示詞、切塊或 topN；以 API 呼叫，未檢視實際畫面；經 Git Bash 上傳造成 AnythingLLM 中文檔名亂碼，屬操作問題，不是平台缺陷；選項一致不代表理由正確。
+- 驗證：compose config 通過；Windows 77 passed（本輪實跑）；勘誤探針確認加上 tool calling 參數後 ask 仍可正常執行。Docker test 目標與 hosted CI 本輪未跑。
+- 收尾：vLLM 與嵌入端點已停止；兩個平台的容器仍在執行，供使用者檢視。
+- AI 建議（待使用者決定）：保留自建檢索；補 PDF 頁序（與章節頁碼並列，可連到 檔案.pdf#page=N）；第二步的介面建議 LibreChat。
+- 結束階段：選擇（第一步比較完成，等使用者決定）。
+
+
+### 2026-11-17 第五十筆（版本：分支 chore/platform-compare；使用者決定與清理）
+
+- 使用者決定：第二步的介面用 AnythingLLM；沒選上的平台移除以釋放記憶體與容量；同意提交 compose.yaml 與 progress 變更並開 PR（合併另行確認）。
+- 使用者指出官方學習資源頁還有其他素材當時未下載，現在可以擴充，用來改善「樣本小」的限制。要下載哪些檔案尚未確認。
+- 清理：LibreChat 的四個容器、四個資料卷、網路與五個映像（librechat、rag-api lite、mongo、meilisearch、pgvector）已移除；本機設定目錄 data/platforms/librechat 已刪除。實測輸出保留在 data/evaluation/platform-compare/。AnythingLLM 容器與資料卷保留。
+- 未決：是否補 PDF 頁碼，使用者尚未明確回覆。
