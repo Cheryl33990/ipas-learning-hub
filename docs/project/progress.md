@@ -14,6 +14,8 @@ updated: 2026-11-16
 
 目前進度（第三十八筆）：使用者已批准最終 29 檔 diff 的 commit／push／Draft PR；已提交並推送 b38e031，建立 [Draft PR #3](https://github.com/Cheryl33990/ipas-learning-hub/pull/3)。目前為程式審查與雲端 CI 待確認階段；三組試用已回覆，本輪先前 Windows／Docker 各37項測試通過。上方及歷史紀錄按當時狀態保留，最新動作以此與末筆為準。本筆交付紀錄為提交後補記，尚未提交。
 
+目前進度（第五十四筆）：第二步已提交為 9814af5、開 PR #10（CI pass，待使用者同意合併）。PDF 頁碼與教材連結在分支 feat/pdf-page-links 實作完成並實機核對，未提交；AnythingLLM 畫面上點連結尚未驗證，見末筆。
+
 目前進度（第五十三筆）：新對話接手並核對狀態；第二步變更（端點＋AnythingLLM）已備妥 diff，等使用者同意提交與開 PR。之後依序做 PDF 頁碼與教材連結、試題下載、pgvector，做法已提案待確認，見末筆。
 
 目前進度（第五十二筆）：PR #9 已合併為 222013a；使用者試用後決定補 PDF 頁碼（可連到教材該頁）、下載其他試題、加入 pgvector。第二步變更仍未提交，見末筆。
@@ -66,6 +68,7 @@ updated: 2026-11-16
 
 | 任務／本輪範圍 | 目前階段 | 已有最小產出／證據連結與版本 | 未達條件／待確認或風險 | 前進判斷 | 下一個最小動作／負責人 |
 |---|---|---|---|---|---|
+| 第八輪：PDF 頁碼與教材連結（引用定位 v0.6） | 審查與交付（實作完成，待使用者看 diff 與畫面試用） | 分支 feat/pdf-page-links（基於 9814af5），未提交；[設計 v0.6](design/rag-prototype.md)；Windows 98 passed；新索引頁序核對與端點實跑見第五十四筆 | AnythingLLM 畫面上連結是否可點、是否跳到該頁未驗證（瀏覽器自動化工具連不上）；實機只跑 1 則；Docker test 目標未跑 | 可送審；畫面驗證需使用者重啟 serve 後點一次 | 使用者看 diff、重啟 serve 試點連結、同意提交／使用者 |
 | 第七輪：網頁介面（現成平台＋本專案 RAG 端點） | 實作（第二步：端點＋AnythingLLM；第一步比較已完成） | brief 第四輪「網頁介面」列；授權查證見第四十八筆、並排實測見第四十九筆 | 實機只跑 3 則；畫面排版未經 AI 檢視（使用者已親自試用）；沒有多輪對話；引用只有章節頁碼；變更未提交、無獨立真人程式審查 | 可送審：使用者已選 AnythingLLM 並試用（第五十、五十二筆）；Windows 92 passed（第五十三筆實跑） | 使用者看 diff 後同意提交與開 PR／使用者；之後 PDF 頁碼與連結、試題下載、pgvector／AI 提案待確認 |
 | 第六輪：外部搜尋前後文＋英文維基備援（v0.4） | 已合併（2026-11-17，PR #7 → 7ecb211） | 分支 feat/web-search-context（基於 877feb4）；[設計 v0.4](design/rag-prototype.md)；77 passed（Windows）；同 6 題實跑見第四十六筆 | 6 題結果不代表泛化，第 15 題前後結果不穩；維基 429 限流；中文相關性規則仍放過部分無關頁；Docker 未跑 | 同 6 題由 3 對／1 錯／2 不足變為 6 題皆選出官方答案 | 無（已合併；限制保留於第四十六筆） |
 | 第五輪：逐句引用＋字詞核對（生成契約 v0.3） | 已合併（2026-11-17，PR #6 → 877feb4） | 分支 feat/sentence-citations（基於 637944a）；[設計 v0.3](design/rag-prototype.md)；67 passed（Windows）；vLLM 實跑 6 題（第 28 題＋8 題以外 5 題），見第四十五筆 | 字詞核對會漏標（第 15 題掛到 RANSAC 條目未被標出）；檢索／維基搜尋對 LIME 等詞找不到依據，2 題回依據不足；1 題證據在手仍推理錯（第 15 題）；Docker 未跑 | 逐句標示已可用；核對只是輔助提示 | 無（已合併；限制轉入第六輪） |
@@ -669,3 +672,18 @@ updated: 2026-11-16
   4. pgvector：檢索包成可替換的儲存介面，檔案索引保留；BM25 維持在程式內、預設方法不變。
 - 使用者回覆（2026-11-17）：「我都同意，而 D 的部分按照你的建議」。即同意第二步變更提交與開 PR（合併另行確認）；同意 PDF 由 `serve` 同埠提供、依據清單改 Markdown 連結；pgvector 的重現路徑採「Postgres 存片段、預設 BM25、不需下載嵌入模型，向量檢索為選用」。
 - 結束階段：第二步為審查與交付（已獲提交與開 PR 授權）；PDF 頁碼進入實作；試題下載與 pgvector 依序進行，下載範圍與映像仍須先列出再確認。
+
+
+### 2026-11-17 第五十四筆（版本：分支 feat/pdf-page-links，9814af5 加未提交變更；PDF 頁碼與教材連結）
+
+- 第二步交付：提交 9814af5 並推送 feat/rag-chat-endpoint，開 [PR #10](https://github.com/Cheryl33990/ipas-learning-hub/pull/10)；PR CI（run 44037657582）pass。尚未合併，合併前需使用者同意。
+- 實作（未提交，先寫合成測試）：guide.py 的 Page／Chunk 加 `pdf_page`，`read_pages()` 記 PDF 頁序；knowledge.py 把 `pdf_page` 寫入片段、`pdf` 路徑寫入來源；rag.py 的 sources 帶來源識別與 PDF 頁，`render_text` 顯示「（PDF 第 N 頁）」並可輸出 Markdown 連結；server.py 新增唯讀的 `/files/<名稱>` 允許清單；cli.py 新增 `source_files`、`textbook_link` 與 `serve --link-base`。送給模型的 evidence 未變。設計文件新增 v0.6，README 與 brief 同步。
+- 測試：Windows 98 passed（原 92＋新增 6，本輪實跑）。Docker test 目標與 hosted CI 未跑。
+- 新索引（舊的三個目錄未動）：BM25 版 data/index/kb/8e487281…、含 bge-m3 向量版 a0ff519f…（本機快取，建置 72 秒）。兩者由未提交的工作樹建立，提交後 code_version 會不同，必要時重建。
+- 核對（本輪實跑）：新索引 266 塊的 id 與文字與原 19a8fa4b… 完全相同，全部帶 `pdf_page`；科目 1 的 3-36 = PDF 第 42 頁、3-25 = 第 31 頁，與上一輪 pypdf 核對一致；科目 1 片段涵蓋 PDF 第 5–70 頁、科目 2 第 5–61 頁。
+- 實機（另開 8101 埠的 serve、`--web none`，既有 vLLM；輸出在 data/evaluation/pdf-links/）：勘誤探針 3.8 秒，依據為「[教材1] [教材 初級科目 1 人工智慧基礎概論 3-25（PDF 第 31 頁）](http://127.0.0.1:8101/files/subject1.pdf#page=31)」；`/files/subject1.pdf` 回 200、application/pdf，下載內容的 SHA-256 與設定檔相同；`/files/../../.env` 回 404。
+- 未驗證：AnythingLLM 畫面是否把依據渲染成可點的連結、瀏覽器是否跳到該頁（Chrome 擴充功能本輪未連線）；經 AnythingLLM 的完整來回本輪未跑，因為 8100 埠是使用者自己啟動的舊版 serve，未去動它。維基搜尋的題目本輪未跑。
+- 收尾：我啟動的 8101 serve 已停止。vLLM、`ui` 容器與 8100 的 serve 在本輪開始前就在執行，未更動；vLLM 仍佔用顯存，用完需 stop。
+- 下一步：使用者看 diff；以新索引重啟 serve 後在畫面點一次連結；同意後提交並開 PR。之後進行試題下載（先列檔名、網址、大小）。
+- 結束階段：審查與交付（PDF 頁碼，待提交授權與畫面驗證）。
+- 補記（同日，使用者畫面驗證）：使用者第一次重啟 serve 時仍用舊索引 19a8fa4b…，`/files/` 回 404（舊索引沒有 PDF 頁序與教材路徑，屬預期行為）；改用新索引 8e487281… 重啟後，使用者回覆「都可以點!!! OK 沒有問題」，即 AnythingLLM 畫面的教材連結可點並開到教材頁。這是使用者親自操作的結果，AI 未檢視畫面。使用者同意提交並開 PR（合併另行確認），並指示接續試題下載。

@@ -67,12 +67,13 @@ def build_index(root: Path, config_path: Path, output: Path,
         labels = [p.label for p in pages]
         if len(labels) != len(set(labels)):
             raise ValueError(f"教材頁碼重複：{source}")
-        sources.append({"id": source, "name": spec["name"], "version": spec["version"],
+        sources.append({"id": source, "name": spec["name"], "version": spec["version"], "pdf": spec["pdf"],
                         "sha256": sha, "patch_sha256": digest(patch_bytes),
                         "patch_report": report, "pages": len(pages)})
         for chunk in chunk_pages(pages, size, stride):
             chunks.append({"id": f"{source}:{chunk.label}:{chunk.index}", "source": source,
-                           "page": chunk.label, "text": chunk.text})
+                           "page": chunk.label, "text": chunk.text,
+                           **({"pdf_page": chunk.pdf_page} if chunk.pdf_page else {})})
     if not chunks:
         raise ValueError("知識庫不可為空")
     model_meta, vectors = None, None

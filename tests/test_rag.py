@@ -65,6 +65,33 @@ def test_each_segment_gets_program_markers_numbered_per_source_type():
     assert "⚠" not in text
 
 
+def test_pdf_page_is_shown_next_to_the_printed_page_and_can_become_a_link():
+    book = [{**BOOK[0], "pdf_page": 42}]
+    result = answer("題目", book, WEB, reply(status="supported", segments=[
+        seg("迴歸預測連續數值", "subject1:3-36:0"), seg("MAE 是絕對誤差平均", "wiki:1")]))
+    assert result["sources"][0]["pdf_page"] == 42 and result["sources"][0]["source"] == "subject1"
+    assert result["sources"][0]["label"] == "教材 科目一 3-36"  # 給模型的標籤不變
+    plain = render_text(result)
+    assert "- [教材1] 教材 科目一 3-36（PDF 第 42 頁）" in plain and "/files/" not in plain
+    link = lambda s: f"http://127.0.0.1:8100/files/{s['source']}.pdf#page={s['pdf_page']}" if s.get("pdf_page") else None
+    assert "- [教材1] 教材 科目一 3-36（PDF 第 42 頁）  http://127.0.0.1:8100/files/subject1.pdf#page=42" in render_text(result, link)
+    md = render_text(result, link, markdown=True)
+    assert "- [教材1] [教材 科目一 3-36（PDF 第 42 頁）](http://127.0.0.1:8100/files/subject1.pdf#page=42)" in md
+    assert "- [外部1] [外部 維基百科：平均絕對誤差](https://zh.wikipedia.org/w/index.php?curid=1&oldid=9)" in md
+
+
+def test_old_index_without_pdf_page_shows_only_the_printed_page_and_no_link():
+    result = answer("題目", BOOK, [], reply(status="supported", segments=[seg("迴歸預測連續數值", "subject1:3-36:0")]))
+    md = render_text(result, lambda s: None, markdown=True)
+    assert "- [教材1] 教材 科目一 3-36" in md.splitlines() and "PDF" not in md and "](" not in md
+
+
+def test_markdown_link_text_escapes_brackets():
+    web = [{**WEB[0], "title": "誤差 [統計]"}]
+    result = answer("題目", [], web, reply(status="supported", segments=[seg("MAE 是絕對誤差平均", "wiki:1")]))
+    assert "[外部 維基百科：誤差 \\[統計\\]](https://" in render_text(result, markdown=True)
+
+
 def test_external_only_answer_is_marked_as_external():
     result = answer("題目", [], WEB, reply(status="supported", segments=[seg("MAE 是絕對誤差平均", "wiki:1")]))
     assert result["basis"] == "external_only"

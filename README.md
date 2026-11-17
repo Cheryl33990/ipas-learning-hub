@@ -114,6 +114,8 @@ $env:LLM_MODEL='qwen3-vl-8b-fp8'; .venv/Scripts/python.exe -m ipas_hub.cli serve
 
 開啟 http://localhost:3001 ，建立工作區後直接提問；不要在工作區上傳文件，檢索與外部搜尋由本專案負責。模型未啟動或回答不合格時，畫面會顯示「⚠ 無法產生有依據的解答」與原因。
 
+教材引用同時列出章節頁碼與 PDF 頁，例如「3-36（PDF 第 42 頁）」。`serve` 執行期間，依據清單的教材項目是連結，點下去由瀏覽器開啟 `http://127.0.0.1:8100/files/<教材識別>.pdf#page=N`。教材檔只從本機 data/ 唯讀提供，且雜湊須與索引相同；埠或主機名稱不同時用 `--link-base` 指定連結開頭。PDF 頁碼需要用目前版本重建的索引（`index` 指令），舊索引仍可使用，但只顯示章節頁碼。
+
 - 外部搜尋：`--web wikipedia`（預設）或 `--web none`。搜尋介面在 src/ipas_hub/websearch.py，新增提供者只要回傳相同欄位。
 - 換成 OpenAI 等遠端 API：設定 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY`，並加 `--allow-remote`。預設拒絕本機以外的端點，避免誤用付費服務；金鑰不寫入執行紀錄。
 - 執行紀錄（含題目、片段、搜尋詞、模型與耗時）寫入 data/runs/。

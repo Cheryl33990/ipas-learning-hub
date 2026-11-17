@@ -1,10 +1,12 @@
 """把問答流程包成 OpenAI 相容的 /v1/chat/completions，供現成聊天介面當作模型使用。
 
 只綁本機迴路位址；不含任何領域邏輯，回答文字由呼叫端提供的 answer_fn 產生。
+另可唯讀提供呼叫端明列的檔案（/files/<名稱>），讓回答中的引用連結能在瀏覽器開啟原始文件。
 """
 from __future__ import annotations
 
 import json
+import shutil
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -67,7 +69,10 @@ def sse_chunks(text: str, model: str):
     yield "data: [DONE]\n\n"
 
 
-def make_server(answer_fn, port: int, model: str) -> ThreadingHTTPServer:
+def make_server(answer_fn, port: int, model: str, files: dict | None = None) -> ThreadingHTTPServer:
+    """files 是「名稱 → 檔案路徑」的允許清單；只比對完整名稱，不把請求路徑接到檔案系統上。"""
+    files = dict(files or {})
+
     class Handler(BaseHTTPRequestHandler):
         def _json(self, status: int, payload: dict) -> None:
             data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -77,8 +82,27 @@ def make_server(answer_fn, port: int, model: str) -> ThreadingHTTPServer:
             self.end_headers()
             self.wfile.write(data)
 
+        def _file(self, path) -> None:
+            try:
+                size = path.stat().st_size
+                handle = open(path, "rb")
+            except OSError:
+                return self._json(404, {"error": {"message": "檔案無法讀取", "type": "invalid_request_error"}})
+            with handle:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/pdf" if path.suffix.lower() == ".pdf"
+                                 else "application/octet-stream")
+                self.send_header("Content-Disposition", "inline")
+                self.send_header("Content-Length", str(size))
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                shutil.copyfileobj(handle, self.wfile)
+
         def do_GET(self):
-            if self.path.rstrip("/") == "/v1/models":
+            path = self.path.split("?", 1)[0].split("#", 1)[0]
+            if path.startswith("/files/") and path[len("/files/"):] in files:
+                self._file(files[path[len("/files/"):]])
+            elif path.rstrip("/") == "/v1/models":
                 self._json(200, {"object": "list", "data": [{"id": model, "object": "model", "owned_by": "local"}]})
             else:
                 self._json(404, {"error": {"message": "找不到此路徑", "type": "invalid_request_error"}})

@@ -113,7 +113,7 @@ def test_answer_text_reuses_ask_and_render_and_reports_search_failure(monkeypatc
         seen.update(question=question, hits=hits)
         return {"web": {"error": "維基百科 HTTP 429"}, "generation": {"marker": "g"}}
     monkeypatch.setattr(cli, "ask", fake_ask)
-    monkeypatch.setattr(cli, "render_text", lambda generation: f"rendered:{generation['marker']}")
+    monkeypatch.setattr(cli, "render_text", lambda generation, *a, **k: f"rendered:{generation['marker']}")
     args = SimpleNamespace(k=5, method="bm25")
     text = cli.answer_text(FakeKB(), "題目", args, tmp_path)
     assert seen == {"question": "題目", "hits": [{"id": "s1:1-1:0"}]}
@@ -124,5 +124,50 @@ def test_answer_text_reuses_ask_and_render_and_reports_search_failure(monkeypatc
 
 def test_answer_text_has_no_warning_when_search_is_fine(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "ask", lambda q, h, a: {"web": {"error": None}, "generation": {}})
-    monkeypatch.setattr(cli, "render_text", lambda generation: "rendered")
+    monkeypatch.setattr(cli, "render_text", lambda generation, *a, **k: "rendered")
     assert cli.answer_text(FakeKB(), "題目", SimpleNamespace(k=5, method="bm25"), tmp_path) == "rendered"
+
+
+def test_only_listed_files_are_served_read_only(tmp_path):
+    pdf = tmp_path / "book.pdf"
+    pdf.write_bytes(b"%PDF-synthetic")
+    (tmp_path / "secret.txt").write_text("不可外流")
+    server = make_server(lambda q: "", 0, "rag", files={"s1.pdf": pdf})
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://{HOST}:{server.server_address[1]}"
+    try:
+        with urlopen(base + "/files/s1.pdf", timeout=10) as res:
+            assert res.headers.get("Content-Type") == "application/pdf"
+            assert res.headers.get("Content-Disposition") == "inline"
+            assert res.read() == b"%PDF-synthetic"
+        for path in ("/files/secret.txt", "/files/../secret.txt", "/files/book.pdf", "/files/s1.pdf/../secret.txt",
+                     "/files/%2e%2e/secret.txt", "/files/"):
+            with pytest.raises(HTTPError) as err:
+                urlopen(base + path, timeout=10)
+            assert err.value.code == 404
+        with pytest.raises(HTTPError) as err:  # 唯讀：不接受寫入
+            urlopen(Request(base + "/files/s1.pdf", b"x", method="PUT"), timeout=10)
+        assert err.value.code in (405, 501)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_served_files_must_match_the_indexed_version(tmp_path, capsys):
+    (tmp_path / "data").mkdir()
+    good, bad = tmp_path / "data/good.pdf", tmp_path / "data/bad.pdf"
+    good.write_bytes(b"good")
+    bad.write_bytes(b"changed")
+    from ipas_hub.knowledge import digest
+    sources = [{"id": "s1", "pdf": "data/good.pdf", "sha256": digest(b"good")},
+               {"id": "s2", "pdf": "data/bad.pdf", "sha256": digest(b"original")},
+               {"id": "s3", "pdf": "data/missing.pdf", "sha256": "x"},
+               {"id": "old-index-without-path", "sha256": "x"}]
+    files = cli.source_files(tmp_path, sources)
+    assert files == {"s1.pdf": good.resolve()}
+    assert "s2" in capsys.readouterr().err
+    link = cli.textbook_link("http://127.0.0.1:8100/", files)
+    assert link({"source_type": "textbook", "source": "s1", "pdf_page": 42}) == "http://127.0.0.1:8100/files/s1.pdf#page=42"
+    assert link({"source_type": "textbook", "source": "s2", "pdf_page": 42}) is None
+    assert link({"source_type": "textbook", "source": "s1"}) is None
+    assert link({"source_type": "external", "url": "https://example.org/a"}) == "https://example.org/a"
