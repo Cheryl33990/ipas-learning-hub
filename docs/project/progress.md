@@ -804,3 +804,4 @@ updated: 2026-11-16
 - 測試（本輪實跑）：有資料庫時 121 passed；沒有 PG_TEST_DSN 時 117 passed、4 skipped。一個資料庫測試起初失敗，原因是本機資料庫 public schema 已有真實資料表、測試 schema 建表前查到它；改為建表後才判斷（CI 的資料庫是空的，不受影響）。
 - 實機（只檢索、不呼叫 LLM）：檔案索引含向量 → hybrid；檔案索引無向量 → bm25 並印提醒；`--store pg` 預設 → hybrid；`--store pg` 指定無向量索引 → bm25 並印提醒。四者第一筆皆為 3-25。
 - 結束階段：審查與交付（PR 待使用者同意合併）。
+- 交付：提交 3dd706c 並推送 feat/pgvector，開 [PR #13](https://github.com/Cheryl33990/ipas-learning-hub/pull/13)；PR CI（run 44048061078）success。CI 主機上 121 passed（4 個資料庫測試在 service container 實際執行，未略過），容器內 117 passed、4 skipped（容器內沒有資料庫，屬預期）。整個 job 57 秒，PR #9 時為 31 秒，多約 26 秒。本筆補記在提交後寫入，尚未提交。
