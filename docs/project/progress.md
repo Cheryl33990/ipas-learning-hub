@@ -12,7 +12,9 @@ updated: 2026-11-16
 
 第二十五筆：使用者已同意 v2 方案；[v2 結果](validation/2026-11-16-retrieval-support-v2.md)完成全 8 題、90 筆片段標註與 24 組凍結結果重評，120 個前五位置均有分類。方法採用與內容判讀分開：標註仍為 AI 待審，原 v1 保留，未改排序或選 LLM。資料主來源為 data/evaluation/rag-retrieval-support-v2.json；原文對照與獨立驗證腳本在同目錄，不進版控。
 
-目前進度（第三十四筆）：已整理[交付與試用入口](validation/2026-11-16-handoff-readiness.md)，本輪 Windows／Docker 各37項測試通過，三組試用結果已在 data/review/handoff-trial/results.md。三組試用已回覆，當前等待最終diff的提交／push／Draft PR授權；上方及歷史紀錄中的待辦按當時狀態保留，最新動作以此與末筆為準。
+目前進度（第三十八筆）：使用者已批准最終 29 檔 diff 的 commit／push／Draft PR；已提交並推送 b38e031，建立 [Draft PR #3](https://github.com/Cheryl33990/ipas-learning-hub/pull/3)。目前為程式審查與雲端 CI 待確認階段；三組試用已回覆，本輪先前 Windows／Docker 各37項測試通過。上方及歷史紀錄按當時狀態保留，最新動作以此與末筆為準。本筆交付紀錄為提交後補記，尚未提交。
+
+目前進度（第三十九筆，取代上段的「CI 待確認」狀態）：實際查證 PR #3 已於 2026-11-16T10:30:32Z 合併為 7376873，PR 與合併後 main 的 hosted CI 均為 success。本機 main 已快轉至 7376873；第三十八、三十九筆補記在新分支 docs/record-pr-3-merge 的工作樹，尚未提交。獨立真人程式審查仍無紀錄，合併不等於品質驗收、部署或結案。MAE 外部補證的可追溯化方案已獲使用者接受並實作（第四十筆），13 條主張待人工審查，全部變更尚未提交。
 
 ## 初始化與路徑對照
 - 模板來源／採用 commit：problem-def-template `4c73a73`；本 repo 初始 commit `c6f651c`
@@ -46,6 +48,9 @@ updated: 2026-11-16
 
 | 任務／本輪範圍 | 目前階段 | 已有最小產出／證據連結與版本 | 未達條件／待確認或風險 | 前進判斷 | 下一個最小動作／負責人 |
 |---|---|---|---|---|---|
+| 第四輪：端到端 RAG（教材＋維基百科＋vLLM） | 審查與交付（使用者試用滿意，提交與 PR 進行中） | llm.py、websearch.py、rag.py v0.2、compose 的 vllm 服務；57 passed（刪除登錄檢查後）；主機實跑 8 題全通，見第四十一筆 | 8 題均在既有解析範圍，答案一致不代表泛化；引用語意未檢查；未提交、hosted CI 未跑新測試；pgvector 未做 | 流程已跑通，可審查 diff 與輸出 | 提交、PR、CI 通過後合併（使用者已授權）；下一步候選：引用逐句化、pgvector、網頁介面 |
+| MAE 外部補證可追溯化 | 停止（2026-11-17 使用者決定刪除） | 登錄檔、evidence.py 與其測試已刪除且從未提交；過程見第三十九、四十筆 | 無 | 停止：外部依據改由 RAG 即時搜尋提供 | 無 |
+| 第三輪 PR #3 交付 | 已合併（2026-11-16 實際查證） | b38e031 → 合併提交 7376873；[PR #3](https://github.com/Cheryl33990/ipas-learning-hub/pull/3)；CI run 43849133563（PR）與 43849483100（main）皆 success | 無獨立真人程式審查紀錄；hosted CI 只跑合成測試與容器檢查，未涵蓋真實教材、embeddings 容器、delivery workflow 或 LLM；未部署 | 合併完成，不等於品質驗收或結案 | 提交合併補記（需使用者看 diff 後授權）；原列內容見第三十八筆 |
 | 第4／40題外部補證 | 筆記完成、待審 | [補證](validation/2026-11-16-fairness-mode-collapse-evidence.md)：六份第一手來源 | 第4題優先性仍為推論，B／D措辭待修；未整合索引 | 核心定義已有外部支持 | 審查來源範圍與最小修訂建議 |
 | 第28題 MAE 外部補證 | 證據筆記完成、待審 | [補證](validation/2026-11-16-mae-external-evidence.md)：五份官方文件與自造算例 | 尚未納入教材索引；非官方考綱查證 | 定義與搭配已有外部支持 | 先審查獨立筆記，再議來源整合或第4／40題補證 |
 | 檢索與內容缺口清單 | 整理完成 | [清單](validation/2026-11-16-retrieval-gap-register.md)：三組核心排名缺口、全八題內容限制及評估集合落差 | 不證明全教材不存在；僅28／32所審判讀獲人工確認 | 優先處理已確認的 MAE 補證需求 | 外部補證與排序實驗分別規劃，原結果保留 |
@@ -443,3 +448,66 @@ updated: 2026-11-16
 - 完成作者自查：重讀新增程式、prompt、合成測試、Docker／workflow與相依diff，保留公式排版、外部補證未入庫、hosted CI與LLM未實測等限制。沒有新增程式變更，沿用第三十四筆本輪Windows／Docker各37 passed，不虛構再次測試。
 - 交付入口補記三組結果與自查範圍；PR正文草稿、包含未追蹤檔案的最終diff及29檔SHA-256清單保存data/review/handoff-trial/。舊快照保留。data無已追蹤內容；diff空白檢查通過。
 - 結束階段：已具備Draft PR候選內容，非獨立真人批准。下一步請使用者審閱full-working-tree-final.patch及pr-body.md，授權commit／push／Draft PR；尚未stage或對外寫入，不含合併與公開。
+
+
+### 2026-11-16 第三十八筆（版本：b38e031；Draft PR 交付）
+
+- 開始：使用者明確同意最終清單的 commit、push 與 Draft PR；進入審查交付階段，授權不含合併、部署或公開。
+- 實際步驟：核對 manifest-for-approval.json 的分支、HEAD 與 29 檔 SHA-256；只 stage 清單檔案，核對 staged 路徑並通過 diff --cached --check。提交 b38e0315bb8a555d651ebed9098425cbd32d356f，推送 docs/rag-next-iteration-plan，建立 Draft PR #3，base 為 main／5cf7d96。
+- 結果：GitHub 回傳 Draft=true、merged=false、29 changed files，遠端 PR head 與本機提交一致。資料未納入提交；原案例、索引及評估結果保留。本輪未重跑測試，沿用第三十四筆對同一程式內容實跑的 Windows／Docker 各 37 passed。
+- 限制與下一步：首次查詢此提交的 PR workflow runs 為空；再次查詢已取得 CI run 43849133563，狀態 in_progress，尚不能宣稱 hosted CI 通過或失敗。下一步確認 CI 結果，再完成獨立程式審查。MAE 依據不足、公式呈現及其他既有待辦仍保留，不代表整體品質驗收。未合併、未部署。
+- 本筆與目前階段摘要為提交後的本機補記，尚未提交；已批准的 29 檔快照保持原樣，不追加未展示的提交。
+
+
+### 2026-11-16 第三十九筆（版本：main 7376873；PR #3 合併查證與交接收尾）
+
+- 開始：接手時在 docs/rag-next-iteration-plan（b38e031），工作樹僅 progress.md 有第三十八筆補記未提交，無未追蹤檔案。階段為審查與交付，待確認合併與 CI。
+- 使用者告知：已合併 PR #3。
+- 本輪實際查證（gh 與 git fetch）：PR #3 狀態 MERGED，mergedAt 2026-11-16T10:30:32Z，合併者為 repo 擁有者帳號，合併提交 7376873d61d61af6d3ab04ab41355b38bf25dfaa，父提交為 5cf7d96 與 b38e031；b38e031 與 7376873 的檔案樹無差異。CI run 43849133563（pull_request，b38e031）completed／success，工作 test-and-container 於 10:28:57Z 完成；合併後 main 的 CI run 43849483100（push，7376873）completed／success。第三十八筆記的 in_progress 是當時狀態，原文保留。
+- 同步方式：先把 progress.md 與其 diff 備份到工作階段暫存目錄；以 fetch 將本機 main 由 5cf7d96 快轉到 7376873；再從 origin/main 建立 docs/record-pr-3-merge 並帶著未提交修改切換。未使用 reset、clean、強制切換或 stash；切換前後 progress.md 的 SHA-256 相同，無衝突。原分支 docs/rag-next-iteration-plan 本機與遠端都保留。
+- 歷史驗證（非本輪）：Windows／Docker 各 37 passed 為第三十四筆實跑。本輪未跑 pytest、Docker、檢索或模型；hosted CI 的 success 是 GitHub 回報的結果，範圍限 ci.yaml 的合成測試與容器檢查。delivery workflow、embeddings 容器、真實 LLM 仍未實測。
+- 本輪唯讀檢查：讀 MAE 補證筆記、config/knowledge-base.json、knowledge.py 的 build_index，及本機 mae-external-sources.json 的欄位。現況：五份來源只記 stable 網址、顯示版本與短摘記，full_snapshot_saved 為 false，無內容雜湊，人工審查狀態為待審；build_index 只接受帶雜湊的 PDF 與勘誤檔，外部來源無法也不應直接放進現行來源清單。
+- 提出的最小後續工作（未執行，待使用者決定）：為 MAE 建立獨立的外部補證登錄與檢查程式，不入索引。內容為五份來源各記版本化網址、查閱日期、本機快照雜湊與授權標示；逐條主張記支持類型（直接支持／推論／不支持）、對應來源與題號、人工審查狀態。測法：合成測試覆蓋缺版本、缺雜湊、缺審查狀態、來源識別與教材相同、直接支持卻無出處等失敗情境；真實資料檢查每條直接支持的短摘記確實出現在對應快照；隔離檢查確認來源清單、主機索引識別與 v1／v2 評估檔雜湊不變。完成條件：檢查程式對 MAE 登錄通過、既有 37 項測試仍通過、使用者逐條審過主張並留下判定、教材限定基準數字不變。納入檢索須另建索引版本與評估，屬下一個決定。
+- 限制：本輪沒有新增來源、下載頁面、重建索引、改評估集或解析；第 4 題措辭修訂、第 4／40 題補證整合、公式呈現、v2 其餘 AI 標註的人工審查都維持未完成。AI 自查不是獨立真人審查。
+- 結束階段：PR #3 交付為已合併；MAE 可追溯化在選擇階段等使用者決定。本筆與第三十八筆補記均未 commit、push 或開 PR。
+
+
+### 2026-11-16 第四十筆（版本：main 7376873 加未提交變更；MAE 外部補證登錄）
+
+- 開始與授權：使用者回覆「接受方案」。依第三十九筆方案執行，並把當時列出的兩個建議一併視為接受：公開文件頁面快照存 data/、進版控的登錄檔不放外部原文。提交、推送與 PR 不在此授權內。階段由選擇進入設計與實作。
+- 先定測法：合成測試覆蓋缺版本、缺或錯雜湊、缺授權標示、日期格式、非 https、kind 非 external、id 不以 ext- 開頭或與教材來源相同、快照路徑不在 data/、來源重複、缺審查狀態、支持類型錯誤、直接支持無來源或引用未登錄來源、推論缺推導依據、登錄檔夾帶原文、非 pending 卻無人工審查者或記為 AI、快照被改動、摘記缺漏或不在快照可見文字內、版本字樣不在快照內。先確認測試因模組不存在而失敗，再實作。
+- 產出（進版控候選，均未提交）：config/external-evidence.json，5 個來源、13 條主張（直接支持 7、推論 3、來源不支持的限制 3），人工審查狀態全為 pending；src/ipas_hub/evidence.py 檢查程式，`python -m ipas_hub.evidence` 執行，加 `--structure-only` 可不讀 data/；tests/test_evidence.py 共 25 個測試案例。MAE 補證筆記與缺口清單各加一段後續補記，原文未改。
+- 產出（只在 data/）：data/external/mae/snapshots/ 五份頁面快照，下載自 scikit-learn 1.9 版本化網址與 keras.io，HTTP 200，使用一般用戶端名稱，未帶任何個人或專案資訊；data/external/mae/excerpts.json 為 7 條直接支持的原文摘記；data/review/mae-evidence/review.md 為 13 條主張的人工審查對照。
+- 本輪實跑結果：Windows Python 3.14.7 全套 62 passed（原 37 加新 25）；沙箱無法寫入系統暫存目錄時有 7 個 PermissionError，改指定可寫暫存目錄後全數通過，與程式無關。Docker test 目標建置成功，另以斷網容器實跑 62 passed。真實資料檢查通過：5 個快照雜湊相符、版本字樣存在、7 條直接支持的摘記都在對應快照的可見文字中。另做一次反向確認：把一句摘記改成頁面沒有的句子，檢查以失敗結束，還原後通過。
+- 隔離檢查：config/knowledge-base.json 與 knowledge.py 無差異，教材來源仍只有 subject1、subject2；data/index/kb/ 的三個索引目錄未動，主機索引 19a8fa4b… 仍在；評估檔與解析未修改；未重建索引、未跑檢索或模型。git ls-files data 為空。
+- 限制：檢查程式只證明可追溯，不證明主張正確；13 條主張與支持類型是 AI 判讀，未經人工審查。Keras 沒有版本化網址，僅以查閱日期與快照雜湊鎖定，快照頁面也未見授權標示，記為未查證；scikit-learn 只核對到頁尾的 BSD License 字樣，條款全文未讀。快照是 HTML 原始檔，未含頁面另外載入的資源。外部補證不進檢索，查詢時仍找不到 MAE 依據；第 28 題教材限定缺口不變。hosted CI 未跑過新測試；README 未更新這個指令。
+- 結束階段：實作完成，進入審查與交付，等待兩件事：使用者逐條審 13 條主張；使用者看 diff 後決定是否提交。之後若要讓檢索用到外部補證，須另建索引版本與評估，尚未規劃。
+
+
+### 2026-11-17 第四十一筆（版本：main 7376873 加未提交變更；端到端 RAG）
+
+- 開始與方向：使用者指出近期偏重八題內部判定，RAG 本身未前進。確認：vLLM 容器＋Qwen 7–8B；外部搜尋先用維基百科、介面可換（日後可接 OpenAI API）；向量儲存先沿用現有檔案式索引跑通，pgvector 列下一步；優先串接電腦既有模型，不下載。已記入 brief 第四輪。MAE 外部補證登錄暫緩，config/external-evidence.json 與 evidence.py 留在工作樹未提交，待使用者決定保留或刪除。
+- 既有資源（唯讀查證）：本機已有 vllm/vllm-openai:v0.26.0 映像；另一專案的 volume dev_infra_qwen_trial_cache 存有 Qwen/Qwen3-VL-8B-Instruct-FP8（revision 9cdc6310…，2 個權重檔 9.86 GiB，張量無缺漏，視覺部分 1.07 GiB）。只以唯讀掛載使用，未修改該 volume，也未啟動該專案的服務。GPU 為 RTX 5070 Ti 16 GB，桌面程式約佔 5.4 GB。
+- 啟動除錯：第一次啟動失敗，根因是 vLLM 偵測到 WSL2 時預設關閉 pinned memory，而此版需要 UVA；核心 6.18 符合條件，設 VLLM_WSL2_ENABLE_PIN_MEMORY=1 後成功。設定：只載入文字模型、上下文 6144、KV cache fp8、顯存使用率 0.62、enforce-eager。實測權重 9.12 GiB、KV cache 可放 6,608 個 token，啟動約 125–130 秒。
+- 實作（未提交）：src/ipas_hub/llm.py（OpenAI 相容介面，預設拒絕遠端端點，金鑰只讀環境變數）；src/ipas_hub/websearch.py（搜尋介面、維基百科 zh-TW、網址固定 oldid、429 重試一次）；rag.py v0.2（搜尋詞規劃、輪流取外部結果、由程式標教材／外部、引用錯誤修正一次後仍錯即拒絕）；prompts/answer.txt 改寫、新增 prompts/web_queries.txt；cli.py 的 ask 改用新流程並加 --format text；compose.yaml 以 vllm 服務取代 ollama，映像以 digest 固定，模型 volume 由 .env 的 LLM_MODEL_VOLUME 指定。README 與設計文件新增 v0.2 契約，v0.1 描述保留並標註已取代。
+- 測試：先寫合成測試（假 LLM、假搜尋，不連網）。Windows 82 passed；Docker test 目標建置內 82 passed，另以斷網容器實跑 82 passed；compose config 通過。
+- 實機結果（主機 CLI＋容器 vLLM，BM25 k=5，主機索引 19a8fa4b…）：8 題基準全部跑完，最終選項與官方答案 8/8 一致，每題 7–19 秒，約 2,000–4,100 tokens。依據類型：只用教材 4 題、教材＋外部 4 題（含第 18 題重跑）。第 28 題取得維基百科「平均絕對誤差」條目並引用。另以 Compose 的 app 容器呼叫 vllm 服務跑第 28 題，成功。輸出與摘要只在 data/evaluation/e2e/ 與 data/runs/。
+- 實跑發現與處理：第一次第 28 題模型寫出不存在的 id（subject1:3-3-3:1）被拒絕，因此加入一次修正重試；外部結果上限被前兩個搜尋詞佔滿，改為輪流取；第 18 題維基百科回 429，加入等待後重試，重跑成功。
+- 限制：8 題都在既有 50 題解析範圍內，模型也可能本來就會答，答案一致只代表流程跑得通，不代表品質或泛化；選項由 AI 讀答案判定，未經人工確認。引用只檢查 id 存在：第 28 題首次執行曾把 MAE 掛在沒有 MAE 的教材塊上；最新一次則把引用全放在答案末尾，看不出哪句來自哪個來源；外部搜尋會帶回無關條目（如第 4 題的 Anthropic、第 40 題的社會崩潰），這次模型沒有引用它們。hosted CI 未跑新測試；未用向量或混合檢索做端到端；pgvector 未做。vLLM 已停止以釋放顯存。未 commit、push 或開 PR。
+- 結束階段：第四輪在實作，已有可審查原型與實跑證據。下一步：使用者試用 ask 並回饋；決定是否提交，以及下一項改進（引用逐句化與語意檢查、pgvector、或用 8 題以外的題目測試）。
+
+
+### 2026-11-17 第四十二筆（版本：同第四十一筆，未提交；使用者試用）
+
+- 使用者依設定步驟自行以 Compose 試用，回覆：「我剛剛試用了 成果我非常滿意 都有答對且解析完整」。
+- data/runs/ 對應 6 筆執行紀錄（AI 讀紀錄整理，未逐題核對內容）：4 道情境考題與 1 個 Transformer 概念問題皆為 supported，其中 4 筆用教材＋維基百科、1 筆只用教材；「台北今天天氣如何」回 insufficient、未呼叫生成，符合預期。5 筆需生成者約 8.8–20.9 秒，均無修正重試、無搜尋錯誤。
+- 記為使用者可用性試用接受。答案正確與解析完整是使用者判斷；是否逐一核對引用內容，使用者未提及，因此引用語意正確性仍列為未驗證，不視為品質驗收或結案。
+- 下一步：等待使用者決定是否提交（需先看完整 diff）及 MAE 登錄檔去留；之後再選下一項改進。
+
+
+### 2026-11-17 第四十三筆（版本：提交前工作樹；提交授權與 MAE 登錄刪除）
+
+- 使用者回覆：「我覺得先提交與 PR merge／MAE登錄檔刪除／下一步我想開另一個對話接續」。授權本批 commit、push、開 PR 及 CI 通過後合併。
+- 刪除未提交的 config/external-evidence.json、src/ipas_hub/evidence.py、tests/test_evidence.py；兩份 validation 文件中描述該登錄的補記一併還原。本機 data/external/mae/ 的快照與 data/review/mae-evidence/ 不進版控，保留未動。原 MAE 補證筆記（已在 main）不改。
+- 提交前驗證：Windows 57 passed（原 37＋RAG 新增 20）；Docker test 目標與斷網容器結果見本筆末行；git diff --check 通過、data/ 無已追蹤檔案。
+- 實際結果：Docker test 目標建置內 57 passed，斷網容器實跑 57 passed，compose config 通過。分支由 docs/record-pr-3-merge 更名為 feat/end-to-end-rag，以符合內容。

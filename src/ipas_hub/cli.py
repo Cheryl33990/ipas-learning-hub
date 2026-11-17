@@ -3,14 +3,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 import uuid
 from pathlib import Path
 
 from .knowledge import KnowledgeBase, build_index, data_path
-from .rag import answer, ollama_generate
+from .llm import LLMConfig, chat_json
+from .rag import answer, gather_external, plan_web_queries, render_text
+from .websearch import make_search
 
 
 def save_run(root: Path, payload: dict) -> Path:
@@ -37,6 +38,24 @@ def evaluate(kb: KnowledgeBase, cases: list[dict], method: str, k: int) -> dict:
             "limitation": "只量檢索基準，不代表理由正確或 RAG 內容驗收通過"}
 
 
+def ask(question: str, hits: list[dict], args) -> dict:
+    cfg = LLMConfig.from_env(args.llm_url, args.model, args.allow_remote)
+    generate = lambda system, user: chat_json(cfg, system, user)
+    record = {"llm": cfg.describe(), "web": {"provider": args.web, "queries": [], "error": None}}
+    external = []
+    if args.web != "none":
+        if not 1 <= args.web_k <= 10:
+            raise ValueError("--web-k 須介於 1 至 10")
+        record["web"]["queries"] = plan_web_queries(question, generate)
+        try:
+            external = gather_external(record["web"]["queries"], make_search(args.web), 2, args.web_k)
+        except ValueError as exc:  # 搜尋失敗不中止，但明確記錄並只用教材回答
+            record["web"]["error"] = str(exc)
+    record["external_hits"] = external
+    record["generation"] = answer(question, hits, external, generate)
+    return record
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
@@ -57,8 +76,13 @@ def main(argv=None) -> int:
             query.add_argument("--query")
             query.add_argument("--query-file", type=Path)
         if name == "ask":
-            cmd.add_argument("--model", required=True, help="本機已安裝模型，不自動下載")
-            cmd.add_argument("--ollama-url", default=os.getenv("OLLAMA_URL", "http://127.0.0.1:11434"))
+            cmd.add_argument("--model", help="OpenAI 相容服務上的模型名稱；預設讀 LLM_MODEL")
+            cmd.add_argument("--llm-url", help="OpenAI 相容端點；預設讀 LLM_BASE_URL，否則本機 vLLM")
+            cmd.add_argument("--allow-remote", action="store_true",
+                             help="允許本機以外的 LLM 端點（可能收費）；金鑰只讀 LLM_API_KEY")
+            cmd.add_argument("--web", choices=("wikipedia", "none"), default="wikipedia")
+            cmd.add_argument("--web-k", type=int, default=4, help="外部片段上限")
+            cmd.add_argument("--format", choices=("json", "text"), default="json")
     args = parser.parse_args(argv)
     root = args.root.resolve()
     started = time.perf_counter()
@@ -77,11 +101,14 @@ def main(argv=None) -> int:
                 result = {"index_id": kb.index_id, "method": args.method, "question": question,
                           "hits": hits}
                 if args.command == "ask":
-                    result["generation"] = answer(question, hits,
-                        lambda prompt: ollama_generate(prompt, args.model, args.ollama_url))
+                    result.update(ask(question, hits, args))
         result["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
         result["run_file"] = str(save_run(root, result).relative_to(root))
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        if args.command == "ask" and args.format == "text":
+            print(render_text(result["generation"]))
+            print(f"\n執行紀錄：{result['run_file']}")
+        else:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (ValueError, OSError, KeyError, TypeError, ImportError) as exc:
         print(f"執行失敗：{exc}", file=sys.stderr)

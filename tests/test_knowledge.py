@@ -7,7 +7,7 @@ import pytest
 from ipas_hub.cli import evaluate, main
 from ipas_hub.guide import Page
 from ipas_hub.knowledge import KnowledgeBase, build_index, canonical, data_path, digest
-from ipas_hub.rag import answer, ollama_generate
+from ipas_hub.rag import answer
 
 
 def payload(embedding=None):
@@ -86,7 +86,7 @@ def test_build_records_patches_and_fails_if_patch_does_not_apply(tmp_path, monke
 def test_no_evidence_does_not_call_model():
     def unexpected(_):
         pytest.fail("不應呼叫模型")
-    assert answer("合成問題", [], unexpected)["status"] == "insufficient"
+    assert answer("合成問題", [], [], unexpected)["status"] == "insufficient"
 
 
 @pytest.mark.parametrize("output", [
@@ -97,20 +97,15 @@ def test_no_evidence_does_not_call_model():
 def test_invalid_model_citations_and_empty_answers_are_rejected(output):
     hits = KnowledgeBase(payload()).search("差分隱私")
     with pytest.raises(ValueError):
-        answer("合成問題", hits, lambda _: {"output": output})
+        answer("合成問題", hits, [], lambda *_: {"output": output})
 
 
 def test_valid_response_is_labelled_as_structural_not_semantic_verification():
     hits = KnowledgeBase(payload()).search("差分隱私")
-    result = answer("合成問題", hits, lambda _: {"model": "fake-test-only", "output": {
+    result = answer("合成問題", hits, [], lambda *_: {"model": "fake-test-only", "output": {
         "status": "supported", "answer": "合成回答 [s2:3-1:0]", "citations": ["s2:3-1:0"]}})
     assert result["prompt_sha256"]
     assert result["validation"] == "citation_ids_only_not_semantic_verification"
-
-
-def test_remote_llm_endpoint_is_rejected_before_network_access():
-    with pytest.raises(ValueError, match="本機"):
-        ollama_generate("prompt", "model", "https://paid.example.com")
 
 
 def test_evaluation_matches_subject_and_page_together():
