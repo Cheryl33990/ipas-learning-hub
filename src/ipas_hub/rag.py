@@ -22,7 +22,7 @@ def textbook_label(hit: dict) -> str:
 
 
 def external_label(hit: dict) -> str:
-    provider = {"wikipedia": "維基百科"}.get(hit.get("provider"), hit.get("provider", "外部"))
+    provider = {"wikipedia": "維基百科", "wikipedia-en": "英文維基百科"}.get(hit.get("provider"), hit.get("provider", "外部"))
     return f"外部 {provider}：{hit['title']}"
 
 
@@ -37,22 +37,42 @@ def build_evidence(textbook: list[dict], external: list[dict]) -> list[dict]:
     return evidence
 
 
-def plan_web_queries(question: str, generate) -> list[str]:
-    """請模型列出要查證的概念詞；回覆不合格就拋錯，不改用猜測的搜尋詞。"""
+def plan_web_queries(question: str, generate) -> list[dict]:
+    """請模型列出要查證的概念（中英概念詞，必要時加領域詞）；回覆不合格就拋錯，不改用猜測的搜尋詞。"""
     output = generate(QUERY_PROMPT.read_text(encoding="utf-8"), question)["output"]
     queries = output.get("queries")
-    if not isinstance(queries, list) or not all(isinstance(q, str) for q in queries):
+    if not isinstance(queries, list):
         raise ValueError("搜尋詞規劃回覆不符合格式")
-    cleaned = []
-    for q in (q.strip() for q in queries):
-        if q and q not in cleaned and len(q) <= 40:
-            cleaned.append(q)
+    cleaned, seen = [], set()
+    for item in queries:
+        if isinstance(item, str):  # 容許只給中文詞
+            item = {"zh": item}
+        if not isinstance(item, dict) or not isinstance(item.get("zh"), str):
+            raise ValueError("搜尋詞規劃回覆不符合格式")
+        text = lambda key, limit: (item[key].strip()[:limit] or None) if isinstance(item.get(key), str) else None
+        zh = item["zh"].strip()
+        if zh and zh not in seen and len(zh) <= 40:
+            seen.add(zh)
+            cleaned.append({"zh": zh, "en": text("en", 60),
+                            "domain_zh": text("domain_zh", 20), "domain_en": text("domain_en", 40)})
     return cleaned[:MAX_WEB_QUERIES]
 
 
-def gather_external(queries: list[str], search, per_query: int, limit: int) -> list[dict]:
-    """每個搜尋詞輪流取結果，避免前面的詞佔滿上限。"""
-    results = [search.search(query, per_query) for query in queries]
+def gather_external(queries: list[dict], search, per_query: int, limit: int, errors: list | None = None) -> list[dict]:
+    """每個搜尋詞輪流取結果，避免前面的詞佔滿上限。
+
+    傳入 errors 時，單一搜尋詞失敗只記錄並略過，不影響其他詞；未傳入則直接拋出。
+    """
+    results = []
+    for q in queries:
+        try:
+            results.append(search.search(q["zh"], per_query, context=q.get("domain_zh"),
+                                         fallback_query=q.get("en"), fallback_context=q.get("domain_en")))
+        except ValueError as exc:
+            if errors is None:
+                raise
+            errors.append(f"{q['zh']}：{exc}")
+            results.append([])
     hits, seen = [], set()
     for rank in range(per_query):
         for found in results:
@@ -110,12 +130,15 @@ def _bigrams(text: str) -> set[str]:
 
 
 def check_segment(text: str, cited_texts: list[str]) -> dict:
-    """比對句子與被引用片段：英文詞與數字是否出現、中文二元組重疊比例。"""
+    """比對句子與被引用片段：英文詞與數字是否出現、中文二元組重疊比例。
+
+    被引用片段沒有中文（如英文維基）時不算重疊，只檢查英文詞，避免中文句引英文來源被誤標。
+    """
     joined = "\n".join(cited_texts)
     lower = joined.lower()
     missing = [t for t in _terms(text) if t.lower() not in lower]
-    grams = _bigrams(text)
-    overlap = round(len(grams & _bigrams(joined)) / len(grams), 2) if grams else None
+    grams, cited_grams = _bigrams(text), _bigrams(joined)
+    overlap = round(len(grams & cited_grams) / len(grams), 2) if grams and cited_grams else None
     reasons = []
     if missing:
         reasons.append("引用片段中找不到：" + "、".join(missing))

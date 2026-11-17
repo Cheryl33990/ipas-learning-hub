@@ -47,10 +47,9 @@ def ask(question: str, hits: list[dict], args) -> dict:
         if not 1 <= args.web_k <= 10:
             raise ValueError("--web-k 須介於 1 至 10")
         record["web"]["queries"] = plan_web_queries(question, generate)
-        try:
-            external = gather_external(record["web"]["queries"], make_search(args.web), 2, args.web_k)
-        except ValueError as exc:  # 搜尋失敗不中止，但明確記錄並只用教材回答
-            record["web"]["error"] = str(exc)
+        errors = []  # 搜尋失敗不中止，但逐詞明確記錄；全部失敗時只用教材回答
+        external = gather_external(record["web"]["queries"], make_search(args.web), 2, args.web_k, errors)
+        record["web"]["error"] = "；".join(errors) or None
     record["external_hits"] = external
     record["generation"] = answer(question, hits, external, generate)
     return record
