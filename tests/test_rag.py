@@ -111,6 +111,14 @@ def test_ids_the_model_writes_inside_text_are_removed():
     assert result["segments"][0]["text"] == "迴歸預測連續數值。"
 
 
+def test_ids_written_in_round_brackets_are_removed_too():
+    result = answer("題目", BOOK, WEB, reply(status="supported", segments=[
+        seg("迴歸預測連續數值（subject1:3-36:0）。", "subject1:3-36:0"),
+        seg("MAE 是絕對誤差平均 (wiki:1, subject1:3-36:0)", "wiki:1"), seg("見（附錄）")]))
+    assert [s["text"] for s in result["segments"]] == ["迴歸預測連續數值。", "MAE 是絕對誤差平均", "見（附錄）"]
+    assert result["segments"][0]["check"]["missing_terms"] == []
+
+
 def test_missing_english_term_is_flagged_but_not_rejected():
     result = answer("題目", BOOK, WEB, reply(status="supported", segments=[
         seg("MAE 用於迴歸預測連續數值", "subject1:3-36:0")]))
@@ -118,6 +126,61 @@ def test_missing_english_term_is_flagged_but_not_rejected():
     assert check["missing_terms"] == ["MAE"] and check["flagged"]
     assert result["status"] == "supported" and result["flagged_segments"] == 1
     assert "⚠" in render_text(result) and "MAE" in render_text(result)
+
+
+def test_missing_term_that_comes_from_the_question_is_still_flagged_but_labelled():
+    # 題目裡的詞也可能是真的掛錯（如第 28 題的 MAE），所以不略過，只註明來源
+    result = answer("下列何者描述 SOP 與 MAE？(A) 甲 (B) 乙", BOOK, WEB, reply(status="supported", segments=[
+        seg("SOP 用於迴歸預測連續數值", "subject1:3-36:0"), seg("答案：A")]))
+    check = result["segments"][0]["check"]
+    assert check["flagged"] and check["missing_terms"] == ["SOP"] and check["question_terms"] == ["SOP"]
+    text = render_text(result)
+    assert "⚠" in text and "題目中的詞" in text and "SOP" in text
+
+
+def test_missing_term_not_in_question_is_reported_without_question_label():
+    result = answer("題目", BOOK, WEB, reply(status="supported", segments=[
+        seg("MAE 用於迴歸預測連續數值", "subject1:3-36:0")]))
+    assert result["segments"][0]["check"]["question_terms"] == []
+    assert "題目中的詞" not in render_text(result)
+
+
+OPTIONS = "下列何者正確？(A) 甲 (B) 乙 (C) 丙 (D) 丁"
+
+
+def test_multiple_choice_answer_without_final_choice_gets_one_repair():
+    replies = iter([{"status": "supported", "segments": [seg("迴歸預測連續數值", "subject1:3-36:0")]},
+                    {"status": "supported", "segments": [seg("迴歸預測連續數值", "subject1:3-36:0"), seg("答案：(B)")]}])
+    seen = []
+    def generate(system, user):
+        seen.append(user)
+        return {"output": next(replies)}
+    result = answer(OPTIONS, BOOK, WEB, generate)
+    assert len(seen) == 2 and "答案：X" in seen[1]
+    assert result["answer_choice"] == "B" and result["repair_attempts"] == 1
+    assert "未明寫答案" not in render_text(result)
+
+
+def test_still_missing_choice_after_repair_is_shown_with_a_note_not_rejected():
+    result = answer(OPTIONS, BOOK, WEB, reply(status="supported", segments=[seg("迴歸預測連續數值", "subject1:3-36:0")]))
+    assert result["answer_choice"] is None and result["status"] == "supported" and result["repair_attempts"] == 1
+    assert "⚠ 模型未明寫答案選項" in render_text(result)
+
+
+def test_choice_is_read_from_the_last_answer_line_and_not_required_without_options():
+    result = answer(OPTIONS, BOOK, WEB, reply(status="supported", segments=[
+        seg("迴歸預測連續數值", "subject1:3-36:0"), seg("答案：C")]))
+    assert result["answer_choice"] == "C" and result["repair_attempts"] == 0
+    from ipas_hub.rag import answer_choice
+    assert [answer_choice([seg(t)]) for t in ("答案：B選項", "答案:(D)。", "答案：（A）", "答案：Bad")] == ["B", "D", "A", None]
+    plain = answer("迴歸是什麼？", BOOK, WEB, reply(status="supported", segments=[seg("迴歸預測連續數值", "subject1:3-36:0")]))
+    assert plain["answer_choice"] is None and plain["repair_attempts"] == 0
+    assert "未明寫答案" not in render_text(plain)
+
+
+def test_insufficient_multiple_choice_does_not_demand_a_choice():
+    result = answer(OPTIONS, BOOK, WEB, reply(status="insufficient", segments=[seg("教材沒有提到此概念")]))
+    assert result["repair_attempts"] == 0 and "未明寫答案" not in render_text(result)
 
 
 def test_low_chinese_overlap_is_flagged_and_uncited_segments_are_not_checked():

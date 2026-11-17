@@ -114,7 +114,23 @@ def _check_output(output, by_id: dict) -> list[str]:
 LOW_OVERLAP = 0.1
 TERM = re.compile(r"[A-Za-z][A-Za-z0-9]*(?:[-_.][A-Za-z0-9]+)*|\d+(?:\.\d+)?")
 CJK_RUN = re.compile(r"[\u3400-\u9fff]+")
-BRACKET = re.compile(r"\s*\[([^\[\]]+)\]")
+BRACKET = re.compile(r"\s*(?:\[([^\[\]]+)\]|[(（]([^()（）]+)[)）])")
+OPTION = re.compile(r"[(（]\s*([A-D])\s*[)）]")
+CHOICE = re.compile(r"答案\s*[:：]\s*[(（]?\s*([A-D])(?![A-Za-z])")
+
+
+def has_options(question: str) -> bool:
+    """題目含 (A)(B) 這類選項標記時，視為選擇題。"""
+    return len(set(OPTION.findall(question))) >= 2
+
+
+def answer_choice(segments: list[dict]) -> str | None:
+    """從最後一句往前找「答案：X」；找不到回傳 None。"""
+    for item in reversed(segments):
+        found = CHOICE.findall(item.get("text", "")) if isinstance(item, dict) else []
+        if found:
+            return found[-1]
+    return None
 
 
 def _terms(text: str) -> list[str]:
@@ -129,28 +145,34 @@ def _bigrams(text: str) -> set[str]:
     return {run[i:i + 2] for run in CJK_RUN.findall(text) for i in range(len(run) - 1)}
 
 
-def check_segment(text: str, cited_texts: list[str]) -> dict:
+def check_segment(text: str, cited_texts: list[str], question: str = "") -> dict:
     """比對句子與被引用片段：英文詞與數字是否出現、中文二元組重疊比例。
 
     被引用片段沒有中文（如英文維基）時不算重疊，只檢查英文詞，避免中文句引英文來源被誤標。
+    缺漏的詞若出現在題目中，另列 question_terms 並在原因註明；仍算標記，因為題目的詞也可能是真的掛錯。
     """
     joined = "\n".join(cited_texts)
     lower = joined.lower()
     missing = [t for t in _terms(text) if t.lower() not in lower]
+    from_question = [t for t in missing if t.lower() in question.lower()]
     grams, cited_grams = _bigrams(text), _bigrams(joined)
     overlap = round(len(grams & cited_grams) / len(grams), 2) if grams and cited_grams else None
     reasons = []
-    if missing:
-        reasons.append("引用片段中找不到：" + "、".join(missing))
+    others = [t for t in missing if t not in from_question]
+    if others:
+        reasons.append("引用片段中找不到：" + "、".join(others))
+    if from_question:
+        reasons.append("引用片段中找不到題目中的詞（可能只是重述題目）：" + "、".join(from_question))
     if overlap is not None and overlap < LOW_OVERLAP:
         reasons.append(f"與引用片段的中文字詞重疊低（{overlap}）")
-    return {"missing_terms": missing, "overlap": overlap, "flagged": bool(reasons), "reasons": reasons}
+    return {"missing_terms": missing, "question_terms": from_question, "overlap": overlap,
+            "flagged": bool(reasons), "reasons": reasons}
 
 
 def _strip_ids(text: str, by_id: dict) -> str:
-    """模型若自行在句中寫 [id]，移除；標記一律由程式產生。"""
+    """模型若自行在句中寫 [id] 或（id），移除；標記一律由程式產生。括號內不全是 id 的保留。"""
     def drop(match):
-        parts = [p for p in re.split(r"[,，、\s]+", match.group(1)) if p]
+        parts = [p for p in re.split(r"[,，、\s]+", match.group(1) or match.group(2)) if p]
         return "" if parts and all(p in by_id for p in parts) else match.group(0)
     return BRACKET.sub(drop, text).strip()
 
@@ -167,10 +189,14 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
     user = json.dumps({"question": question, "evidence": evidence}, ensure_ascii=False)
     by_id = {e["id"]: e for e in evidence}
     located = {h["id"]: h for h in textbook}  # 來源識別與 PDF 頁只給程式顯示用，不送進模型
+    choice_expected = has_options(question)
     generated = generate(template, user)
     problems = _check_output(generated["output"], by_id)
+    if (not problems and choice_expected and generated["output"]["status"] == "supported"
+            and not answer_choice(generated["output"]["segments"])):
+        problems = ["選擇題的最後一個 segment 須為「答案：X」（X 為 A、B、C 或 D）"]
     repairs = 0
-    if problems:  # 只給一次修正機會；仍不合格就拒絕，不自行刪改引用
+    if problems:  # 只給一次修正機會；結構仍不合格就拒絕，不自行刪改引用；只缺答案選項則照常顯示並註明
         repairs = 1
         feedback = ("你上一次的回覆不合格：" + "；".join(problems)
                     + "。請只使用 evidence 中實際存在的 id，依相同規則重新回覆完整 JSON。")
@@ -195,7 +221,7 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
                 markers[c] = ("教材" if kind == "textbook" else "外部") + str(counts[kind])
         text = _strip_ids(item["text"], by_id)
         segments.append({"text": text, "citations": cited, "markers": [markers[c] for c in cited],
-                         "check": check_segment(text, [by_id[c]["text"] for c in cited]) if cited else None})
+                         "check": check_segment(text, [by_id[c]["text"] for c in cited], question) if cited else None})
     citations = list(markers)
     sources = [{"id": c, "marker": markers[c], "source_type": by_id[c]["source_type"], "label": by_id[c]["label"],
                 **({"url": by_id[c]["url"]} if by_id[c].get("url") else {}),
@@ -212,6 +238,8 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
     lines = [s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else "")
              for s in segments]
     return {"status": output["status"], "answer": "\n".join(lines), "segments": segments,
+            "answer_choice": answer_choice(segments),
+            "choice_expected": choice_expected and output["status"] == "supported",
             "citations": citations, "sources": sources, "basis": basis,
             "flagged_segments": sum(1 for s in segments if s["check"] and s["check"]["flagged"]),
             "model": generated.get("model"), "usage": generated.get("usage"),
@@ -233,6 +261,8 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
         lines.append(s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else ""))
         if s["check"] and s["check"]["flagged"]:
             lines.append("  ⚠ 引用可能不支持此句：" + "；".join(s["check"]["reasons"]))
+    if result.get("choice_expected") and not result.get("answer_choice"):
+        lines.append("⚠ 模型未明寫答案選項，請依上方逐項說明自行判斷。")
     lines += ["", "依據："]
     for s in result["sources"]:
         label = s["label"] + (f"（PDF 第 {s['pdf_page']} 頁）" if s.get("pdf_page") else "")
