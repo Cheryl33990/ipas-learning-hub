@@ -14,6 +14,8 @@ updated: 2026-11-16
 
 目前進度（第三十八筆）：使用者已批准最終 29 檔 diff 的 commit／push／Draft PR；已提交並推送 b38e031，建立 [Draft PR #3](https://github.com/Cheryl33990/ipas-learning-hub/pull/3)。目前為程式審查與雲端 CI 待確認階段；三組試用已回覆，本輪先前 Windows／Docker 各37項測試通過。上方及歷史紀錄按當時狀態保留，最新動作以此與末筆為準。本筆交付紀錄為提交後補記，尚未提交。
 
+目前進度（第四十四筆）：PR #4 端到端 RAG 已於 2026-11-17 合併為 7c74cbe，PR 與 main 的 CI 均通過；本筆合併補記尚未提交。以下第三十九筆段落為歷史狀態。
+
 目前進度（第三十九筆，取代上段的「CI 待確認」狀態）：實際查證 PR #3 已於 2026-11-16T10:30:32Z 合併為 7376873，PR 與合併後 main 的 hosted CI 均為 success。本機 main 已快轉至 7376873；第三十八、三十九筆補記在新分支 docs/record-pr-3-merge 的工作樹，尚未提交。獨立真人程式審查仍無紀錄，合併不等於品質驗收、部署或結案。MAE 外部補證的可追溯化方案已獲使用者接受並實作（第四十筆），13 條主張待人工審查，全部變更尚未提交。
 
 ## 初始化與路徑對照
@@ -48,7 +50,7 @@ updated: 2026-11-16
 
 | 任務／本輪範圍 | 目前階段 | 已有最小產出／證據連結與版本 | 未達條件／待確認或風險 | 前進判斷 | 下一個最小動作／負責人 |
 |---|---|---|---|---|---|
-| 第四輪：端到端 RAG（教材＋維基百科＋vLLM） | 審查與交付（使用者試用滿意，提交與 PR 進行中） | llm.py、websearch.py、rag.py v0.2、compose 的 vllm 服務；57 passed（刪除登錄檢查後）；主機實跑 8 題全通，見第四十一筆 | 8 題均在既有解析範圍，答案一致不代表泛化；引用語意未檢查；未提交、hosted CI 未跑新測試；pgvector 未做 | 流程已跑通，可審查 diff 與輸出 | 提交、PR、CI 通過後合併（使用者已授權）；下一步候選：引用逐句化、pgvector、網頁介面 |
+| 第四輪：端到端 RAG（教材＋維基百科＋vLLM） | 已合併（2026-11-17） | PR #4：ef67cea → 合併提交 7c74cbe；PR CI 與 main CI（run 44004961566）皆 success；57 passed；8 題實跑與使用者試用見第四十一、四十二筆 | 引用只檢查 id、不檢查內容是否支持該句；8 題不代表泛化；向量／混合檢索未做端到端；pgvector 未做；無獨立真人程式審查 | 合併完成，不等於品質驗收或結案 | 新對話接續：先提交本筆補記，再選下一項（建議引用逐句化與內容核對） |
 | MAE 外部補證可追溯化 | 停止（2026-11-17 使用者決定刪除） | 登錄檔、evidence.py 與其測試已刪除且從未提交；過程見第三十九、四十筆 | 無 | 停止：外部依據改由 RAG 即時搜尋提供 | 無 |
 | 第三輪 PR #3 交付 | 已合併（2026-11-16 實際查證） | b38e031 → 合併提交 7376873；[PR #3](https://github.com/Cheryl33990/ipas-learning-hub/pull/3)；CI run 43849133563（PR）與 43849483100（main）皆 success | 無獨立真人程式審查紀錄；hosted CI 只跑合成測試與容器檢查，未涵蓋真實教材、embeddings 容器、delivery workflow 或 LLM；未部署 | 合併完成，不等於品質驗收或結案 | 提交合併補記（需使用者看 diff 後授權）；原列內容見第三十八筆 |
 | 第4／40題外部補證 | 筆記完成、待審 | [補證](validation/2026-11-16-fairness-mode-collapse-evidence.md)：六份第一手來源 | 第4題優先性仍為推論，B／D措辭待修；未整合索引 | 核心定義已有外部支持 | 審查來源範圍與最小修訂建議 |
@@ -511,3 +513,11 @@ updated: 2026-11-16
 - 刪除未提交的 config/external-evidence.json、src/ipas_hub/evidence.py、tests/test_evidence.py；兩份 validation 文件中描述該登錄的補記一併還原。本機 data/external/mae/ 的快照與 data/review/mae-evidence/ 不進版控，保留未動。原 MAE 補證筆記（已在 main）不改。
 - 提交前驗證：Windows 57 passed（原 37＋RAG 新增 20）；Docker test 目標與斷網容器結果見本筆末行；git diff --check 通過、data/ 無已追蹤檔案。
 - 實際結果：Docker test 目標建置內 57 passed，斷網容器實跑 57 passed，compose config 通過。分支由 docs/record-pr-3-merge 更名為 feat/end-to-end-rag，以符合內容。
+
+
+### 2026-11-17 第四十四筆（版本：main 7c74cbe；PR #4 合併）
+
+- 依使用者授權：提交 ef67cea（13 檔，739 行新增、81 行刪除），推送 feat/end-to-end-rag，建立 PR #4（https://github.com/Cheryl33990/ipas-learning-hub/pull/4）。提交前完整 diff 存於 data/review/pr4-full.patch，並掃描無個人資訊、題目原文或金鑰。
+- 實際查證：PR CI（run 44004865608，test-and-container）pass；以 merge commit 合併，mergedAt 2026-11-17T02:42:34Z，合併提交 7c74cbea3c7e3296ca5326cfe1959ed96f4742b8；合併後 main 的 CI（run 44004961566）completed／success；ef67cea 與 7c74cbe 檔案樹相同。本機 main 已快轉並切回 main；feat/end-to-end-rag 本機與遠端分支保留。
+- 本筆與階段表更新為合併後的本機補記，尚未提交。
+- 下一步：使用者將開新對話接續；建議先把本筆補記以小 PR 提交，再選下一項改進。
