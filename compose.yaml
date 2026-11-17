@@ -42,6 +42,9 @@ services:
       - --gpu-memory-utilization=${LLM_GPU_UTIL:-0.62}
       - --max-num-seqs=4
       - --enforce-eager
+      # 讓以工具呼叫運作的平台功能（如 LibreChat 檔案檢索）可用；不影響一般 JSON 回答
+      - --enable-auto-tool-choice
+      - --tool-call-parser=hermes
       - --host=0.0.0.0
       - --port=8000
 volumes:
