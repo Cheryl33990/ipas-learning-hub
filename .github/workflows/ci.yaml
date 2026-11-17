@@ -13,17 +13,34 @@ jobs:
   test-and-container:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # 需要資料庫的測試（tests/test_pgstore.py 後半）用這個 service container；只有合成資料
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg17@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f
+        env:
+          POSTGRES_USER: ipas
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: ipas
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ipas -d ipas"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      PG_TEST_DSN: host=127.0.0.1 port=5432 dbname=ipas user=ipas password=ci-only
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
         with:
           version: "0.9.11"
-      - run: uv sync --locked --python 3.12
+      - run: uv sync --locked --python 3.12 --extra pg
       - run: uv run --no-sync pytest -p no:cacheprovider
       - name: 確認原始資料未追蹤
         run: test -z "$(git ls-files data)"
       - name: 驗證 Compose 設定
-        run: docker compose --profile llm config --quiet
+        run: docker compose --profile llm --profile ui --profile db config --quiet
       - name: 容器內跑合成測試
         run: docker build --build-arg CODE_VERSION=${{ github.sha }} --target test -t ipas-hub:test .
       - name: 建立不含資料的執行映像

@@ -14,6 +14,10 @@ updated: 2026-11-16
 
 目前進度（第三十八筆）：使用者已批准最終 29 檔 diff 的 commit／push／Draft PR；已提交並推送 b38e031，建立 [Draft PR #3](https://github.com/Cheryl33990/ipas-learning-hub/pull/3)。目前為程式審查與雲端 CI 待確認階段；三組試用已回覆，本輪先前 Windows／Docker 各37項測試通過。上方及歷史紀錄按當時狀態保留，最新動作以此與末筆為準。本筆交付紀錄為提交後補記，尚未提交。
 
+目前進度（第六十一筆）：PR #12 已合併為 96d91cb；預設檢索方法改為混合（兩種儲存皆同，沒有向量時自動改用 BM25 並提醒）；feat/pgvector 提交並開 PR，待同意合併。見末筆。
+
+目前進度（第六十筆）：PostgreSQL＋pgvector 已在 feat/pgvector 實作並實機驗證（資料庫與檔案索引檢索結果相同、serve --store pg 可用），未提交，待使用者審查；PR #12 待同意合併。見末筆。
+
 目前進度（第五十七筆）：選擇題改為一定明寫「答案：X」、⚠ 註明是否為題目用詞、圓括號內的 id 會清除；同 8 題重跑 8 題都明寫並與官方一致。準備提交並開 PR，之後做 pgvector，見末筆。
 
 目前進度（第五十六筆）：PR #10、#11 已合併，main 為 7371408、CI success。官方資源 17 份已下載到 data/raw/ 的新子目錄；新試題抽 8 題試跑皆選出官方答案，並記下四項觀察到的問題。pgvector 細部設計待提，見末筆。本筆與第五十五筆尚未提交。
@@ -738,3 +742,66 @@ updated: 2026-11-16
   - 引用來源與第一次不同（例如第 1、6 題改為教材＋維基），顯示同題重跑結果會變動。
 - 限制：8 題、各一次；選項一致不代表理由正確；Chunking 掛到心理學條目的問題未處理，仍在。
 - 結束階段：審查與交付（待提交與開 PR，使用者已授權）；pgvector 進入設計與測試規劃。
+
+
+### 2026-11-17 第五十八筆（版本：分支 feat/pgvector，基於 chore/more-exams f6f61a5，未提交；pgvector 準備）
+
+- 交付：第五十五至五十七筆與答案選項修正提交為 f6f61a5，開 [PR #12](https://github.com/Cheryl33990/ipas-learning-hub/pull/12)，PR CI（run 44043609321）pass；未合併，合併前需使用者同意。
+- 下載（使用者同意）：映像 `pgvector/pgvector:0.8.6-pg17`，digest `sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f`，解壓後 158 MB（未選 5 天前發布的 0.8.7）；Python 套件 psycopg 3.3.9（含 psycopg-binary、tzdata），以 `uv add --optional pg` 加入 pyproject 的選用相依 `pg` 並更新 uv.lock。sentence-transformers 仍在。
+- 本機 5432、5433 埠目前無服務；本機另有其他專案的 postgres:17.10 映像，未啟動、未使用。
+- 細部設計已提給使用者，待確認後實作。
+- 結束階段：設計與測試規劃（pgvector）。
+
+
+### 2026-11-17 第五十九筆（版本：分支 feat/pgvector，f6f61a5 加未提交變更；三種檢索方法端到端比較）
+
+- 使用者討論與決定：使用者過去用全文檢索的經驗是「找到關鍵字，但不一定回答到問題」，希望用向量檢索處理語意相近、用詞不同的情況。AI 說明關鍵字與向量各自的長處、為何 BM25 計算留在程式內、為何先建檔案索引再載入資料庫後，使用者同意三點：(1) 用 Postgres 時預設混合檢索，重現步驟包含下載 bge-m3（本機快取實際 4.3 GB，更正先前「約 2 GB」）；(2) 檔案索引為版本來源，另提供一次做完的 `index --to-pg`；(3) 先做三種方法比較再實作。這取代第五十三筆使用者所選的「預設 BM25、不需下載模型」。
+- 比較做法：14 題（第五十六筆的新題 8 題＋第四十五、四十六筆的舊題 6 題）×（bm25、vector、hybrid），k=5，共 42 次完整回答。同一份含向量索引 a0ff519f…、同一個 vLLM（Qwen3-VL-8B-FP8）、`--web none`（關閉維基，只看教材檢索的差別），各跑一次。程式在同一個程序內載入索引與 bge-m3 一次。輸出在 data/evaluation/method-compare/。
+- 結果（答案選項由程式讀「答案：X」後比對官方答案；理由是否正確未判定）：
+
+| 方法 | 選項與官方一致 | 選錯 | 依據不足 | ⚠ 句數 | 檢索耗時中位數 | 模型耗時中位數 |
+|---|---|---|---|---|---|---|
+| BM25 | 10／14 | 舊 15 | 新 04、舊 7、舊 45 | 9 | 3.9 毫秒 | 5.9 秒 |
+| 向量 | 10／14 | 新 08、舊 15 | 舊 7、舊 45 | 13 | 222 毫秒 | 6.6 秒 |
+| 混合 | 11／14 | 舊 15 | 新 04、舊 45 | 12 | 211 毫秒 | 6.0 秒 |
+
+- 判讀：
+  1. 三者差距只有一題，樣本小、各跑一次，不足以說哪個方法較好；混合沒有比另外兩者差，與使用者的方向一致。
+  2. 向量檢索找回了 BM25 找不到的頁：新 04（Chunking，BM25 前五沒有相關頁、向量找到 3-49）與舊 7（混合找到 3-7、3-49）。向量單獨使用時新 08 選錯，混合沒有。
+  3. 舊 15 三種方法都選 A（官方 C），舊 45 三種都依據不足：這兩題教材本身沒有足夠內容（先前紀錄已知），開外部搜尋時才會補上。
+  4. 混合與向量每題多約 0.2 秒算查詢向量（CPU）；載入索引與 bge-m3 共 5.7 秒（模型檔已在系統快取，冷啟動可能較久）。
+- 限制：14 題、各一次、關閉外部搜尋，所以不等於實際使用（實際使用預設開維基）；選項一致不代表理由正確。
+- 結論：依使用者決定，pgvector 路徑預設混合檢索；BM25 保留給沒有模型的人。檔案索引的 CLI 預設暫不改（仍為 bm25），避免影響既有用法，於 pgvector 交付時一併詢問。
+- 結束階段：pgvector 進入實作。
+
+
+### 2026-11-17 第六十筆（版本：分支 feat/pgvector，基於 f6f61a5，未提交；PostgreSQL＋pgvector）
+
+- 依使用者確認的設計實作（見[設計 v0.7](design/rag-prototype.md)），先寫測試：
+  - 新增 src/ipas_hub/pgstore.py（資料表、資料列互轉、載入、讀回驗證、資料庫向量近鄰）；KnowledgeBase 的向量來源可替換（記憶體或資料庫）並新增 attach_encoder。
+  - cli：`--store file|pg`、依儲存決定預設方法（file 為 bm25、pg 為 hybrid）、`pg-load`、`index --to-pg`；pg 未指定 --index 時取最近載入且含向量的索引。
+  - knowledge：設定檔的來源可不指定勘誤檔，索引記錄 `errata: not_applied`；新增 config/knowledge-base.no-errata.json。原因：勘誤替換檔含教材原文、不在 repo，他人重現時沒有，原程式會直接無法建索引。
+  - compose 新增 `db` 服務（映像以 digest 固定、127.0.0.1:5433、volume pg-data、密碼取 .env 的 PG_PASSWORD）；app 服務加 PG_DSN／PGPASSWORD；Dockerfile 一律安裝 pg 選用相依；CI 加 pgvector service container 與 PG_TEST_DSN，Compose 驗證加 ui、db profile。
+  - README 新增「從零重現」一節；brief 更新向量儲存列。
+- 本機設定：AI 在 repo 根目錄 .env（不進版控，已確認被忽略）新增隨機產生的 PG_PASSWORD（32 字元，只用於本機 db 容器，未在對話中顯示）。
+- 測試（本輪實跑）：Windows 118 passed（含 3 個需資料庫的測試，連本機 db 容器執行）；沒有 PG_TEST_DSN 時這 3 個略過。`docker compose --profile llm --profile ui --profile db config -q` 通過；Docker test 階段（含 pg 選用相依，容器內跑合成測試，資料庫測試略過）本機建置成功。
+- 實機：
+  - 啟動 db 容器（healthy）；pg-load 兩個新索引：含向量 a0ff519f… 0.44 秒、BM25 版 8e487281… 0.16 秒；重複載入回 already_loaded。
+  - 從資料庫讀回並驗證 266 塊 0.07 秒。14 題 × 3 方法的前 5 筆，資料庫與檔案索引完全相同（42／42）；檢索耗時中位數兩者相近（約 0.16 秒，主要是 CPU 算查詢向量）。
+  - `serve --store pg`（預設 hybrid、開維基）6 秒就緒，自動選到含向量的索引；新 04 題 6.3 秒回答，選 B 與官方一致，教材 PDF 連結回 200。這題的外部依據是維基「速讀」條目，與 Chunking 的技術意義不符，屬外部搜尋的既有問題，與資料庫無關。
+  - 以無勘誤設定檔建索引 db777a29…，兩科都記為 not_applied；README 的 PowerShell 讀密碼與 `search --store pg` 指令照寫可用。
+- 未驗證：README 步驟由一個全新環境從頭執行（含 hf download）未做；AnythingLLM 畫面經 `--store pg` 的操作未做（端點 API 已測）；hosted CI 的 service container 與耗時待 PR 實跑。
+- 收尾：我啟動的 8101 serve 已停止；db 容器保持執行（供使用者試用）；vLLM、ui 與使用者的 8100 serve 未更動。
+- 結束階段：實作完成、待審查（未提交）。
+
+
+### 2026-11-17 第六十一筆（版本：分支 feat/pgvector，main 96d91cb；預設方法改為混合與交付）
+
+- 使用者指示：先合併 PR #12，再提交 feat/pgvector 並開 PR，預設方法改成混合。
+- 合併：PR #12 以 merge commit 合併為 96d91cb（2026-11-17T08:33:19Z）；本機 main 已更新。
+- 預設方法（先寫測試）：`--store file` 與 `pg` 都預設 hybrid。為了不讓沒有向量的索引（例如 BM25 版 8e487281…、Docker 預設映像建的索引）直接失敗，未指定 --method 時改用 bm25 並在 stderr 提醒；明確指定 vector／hybrid 仍報錯。pgstore 新增 has_vectors。
+- 影響：使用者目前 8100 的 serve 若用 8e487281…（無向量），重啟後會退回 BM25 並提醒；要用混合須改指 a0ff519f…（含向量），或改用 `--store pg`。
+- 測試（本輪實跑）：有資料庫時 121 passed；沒有 PG_TEST_DSN 時 117 passed、4 skipped。一個資料庫測試起初失敗，原因是本機資料庫 public schema 已有真實資料表、測試 schema 建表前查到它；改為建表後才判斷（CI 的資料庫是空的，不受影響）。
+- 實機（只檢索、不呼叫 LLM）：檔案索引含向量 → hybrid；檔案索引無向量 → bm25 並印提醒；`--store pg` 預設 → hybrid；`--store pg` 指定無向量索引 → bm25 並印提醒。四者第一筆皆為 3-25。
+- 結束階段：審查與交付（PR 待使用者同意合併）。
+- 交付：提交 3dd706c 並推送 feat/pgvector，開 [PR #13](https://github.com/Cheryl33990/ipas-learning-hub/pull/13)；PR CI（run 44048061078）success。CI 主機上 121 passed（4 個資料庫測試在 service container 實際執行，未略過），容器內 117 passed、4 skipped（容器內沒有資料庫，屬預期）。整個 job 57 秒，PR #9 時為 31 秒，多約 26 秒。本筆補記在提交後寫入，尚未提交。

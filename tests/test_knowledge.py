@@ -83,6 +83,24 @@ def test_build_records_patches_and_fails_if_patch_does_not_apply(tmp_path, monke
     monkeypatch.setattr("ipas_hub.knowledge.read_pages", lambda _: [Page("3-1", "無法套用")])
     with pytest.raises(ValueError, match="勘誤"):
         build_index(tmp_path, file, tmp_path / "data/index")
+    assert data["sources"][0]["errata"] == "applied"
+
+
+def test_source_without_errata_file_is_indexed_and_marked_not_applied(tmp_path, monkeypatch):
+    (tmp_path / "data").mkdir()
+    pdf = tmp_path / "data/fake.pdf"
+    pdf.write_bytes(b"synthetic_pdf")
+    (tmp_path / "uv.lock").write_text("synthetic lock")
+    config = {"schema_version": 1, "chunk_size": 40, "chunk_stride": 30,
+              "sources": [{"id": "s1", "name": "合成", "version": "v1", "pdf": "data/fake.pdf",
+                           "sha256": digest(pdf.read_bytes())}]}
+    file = tmp_path / "config.json"
+    file.write_text(json.dumps(config), encoding="utf-8")
+    monkeypatch.setattr("ipas_hub.knowledge.read_pages", lambda _: [Page("3-1", "合成舊詞", 3)])
+    data = json.loads(build_index(tmp_path, file, tmp_path / "data/index").read_text(encoding="utf-8"))
+    source = data["sources"][0]
+    assert source["errata"] == "not_applied" and source["patch_sha256"] is None and source["patch_report"] == []
+    assert data["chunks"][0]["text"] == "合成舊詞"
 
 
 def test_no_evidence_does_not_call_model():
@@ -126,3 +144,22 @@ def test_cli_search_persists_run_only_under_data(tmp_path, capsys):
     result = json.loads(capsys.readouterr().out)
     assert result["hits"][0]["source"] == "s2"
     assert (tmp_path / result["run_file"]).is_file()
+
+
+def test_default_hybrid_falls_back_to_bm25_with_a_notice_when_index_has_no_vectors(tmp_path, capsys):
+    folder = tmp_path / "data/index"
+    folder.mkdir(parents=True)
+    (folder / "index.json").write_bytes(canonical(payload()))
+    assert main(["--root", str(tmp_path), "search", "--index", "data/index/index.json", "--query", "差分隱私"]) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["method"] == "bm25"
+    assert "沒有向量" in captured.err and "BM25" in captured.err
+
+
+def test_explicit_vector_method_on_index_without_vectors_still_fails(tmp_path, capsys):
+    folder = tmp_path / "data/index"
+    folder.mkdir(parents=True)
+    (folder / "index.json").write_bytes(canonical(payload()))
+    assert main(["--root", str(tmp_path), "search", "--index", "data/index/index.json", "--query", "差分隱私",
+                 "--method", "hybrid"]) == 1
+    assert "向量" in capsys.readouterr().err

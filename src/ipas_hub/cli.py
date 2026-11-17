@@ -99,6 +99,48 @@ def answer_text(kb: KnowledgeBase, question: str, args, root: Path, link_for=Non
     return text
 
 
+def default_method(store: str) -> str:
+    """兩種儲存都預設混合檢索（使用者 2026-11-17 決定）；索引沒有向量時見 open_kb 的退回規則。"""
+    return "hybrid"
+
+
+def _fall_back_to_bm25(args) -> None:
+    args.method = "bm25"
+    print("提醒：此索引沒有向量，改用 BM25 關鍵字檢索。要用混合檢索，請以 --embedding-model 重建索引"
+          "（--store pg 時再載入資料庫）。", file=sys.stderr, flush=True)
+
+
+def open_kb(root: Path, args) -> KnowledgeBase:
+    """依 --store 開啟知識庫：file 讀 index.json；pg 從資料庫讀回並驗證，--index 為 index_id（省略取最近載入）。
+
+    未指定 --method 時預設混合檢索；索引沒有向量就退回 BM25 並提醒。明確指定向量或混合時不退回，照常報錯。
+    """
+    defaulted = getattr(args, "method_defaulted", False)
+    if args.store == "pg":
+        from . import pgstore
+        conn = pgstore.connect()
+        index_id = str(args.index) if args.index else None
+        if args.method != "bm25" and defaulted and not pgstore.has_vectors(conn, index_id):
+            _fall_back_to_bm25(args)
+        return pgstore.open_knowledge_base(conn, index_id, args.method != "bm25")
+    if not args.index:
+        raise ValueError("使用檔案索引（--store file）時須指定 --index <index.json>")
+    path = data_path(root, str(args.index))
+    if args.method != "bm25" and not json.loads(path.read_text(encoding="utf-8")).get("embedding"):
+        if not defaulted:
+            raise ValueError("此索引沒有向量，無法使用向量或混合檢索；請改用 --method bm25，或以 --embedding-model 重建索引")
+        _fall_back_to_bm25(args)
+    return KnowledgeBase.load(path, args.method != "bm25")
+
+
+def load_to_pg(index_path: Path) -> dict:
+    from . import pgstore
+    payload, vectors = pgstore.read_index_files(index_path)
+    loaded = pgstore.load_index(pgstore.connect(), payload, vectors)
+    return {"index_id": payload["index_id"], "pg": "loaded" if loaded else "already_loaded",
+            "vectors": vectors is not None}
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
@@ -107,10 +149,17 @@ def main(argv=None) -> int:
     index.add_argument("--config", type=Path, default=Path("config/knowledge-base.json"))
     index.add_argument("--output", type=Path, default=Path("data/index/kb"))
     index.add_argument("--embedding-model")
+    index.add_argument("--to-pg", action="store_true", help="建好後載入 PostgreSQL（連線讀 PG_DSN）")
+    load = sub.add_parser("pg-load", help="把檔案索引驗證後載入 PostgreSQL＋pgvector（連線讀 PG_DSN）")
+    load.add_argument("--index", required=True, type=Path)
     for name in ("search", "ask", "evaluate", "serve"):
         cmd = sub.add_parser(name)
-        cmd.add_argument("--index", required=True, type=Path)
-        cmd.add_argument("--method", choices=("bm25", "vector", "hybrid"), default="bm25")
+        cmd.add_argument("--store", choices=("file", "pg"), default="file",
+                         help="file：讀 index.json；pg：讀 PostgreSQL（連線讀 PG_DSN）")
+        cmd.add_argument("--index", type=Path,
+                         help="file 時為 index.json 路徑（必填）；pg 時為 index_id，省略則用最近載入的")
+        cmd.add_argument("--method", choices=("bm25", "vector", "hybrid"),
+                         help="預設 hybrid；索引沒有向量時自動改用 bm25 並提醒")
         cmd.add_argument("--k", type=int, default=5)
         if name == "evaluate":
             cmd.add_argument("--cases", type=Path, required=True)
@@ -132,14 +181,20 @@ def main(argv=None) -> int:
             if name == "ask":
                 cmd.add_argument("--format", choices=("json", "text"), default="json")
     args = parser.parse_args(argv)
+    if getattr(args, "store", None) and args.method is None:
+        args.method, args.method_defaulted = default_method(args.store), True
     root = args.root.resolve()
     started = time.perf_counter()
     try:
         if args.command == "index":
             path = build_index(root, root / args.config, args.output, args.embedding_model)
             result = {"index": str(path.relative_to(root)), "status": "built"}
+            if args.to_pg:
+                result.update(load_to_pg(path))
+        elif args.command == "pg-load":
+            result = load_to_pg(data_path(root, str(args.index)))
         else:
-            kb = KnowledgeBase.load(data_path(root, str(args.index)), args.method != "bm25")
+            kb = open_kb(root, args)
             if args.command == "serve":
                 from .server import HOST, make_server
                 check_config(LLMConfig.from_env(args.llm_url, args.model, args.allow_remote))  # 設定錯誤在啟動時就報

@@ -10,6 +10,9 @@ dependencies = [
 
 [project.optional-dependencies]
 embeddings = ["sentence-transformers>=3.0"]
+pg = [
+    "psycopg[binary]>=3.2",
+]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
