@@ -14,6 +14,10 @@ updated: 2026-11-16
 
 目前進度（第三十八筆）：使用者已批准最終 29 檔 diff 的 commit／push／Draft PR；已提交並推送 b38e031，建立 [Draft PR #3](https://github.com/Cheryl33990/ipas-learning-hub/pull/3)。目前為程式審查與雲端 CI 待確認階段；三組試用已回覆，本輪先前 Windows／Docker 各37項測試通過。上方及歷史紀錄按當時狀態保留，最新動作以此與末筆為準。本筆交付紀錄為提交後補記，尚未提交。
 
+目前進度（第六十三筆）：刪除多下載的模型檔並修正因此發現的載入問題；聊天回覆改為每句分段、瀏覽器開端點時顯示說明頁；與 README 修正一起提交、開 PR 並合併。接著調整資料夾並納入中級教材。見末筆。
+
+目前進度（第六十二筆）：PR #13 已合併為 a8b085f、main CI success。依 README 在全新 clone 從頭重現成功；發現 README 的模型下載指令會多抓 2.3 GB，已在 docs/repro-verification 修正，未提交。AnythingLLM 畫面經 --store pg 的操作待使用者試用。見末筆。
+
 目前進度（第六十一筆）：PR #12 已合併為 96d91cb；預設檢索方法改為混合（兩種儲存皆同，沒有向量時自動改用 BM25 並提醒）；feat/pgvector 提交並開 PR，待同意合併。見末筆。
 
 目前進度（第六十筆）：PostgreSQL＋pgvector 已在 feat/pgvector 實作並實機驗證（資料庫與檔案索引檢索結果相同、serve --store pg 可用），未提交，待使用者審查；PR #12 待同意合併。見末筆。
@@ -805,3 +809,34 @@ updated: 2026-11-16
 - 實機（只檢索、不呼叫 LLM）：檔案索引含向量 → hybrid；檔案索引無向量 → bm25 並印提醒；`--store pg` 預設 → hybrid；`--store pg` 指定無向量索引 → bm25 並印提醒。四者第一筆皆為 3-25。
 - 結束階段：審查與交付（PR 待使用者同意合併）。
 - 交付：提交 3dd706c 並推送 feat/pgvector，開 [PR #13](https://github.com/Cheryl33990/ipas-learning-hub/pull/13)；PR CI（run 44048061078）success。CI 主機上 121 passed（4 個資料庫測試在 service container 實際執行，未略過），容器內 117 passed、4 skipped（容器內沒有資料庫，屬預期）。整個 job 57 秒，PR #9 時為 31 秒，多約 26 秒。本筆補記在提交後寫入，尚未提交。
+
+
+### 2026-11-17 第六十二筆（版本：main a8b085f；分支 docs/repro-verification 未提交；重現驗證）
+
+- 使用者同意提交與合併並開始驗證：progress 補記提交為 PR #13 的第二個 commit 後合併，合併提交 a8b085f（2026-11-17T08:45:23Z）。補記 commit 推送後、其 PR CI 開始前即合併（只改文件）；合併後 main CI（run 44049450895）success。
+- 全新環境重現（照 README「從零重現」逐步執行，AI 操作）：
+  - 做法：在暫存目錄以 `gh repo clone` 取得 main a8b085f（沒有 data/、.env），用全新的 uv 環境；沒有勘誤替換檔，模擬他人重現。偏離 README 兩處：資料庫埠改 5434（避免與使用者 5433 的資料庫衝突）、serve 埠改 8102（使用者 8100 在用）；LLM 共用已在執行的 vLLM，未另起一份。
+  - 步驟 1：從官方網址下載兩份初級學習指引，SHA-256 與 config/knowledge-base.json 完全相同（科目 1 5,237,777 bytes、科目 2 5,041,118 bytes）。先前只比對過大小，這次才實際比對雜湊。
+  - 步驟 3：`uv sync --extra pg --extra embeddings` 6 秒（套件已在 uv 快取）；`hf download BAAI/bge-m3` 31 秒。
+  - 步驟 5：db 容器啟動；`index --config config/knowledge-base.no-errata.json --embedding-model BAAI/bge-m3 --to-pg` 95 秒，產生並載入 1a470628…（含向量）。與使用者的勘誤版索引 a0ff519f… 比對：266 塊 id 相同、PDF 頁相同，只有 12 塊文字不同，全在勘誤頁（科目 1 的 3-25、3-26、3-27、3-30、3-31，科目 2 的 3-32）。
+  - 步驟 6：`serve --store pg` 7 秒就緒；README 的 `ask --store pg --format text` 12 秒回答勘誤探針（無勘誤，依更正前文字，屬預期）；經端點問新 04、舊 28 題，分別選 B、C，與官方一致，舊 28 題帶 3 個教材連結；`/files/subject1.pdf` 回 200。
+  - 證據（執行紀錄與無勘誤索引）複製到 data/evaluation/repro-2026-11-17/；副本、其資料庫容器與 volume 已刪除。
+- 發現的問題與修正（未提交）：
+  1. README 的 `hf download BAAI/bge-m3` 會下載整個 repo（4.6 GB），其中 ONNX 版本（onnx/model.onnx_data，2.27 GB）與圖片本專案用不到。改為加 `--exclude "onnx/*" --exclude "imgs/*" --exclude "*.jpg"`，依 Hugging Face 檔案清單計算約 2.3 GB；磁碟需求改為約 4 GB。第五十九筆所記「4.3 GB」是使用者原本快取的大小（含兩份相同權重），不是新使用者需要的下載量。
+  2. README 補一行：5433 被占用時設 PG_PORT 並同步改 PG_DSN 的 port。
+- 對使用者環境的影響：這次照 README 執行時，`hf download` 在使用者的 Hugging Face 快取新增了 bge-m3 的 ONNX 版本與圖片等檔案（約 2.3 GB，快取由 4.3 GB 變 6.4 GB），事先未徵求同意；模型版本未變（snapshot 5617a9f…，與索引記錄相同）。這些檔案本專案用不到，刪除與否待使用者決定。
+- 未驗證：AnythingLLM 畫面經 `--store pg` 的操作；README 修正後的 `--exclude` 指令未在無快取的環境實際下載（只用 dry-run 與檔案清單核對）。
+- 結束階段：重現驗證完成；README 修正待提交。
+
+
+### 2026-11-17 第六十三筆（版本：分支 docs/repro-verification，main a8b085f 加未提交變更；刪除多餘模型檔、說明頁與排版）
+
+- 使用者試用：`serve --store pg` 經 AnythingLLM 回答一題中級試題（詞性標註），選出 D；但回覆說「教材未涵蓋」。原因：知識庫只有初級兩科，中級三份教材已下載、尚未納入。畫面上逐句回答與 [外部1] 標記全部併成一段。使用者在瀏覽器開 8100/v1 看到「找不到此路徑」，以為服務有問題。
+- 使用者決定：刪除多下載的模型檔；修正一起提交、開 PR 並合併；同意資料夾結構調整並把中級教材納入知識庫（先不套用中級勘誤，再整理勘誤後重建）。
+- 刪除：bge-m3 快照 5617a9f… 中今天由 `hf download` 新增、本專案用不到的檔案（onnx/、imgs/、long.jpg、colbert_linear.pt、sparse_linear.pt、.gitattributes），共 2.29 GB；刪前確認這些檔案都是今天寫入。快取回到 4.3 GB。
+- 刪除後發現的問題：huggingface_hub 2.4.0 會依 `hf download` 記下的檔案清單（trees/5617a9f….json）檢查快照是否完整，缺檔就拒絕離線載入，連帶使 README 的 `--exclude` 做法對新使用者同樣會失敗。修正：knowledge.local_encoder 載入時傳入 ignore_patterns（EMBEDDING_IGNORE：onnx、openvino、圖片、*.pt、.gitattributes），與 README 的 `--exclude` 一致；README 補 `--exclude "*.pt"`。修正後以目前已刪檔的快取實際載入成功（revision 5617a9f…，與索引相同）。
+- 排版：`render_text(markdown=True)` 每句與每個 ⚠ 各自成段（段間空一行），依據清單維持清單；CLI 的純文字輸出不變。
+- 說明頁：瀏覽器開端點的 `/` 或 `/v1` 時回 200 與一頁簡短說明（這是 API 端點、請從聊天介面使用），不再回 404。
+- 測試（本輪實跑）：Windows 120 passed、4 skipped（未設 PG_TEST_DSN）。新增測試：載入時忽略不需下載的檔案、Markdown 分段、說明頁。
+- 未驗證：新的分段排版在 AnythingLLM 畫面的效果（需重啟 serve 後由使用者檢視）；`--exclude` 加上 ignore_patterns 在完全沒有快取的環境實際下載後載入（只以已刪檔的本機快取驗證）。
+- 結束階段：審查與交付（使用者已同意提交、開 PR 並合併）；接著進行資料夾調整與中級教材納入。

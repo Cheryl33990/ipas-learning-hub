@@ -90,6 +90,14 @@ def test_http_server_binds_loopback_and_serves_models_chat_and_stream(running):
     assert text.rstrip().endswith("data: [DONE]")
 
 
+def test_browser_visit_to_root_or_v1_gets_an_explanation_not_an_error(running):
+    for path in ("/", "/v1", "/v1/"):
+        with urlopen(running + path, timeout=10) as res:
+            page = res.read().decode()
+            assert res.status == 200 and res.headers.get("Content-Type").startswith("text/html")
+            assert "API" in page and "/v1/models" in page and "聊天介面" in page
+
+
 def test_http_server_rejects_bad_json_and_unknown_paths(running):
     with pytest.raises(HTTPError) as bad:
         urlopen(Request(running + "/v1/chat/completions", b"{not json", {"Content-Type": "application/json"}), timeout=10)

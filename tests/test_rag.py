@@ -80,6 +80,17 @@ def test_pdf_page_is_shown_next_to_the_printed_page_and_can_become_a_link():
     assert "- [外部1] [外部 維基百科：平均絕對誤差](https://zh.wikipedia.org/w/index.php?curid=1&oldid=9)" in md
 
 
+def test_markdown_puts_each_sentence_and_warning_in_its_own_paragraph():
+    # 聊天介面把單一換行併成同一段；Markdown 版每句之間空一行，依據清單仍是清單
+    result = answer("題目", BOOK, WEB, reply(status="supported", segments=[
+        seg("迴歸預測連續數值", "subject1:3-36:0"), seg("MAE 用於迴歸預測連續數值", "subject1:3-36:0"), seg("答案：B")]))
+    md = render_text(result, markdown=True)
+    assert "迴歸預測連續數值 [教材1]\n\nMAE 用於迴歸預測連續數值 [教材1]\n\n⚠ 引用可能不支持此句" in md
+    assert "\n\n答案：B\n\n依據：\n- [教材1]" in md
+    plain = render_text(result)  # 終端機版維持原本的單行換行
+    assert "迴歸預測連續數值 [教材1]\nMAE 用於迴歸預測連續數值 [教材1]\n  ⚠ 引用可能不支持此句" in plain
+
+
 def test_old_index_without_pdf_page_shows_only_the_printed_page_and_no_link():
     result = answer("題目", BOOK, [], reply(status="supported", segments=[seg("迴歸預測連續數值", "subject1:3-36:0")]))
     md = render_text(result, lambda s: None, markdown=True)

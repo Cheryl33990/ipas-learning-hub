@@ -32,12 +32,17 @@ def data_path(root: Path, name: str) -> Path:
     return path
 
 
+# 句向量模型用不到的檔案（ONNX 版本、圖片、附加的稀疏／多向量權重）。README 的下載指令排除同一組，
+# 載入時也忽略它們，避免 huggingface_hub 依下載清單把它們當成缺漏而拒絕離線載入。
+EMBEDDING_IGNORE = ["onnx/*", "openvino/*", "imgs/*", "*.jpg", "*.png", "*.webp", "*.pt", ".gitattributes"]
+
+
 def local_encoder(model: str, revision: str | None = None):
     """只使用本機 HF 快取；索引與查詢固定使用相同 snapshot。"""
     from huggingface_hub import snapshot_download
     from sentence_transformers import SentenceTransformer
 
-    path = snapshot_download(model, revision=revision, local_files_only=True)
+    path = snapshot_download(model, revision=revision, local_files_only=True, ignore_patterns=EMBEDDING_IGNORE)
     encoder = SentenceTransformer(path, device="cpu", local_files_only=True)
     return encoder, Path(path).name
 
