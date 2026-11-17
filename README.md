@@ -8,7 +8,14 @@ updated: 2026-11-16
 
 iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到教材出處，之後再提供選項解析。
 
-第一輪兩個探索已有結果；第二輪已完成 115 年第三次初級科目 1 的 50 題逐選項解析，並提供兩科教材對照索引。使用者已確認目前解析與人工審查紀錄通過；14 題有逐題判定，其餘 36 題不宣稱已逐題驗證。目前只供作者本人自用，尚無查題介面。範圍與成功條件見 [brief](docs/project/brief.md)，目前進度與下一步見 [progress](docs/project/progress.md)。
+目前是本機 RAG 原型：初級兩科＋中級三科教材、BM25／向量混合搜尋、PostgreSQL＋pgvector、本機 LLM 與 AnythingLLM 聊天介面，可回傳帶教材頁碼的解答。供作者自用，尚未驗收公開／多人服務及整體答題品質。範圍與成功條件見 [brief](docs/project/brief.md)，進度見 [progress](docs/project/progress.md)。
+
+- 第一次操作：[Windows 新手手冊](docs/project/beginner_setup.md)。
+- 交給 AI 協助：[架設任務指引](docs/project/ai_setup.md)。
+- 評估與展示：[完整度與混合搜尋證據](docs/project/retrieval_evidence.md)。
+- 第二個文件情境：[勞動基準法獨立知識庫](docs/project/labor_law_setup.md)（一般 PDF、明確選庫、關閉外搜的驗證）。多庫時請以 `--kb ipas` 或 `--kb labor-law` 指定範圍。
+
+既有 50 題靜態逐選項解析與雙科索引保留；使用者接受目前內容，14 題有逐題判定，其餘 36 題不宣稱已逐題驗證。
 
 解析入口：[逐選項解析與雙科索引](docs/project/explanations/115-3-subject1.md)。引用區分教材依據與相關頁，供學習對照，不認定為實際命題出處；人工判定見[複核紀錄](docs/project/validation/2026-11-16-explanation-review.md)。
 
@@ -17,7 +24,7 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
 - 探索一：一份初級試題 50 題，分成「找不到／找到但要自己推理／教材沒有」三類，並記下依據頁碼。答案由作者填，依據頁碼與分類由 AI 代填。
 - 探索二：同一批題目比較關鍵字檢索與向量檢索。
 
-第二輪解析由 AI 在協作對話中撰寫，不呼叫付費 API。web search、中級教材、模擬考介面與公開上線不在目前實作範圍；已另獲授權從官方頁下載科目 2 指引，補充現有 50 題的跨科依據。
+第二輪解析由 AI 在協作對話中撰寫，不呼叫付費 API。當時未納入 web search、中級教材、模擬考介面與公開上線；後續已加入維基外部搜尋、中級教材與聊天介面。模擬考介面及公開上線仍未交付。
 
 ## 專案配置
 
@@ -88,10 +95,10 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
    docker compose --profile llm up -d vllm      # 首次約 2 分鐘
    docker compose --profile ui up -d ui
    $env:LLM_MODEL = 'qwen3-vl-8b-fp8'
-   uv run python -m ipas_hub.cli serve --store pg
+   uv run python -m ipas_hub.cli serve --store pg --kb ipas
    ```
 
-   開 http://localhost:3001 建立工作區後提問（不要上傳文件）。預設混合檢索（關鍵字＋向量）；`--store pg` 未指定 `--index` 時用最近載入且含向量的索引。也可以只在終端機問：`uv run python -m ipas_hub.cli ask --store pg --query "題目" --format text`。
+   開 http://localhost:3001 建立工作區後提問（不要上傳文件）。預設混合檢索（關鍵字＋向量）；`--store pg --kb ipas` 未指定 `--index` 時用該庫最近載入且含向量的索引。也可以只在終端機問：`uv run python -m ipas_hub.cli ask --store pg --kb ipas --query "題目" --format text`。
 
 用完：`docker compose --profile llm stop vllm` 釋放顯存；資料庫資料留在 volume `pg-data`。
 

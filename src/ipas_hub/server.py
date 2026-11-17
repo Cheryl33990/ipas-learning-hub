@@ -77,9 +77,11 @@ def sse_chunks(text: str, model: str):
     yield "data: [DONE]\n\n"
 
 
-def make_server(answer_fn, port: int, model: str, files: dict | None = None) -> ThreadingHTTPServer:
+def make_server(answer_fn, port: int, model: str, files: dict | None = None,
+                models: dict | None = None) -> ThreadingHTTPServer:
     """files 是「名稱 → 檔案路徑」的允許清單；只比對完整名稱，不把請求路徑接到檔案系統上。"""
     files = dict(files or {})
+    routes = dict(models) if models is not None else None
 
     class Handler(BaseHTTPRequestHandler):
         def _json(self, status: int, payload: dict) -> None:
@@ -118,7 +120,9 @@ def make_server(answer_fn, port: int, model: str, files: dict | None = None) -> 
                 self.end_headers()
                 self.wfile.write(data)
             elif path.rstrip("/") == "/v1/models":
-                self._json(200, {"object": "list", "data": [{"id": model, "object": "model", "owned_by": "local"}]})
+                self._json(200, {"object": "list", "data": [
+                    {"id": name, "object": "model", "owned_by": "local"}
+                    for name in (routes if routes is not None else [model])]})
             else:
                 self._json(404, {"error": {"message": "找不到此路徑", "type": "invalid_request_error"}})
 
@@ -133,14 +137,21 @@ def make_server(answer_fn, port: int, model: str, files: dict | None = None) -> 
                 question = last_user_message(payload)
             except (ValueError, UnicodeDecodeError) as exc:
                 return self._json(400, {"error": {"message": f"請求格式錯誤：{exc}", "type": "invalid_request_error"}})
+            selected_model, selected_answer = model, answer_fn
+            if routes is not None:
+                selected_model = payload.get("model")
+                if not isinstance(selected_model, str) or selected_model not in routes:
+                    return self._json(400, {"error": {"message": "請指定已設定的模型／知識庫名稱",
+                                                      "type": "invalid_request_error"}})
+                selected_answer = routes[selected_model]
             if not payload.get("stream"):
-                return self._json(*chat_response(payload, answer_fn, model))
+                return self._json(*chat_response(payload, selected_answer, selected_model))
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "close")
             self.end_headers()
-            for line in sse_chunks(answer_or_failure(question, answer_fn), model):
+            for line in sse_chunks(answer_or_failure(question, selected_answer), selected_model):
                 self.wfile.write(line.encode("utf-8"))
             self.wfile.flush()
             self.close_connection = True

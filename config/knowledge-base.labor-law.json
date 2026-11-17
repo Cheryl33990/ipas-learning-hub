@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "knowledge_base": "labor-law",
+  "chunk_size": 400,
+  "chunk_stride": 300,
+  "sources": [
+    {
+      "id": "labor-standards-act",
+      "name": "勞動基準法",
+      "version": "民國113年07月31日修正；2026-11-17取得官方PDF",
+      "pdf": "data/raw/labor-law/labor-standards-act.pdf",
+      "sha256": "153819d3816fa033cfe2dadf2b4d246a512ce74976fc0ee23aa8223d75a67b9d",
+      "parser": "pdf",
+      "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?PCode=N0030001",
+      "download_url": "https://law.moj.gov.tw/LawClass/FilesType.aspx?DataId=N0030001&md=m",
+      "retrieved_at": "2026-11-17"
+    }
+  ]
+}

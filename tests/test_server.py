@@ -108,6 +108,7 @@ def test_http_server_rejects_bad_json_and_unknown_paths(running):
 
 
 class FakeKB:
+    knowledge_base = "ipas"
     index_id = "idx"
 
     def search(self, question, k, method):

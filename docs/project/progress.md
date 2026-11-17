@@ -6,7 +6,21 @@ updated: 2026-11-16
 
 # 進度與接手
 
-目前階段與前進判斷（2026-11-17，本輪交付）：使用者明確要求提交、開 PR、合併；沿用第六十五筆 AI review 與驗證，程式未再修改。下一步提交 chore/data-layout-intermediate、開 Draft PR，待本批 CI 通過後轉 ready 並合併；部署、介面試用與品質驗收仍分開記錄。GitHub connector 已確認可存取本 repo，沿用既有 merge commit 慣例。
+目前階段與前進判斷（2026-11-17，本批交付）：使用者已確認本次進展並明確授權提交、開PR與合併。feat/document-knowledge-bases基底c4bd89d，受審範圍為一般PDF、勞基法獨立庫、模型分庫路由、測試及操作文件；提交前重跑138 passed（含本機pg），未改動運作中的服務。AI自查可送審，依本批hosted CI結果合併；最終CI／merge SHA以同一PR紀錄為準，不另開合併補記PR。本筆與末筆隨功能同批提交，品質缺陷及未驗證範圍仍保留。
+
+目前階段與前進判斷（2026-11-17，使用者工作區試用與設定說明）：使用者已實際試用並確認勞基法回答到問題、詢問機器學習時不提供解答（OK）；這是該次操作確認，不推定全面品質驗收。截圖中AnythingLLM向量計數0屬其內建LanceDB空工作區；自建RAG另查pgvector，唯讀核對ipas為1,389／1,389個向量、labor-law為51／51個向量，皆1,024維。說明兩層設定與搜尋參數差異，不改目前運作設定。
+
+目前階段與前進判斷（2026-11-17，勞基法工作區已啟用）：本機操作驗證完成、可供使用者試用。使用者要求直接執行並給連結；已啟動共用8100，rag→ipas／維基、labor-law→labor-law／web none，沿用現有勞基法工作區並實跑2題。138測試通過，UI頁HTTP與實際工作區SSE／PDF可用，原rag設定保持；工時題的變形工時補充概括過度已記內容缺陷。原8101臨時服務已由共用入口取代並停止，db／ui／vLLM保留。工作區連結與啟停見labor_law_setup.md；未提交合併或對外發布。
+
+目前階段與前進判斷（2026-11-17，勞基法實作）：實作完成、審查與試用。feat/document-knowledge-bases 在 main c4bd89d 加未提交變更；一般 PDF／--kb／跨庫拒絕已實作，勞基法官方 PDF 建立 51 塊、1,024 維索引 6f1226f8… 並載入 pg。132 個測試通過（含資料庫），4 題真實檢索與 1 題 LLM／HTTP 引用管線通過；不宣稱法律或整體品質驗收。操作見 labor_law_setup.md，原 8100 未動，多庫重啟 iPAS 須加 --kb ipas。未提交、開 PR 或發布，詳見末筆。
+
+目前階段與前進判斷（2026-11-17，通用 PDF 與知識庫隔離）：定義轉設計。使用者將範圍擴至內部文件／法條等文字型 PDF，要求文件與測試分割，並同意上一輪順序。已更新 brief，核對既有 SQL 依 index_id 隔離、預設卻選全域最近索引的限制；第一批候選為通用 PDF、明確知識庫選擇、跨庫不召回及測試資料隔離。尚未改程式／資料庫或確定重大架構，下一步定介面、相容策略與逐項測法。
+
+目前階段與前進判斷（2026-11-17，可換教材的 RAG side project）：定義階段。使用者明確提出可擴充非 iPAS 教材、以模型知識或 web 補強，以及供他人參考的完整產品體驗；已寫入 brief 的「產品方向更新」。缺口為文件格式／匯入方式、無依據補充政策與驗收邊界。一般 PDF 與來源分層屬 AI 候選方案，未當作已確認 AC；本輪不直接改 parser／prompt。下一步將通用教材匯入、回答來源與示範交付拆成可驗證小批次。
+
+目前階段與前進判斷（2026-11-17，新手交接與效能證據盤點）：本輪從探索／文件設計進到審查。使用者已親自看見資料庫向量，詢問完整度、新手／AI 架設文件與混合搜尋說服力。已建立新手手冊、AI 架設指引與證據盤點，README 更新現況；只新增文件，未修改檢索。新機從零生成模型路徑與新手實測未通過驗證，評估方案為暫定未採用；未執行新 benchmark、提交或發布。詳見末筆。
+
+目前階段與前進判斷（2026-11-17，本輪交付完成）：使用者明確授權提交、開 PR、合併。已提交 e9bdd9e，建立 [PR #15](https://github.com/Cheryl33990/ipas-learning-hub/pull/15)，本批 CI 通過後轉 ready 並合併為 c4bd89d。本機 main 已快轉同步。交付證據見末筆；部署、介面試用與品質驗收尚未完成。本段及末筆為合併後本機補記，尚未提交。
 
 目前階段與前進判斷（2026-11-17，本輪接手審查）：審查與交付。受審版本為 chore/data-layout-intermediate、基底 127f204 加未提交的 13 檔變更。README 的 UTF-8 讀檔及五科操作說明已修正，本輪單元測試與真實教材回歸通過，AI review 判斷可提交並開 PR；合併仍須本批 CI 通過及負責人最後決定。尚未提交、開 PR 或合併；答題品質及人工勘誤複核未驗收。詳細證據見末筆。
 
@@ -870,3 +884,73 @@ updated: 2026-11-16
 - `python -m ipas_hub.explain` 通過 50 題檢查，生成 Markdown 與版控無內容差異；`git diff --check` 通過。檢視程式、設定、測試與文件 diff，未混入 data 原文或模型。
 - 限制：本輪未重新呼叫 LLM、未驗證 8100／AnythingLLM 畫面、未人工複核勘誤語意；既有 6 題試跑只作歷史探索證據。gh auth status 回報本機登入無效，本輪未操作遠端。
 - 結束階段／前進判斷：可提交並開 PR；新 PR 的 CI（含資料庫與容器）通過後，再依負責人決定合併。PR #14 的 CI 不當成本批結果。尚未提交、開 PR、合併、部署或驗收。回復方式為回復本批程式與設定並還原本機 PDF 路徑；舊索引仍保留，需相容路徑才能開啟教材。
+
+### 2026-11-17 第六十六筆（提交、PR 與合併）
+
+- 使用者明確要求「請幫我提交、開PR、合併」。起始為審查與交付，沿用前筆驗證及 AI review，程式未再修改。
+- 提交 e9bdd9e4ffd6069af5ff87a06f3b9bf693af3347：13 檔、+162／−40。推送 chore/data-layout-intermediate，建立 Draft PR #15；重新產生的 Markdown 無內容差異，未納入提交。
+- 本批 [CI run 44057346093](https://github.com/Cheryl33990/ipas-learning-hub/actions/runs/44057346093) success：125 passed（含 PostgreSQL／pgvector），Docker 121 passed、4 skipped（容器無測試資料庫）；Compose、原始資料未追蹤及 runtime 啟動檢查均通過。
+- CI 通過後轉 ready，依使用者授權以 merge commit 合併；預期 head SHA 鎖定 e9bdd9e，GitHub 確認 merged，合併版本 c4bd89df3fb6ae341f1a0f18ca0b159c5510cdf7（2026-11-17 17:39 台北時間）。本機 main 已同步；PR 說明已更新 CI 與合併證據。
+- 環境：沙箱內 .git 為唯讀，透過核准的提權命令完成 commit／push／fetch／快轉；Git 遠端與 GitHub connector 正常，前筆 gh auth status 不代表這兩條路徑不可用。
+- 結束階段：本輪提交、PR、合併完成。未重啟 8100，未部署或進行新一輪品質驗收；下一步仍為重啟 serve 後試用中級題目及排版。本筆為合併後本機補記，尚未提交；雲端交付結果已寫入 PR #15。
+
+### 2026-11-17 第六十七筆（新手交接與品質／速度證據盤點）
+
+- 起始階段：探索與文件設計。使用者確認已看到資料庫向量；這是資料可檢視的確認，不推定為 RAG 品質或新手安裝驗收。目標為評估專案完整度、提供完全新手及 AI 架設文件、釐清混合搜尋證據。
+- 變更前測法：以實際 compose、CLI、pgstore、knowledge 程式核對命令／欄位；比對歷史驗證來源、檢查新文件本機連結與 diff。純文件工作不新增應用測試或重跑 GPU 模型。
+- 新文件：`docs/project/beginner_setup.md`（安裝、教材雜湊、無勘誤重現、模型／資料庫、搜尋、UI、每日啟停、DBeaver 與排錯）、`docs/project/ai_setup.md`（操作任務與逐步證據；AGENTS 仍為唯一共同規則）、`docs/project/retrieval_evidence.md`（完整度、歷史數字、宣稱界線與暫定評估方案）。README 加入口並修正首頁「尚無介面／未納入中級」的過時說法。
+- 判斷：目前具備自用／展示原型流程與 CI，不能宣稱新手獨立安裝、五科混合搜尋品質優勢或多人產品已驗收。歷史 14 題單次比較為混合 11／14、BM25 與向量各 10／14，均為舊初級索引、web none；差一題不證明穩定優勢。未把舊 211 ms 檢索中位數當現行五科完整回答速度。
+- 限制：新手手冊中以 helper 容器下載生成模型到新 volume 為候選命令，未在乾淨環境執行；既有重現共用了 vLLM，不能冒充從零端到端。安裝工具／Hugging Face CLI／AnythingLLM 連線欄位參考官方文件，查閱日期 2026-11-17。新評估資料尚未選題或人工標註，方案未提升為已確認 AC。
+- 本輪實際檢查：README 與三份新文件的相對連結均存在、程式碼圍欄成對；`git diff --check` 通過，`python -m ipas_hub.cli evaluate --help` 與評估文件參數一致。未跑新下載、索引、資料庫寫入、LLM 或新手畫面操作。
+- 收尾：文件審查中，未提交、開 PR 或合併。下一步由新使用者照手冊實測，優先驗證從零模型準備與 UI 來回；品質工作先確認現行五科保留測試集與人工判準，再公平比較 BM25／向量／混合。保留前筆合併補記，之後隨同一批文件提交，無需單開補記 PR。
+
+### 2026-11-17 第六十八筆（產品方向：通用教材與知識補強）
+
+- 起始／結束階段：定義。使用者確認希望教材可自行擴充且不限 iPAS、教材不足時以模型知識或 web search 補強，並成為可供參考且有優秀產品呈現的完整 side project。方向主來源更新至 brief；形式、預設政策與驗收尚未確認。
+- 現況核對：資料庫欄位與來源設定已有通用基礎，但 guide.parse_page 依章節頁碼辨識，無這種頁碼的頁面會略過，不能宣稱一般 PDF 已可直接使用。rag.answer 在完全沒有 evidence 時直接回報不足；現有 supported 輸出要求引用，模型知識補充需新契約與測試，不能只改文案。
+- 候選順序：一般文字 PDF 匯入與 PDF 頁引用 → 三類來源的回答與不足補強 → 乾淨環境／AI 架設與非 iPAS 示範 → 混合搜尋及端到端品質證據 → 專案展示與產品整理。OCR、其他文件格式、外搜供應者與多人管理仍待定，不一次擴充。
+- 本輪只修 brief／progress；依已讀程式核對限制，未改程式、測試、檢索排序、索引或歷史結果，未提交發布。完成條件為保存使用者方向、未知與候選下一步；不把方向確認視為重大架構或新 AC 已批准。
+
+### 2026-11-17 第六十九筆（通用文件與隔離的第一批規劃）
+
+- 使用者補充：不限教材，也包含內部文件與法條等文字型 PDF；測試需要分割，避免混在一起；同意上一輪順序並詢問下一步。起始定義、結束設計待展開，方向記 brief。
+- 查核：pgstore.read_index／nearest 依 index_id 篩選，並非所有已存索引都一起搜；但未指定 index 時會選全域最近符合條件索引，新測試索引可能改變預設選擇。資料庫單元測試已有 UUID schema 隔離，但真實文件評估仍需獨立資料邊界與固定 index_id。
+- 第一批候選測法：一般 PDF 無 iPAS 章節頁碼仍可引用；A／B 庫相似文字互不召回；新增 B 不影響已選 A；未知庫回報錯誤；既有 iPAS 解析結果保持；評估答案不進文件語料。庫名／索引版本關係與舊 CLI 相容策略待設計，未直接改 schema。
+- 只更新 brief／progress 並檢查 diff；未搬文件、建向量、下載法規或執行外搜。掃描 PDF、複雜圖表、法條更新、跨組織權限不是本輪已交付能力。下一步先完成通用匯入與隔離設計，再按已確認邊界實作。
+
+### 2026-11-17 第七十筆（勞基法官方 PDF、一般文件與知識庫隔離）
+
+- 使用者指定官方 URL 並明確要求接續加入勞基法。開始階段為設計與測試規劃，先寫 design/document_knowledge_bases.md 再改程式；新工作分支 feat/document-knowledge-bases，基底 main c4bd89d，保留先前未提交文件。
+- 官方來源：LawAll.aspx?PCode=N0030001；頁面實際 PDF 入口為 FilesType.aspx?DataId=N0030001&md=m。下載原檔 302,061 bytes、19 頁，頁面與 PDF 皆標示民國113年07月31日修正；SHA-256 153819d3816fa033cfe2dadf2b4d246a512ce74976fc0ee23aa8223d75a67b9d。原文與取得 manifest 僅在 data/raw/labor-law；設定 config/knowledge-base.labor-law.json 只記來源、版本與識別，不收原文。
+- 實作：guide 的 parser=pdf 收一般非空文字頁、預設仍為 ipas；來源保存 parser／URL／取得日。knowledge_base 寫入 manifest，歷史缺欄位索引解讀為 ipas，不改原索引。CLI --kb 限定資料庫庫名或核對 file／明確 index；多庫省略範圍拒絕；混合方法仍優先選同庫含向量版本。沿用現有 JSON manifest 無新資料表。一般來源顯示文件標記、版本與 PDF 頁；內部 source_type 沿用既有 textbook 契約，不改生成 JSON。
+- 本輪實跑：132 passed（本機 pg，含 7 個資料庫測試、CLI 分庫與相似文字向量隔離），0 skipped。最初 pytest 預設暫存目錄權限造成 14 setup errors；第一次改 basetemp 漏建父目錄仍失敗；補建 data/test-tmp 並使用新 UUID 目錄後發現 2 個 FakeKB 缺 knowledge_base，更新測試替身後通過；再新增 CLI 實際路由測試，最後 132 項全通過。未將中途失敗寫成通過。
+- 真實索引：6f1226f8141db00bb31356bbb69991263284768b0be4ca0f2a1564f5d27abadb；bge-m3、51 塊、1,024 維，CPU 建置約 21–25 秒（只作本機觀察，不當服務速度指標）。已載入 pg；索引 code_sha256 與目前所有正式程式檔一致。四題開發管線題（工時／出勤紀錄／特休／服務證明書）Top-5 都含預期 PDF 頁7／8／10／5，回傳僅屬 labor-law。沒有建立或採用保留品質測試集，不能宣稱4/4為泛化準確率。
+- iPAS 回歸：指定 ce5090f4… 資料庫／檔案對「詞性標註」BM25 結果一致，既有索引保留。新增 law 後未選庫呼叫會明確拒絕，不用全域最新。原8100、vLLM、UI未重啟或改設定。
+- LLM／HTTP：沿用已運作的 qwen3-vl-8b-fp8、--web none，工時1題 supported、引用PDF第7頁、字詞警告0；法律正確性未人工驗收。臨時測試 HTTP 回答含文件標記與 #page 連結，PDF HTTP 內容與原始檔相同；測試伺服器已停止，未佔用8100或8101。AnythingLLM畫面／工作區設定未操作，labor_law_setup.md 提供8101獨立端點與工作區設定指引。
+- 證據：data/evaluation/labor-law/{verify_pipeline.py,pipeline_cases.json,pipeline_report.json,answer.json}；測試題／答案不進索引或版控。新文件連結與 code fences 已檢查、git diff --check 通過。未跑本批 hosted CI 或 Docker build；本機測試不冒充它們。
+- AI review：查實際程式 diff、既有相容、無原文版控、選庫限制與證據。限制為400字／步長300的頁內切塊可能斷開跨頁條文，尚無條號metadata／OCR／法規自動更新；邏輯庫隔離不等於多人權限隔離。結束為可審查與試用，未提交／PR／合併。下一步使用者依案例建立獨立工作區試用，並針對條文切塊及引用品質提出下一批改善；原 iPAS serve 下次重啟要加 --kb ipas。
+
+### 2026-11-17 第七十一筆（直接啟動與AnythingLLM工作區接線）
+
+- 使用者要求直接執行並提供AnythingLLM可點選測試連結。起始為操作驗證；確認3001與vLLM存活，但8100／8101原本都沒有服務。先啟動8101單庫供接線，後因目前AnythingLLM架構修訂方案。
+- 讀目前容器endpoints/workspaces.js、models/workspace.js與chat.js：workspace可更新chatProvider／chatModel，Generic OpenAI base URL為全域。前筆指引「每工作區不同URL」在此版本不可用；沒有默默改全域讓iPAS換庫。補設計document_knowledge_bases.md、設定config/rag-routes.json與CLI serve --routes；server以請求model選明列callback、缺／未知model拒絕，檔案連結依模型加前綴。嵌入模型版本相同的庫共用encoder，版本／維度不同拒絕共享。
+- 共用8100已啟動（本輪exec session 47229），model rag→ipas／ce5090f4…／web wikipedia，model labor-law→labor-law／6f1226f8…／web none；未修改舊索引，索引的code_sha仍是建索引時版本。本輪先前8101程序PID82668核對命令後停止，避免重複載入；vLLM／ui／db沿用保持運作。
+- 實際工作區：沿用使用者已建立的「勞基法」（id2、slug d4b98ca9-b52c-45ef-8b48-fad9c0991f6a），經本機API設chatProvider=generic-openai、chatModel=labor-law、chatMode=chat。原rag工作區(id1)的provider／model／mode／prompt前後一致，未變全域設定或上傳文件。設定前備份僅存data/evaluation/labor-law/workspace_before.json，不建立新的API key。
+- 驗證：138 passed（含本機pg；串流／非串流模型隔離、未知模型400、同名PDF隔離、路由設定驗證與外搜政策）。經AnythingLLM實際stream-chat兩題，出勤紀錄回答五年、引用PDF8頁；data/runs確認labor-law與web none。工時題引用PDF7頁但變形工時補充概括過度，未被字詞警告抓出，保留失敗內容，非法律品質驗收。檢索與回答範圍無iPAS混入。
+- UI連結 http://localhost:3001/workspace/d4b98ca9-b52c-45ef-8b48-fad9c0991f6a HTTP200；共用/v1/models列rag與labor-law；法規PDF回傳位元組完全相同、iPAS PDF也可讀。Browser host unavailable、native Chrome最小化無法還原，重試後停止CUA；因此未目視畫面，不冒稱實際點選引用。API工作區往返與PDF端點已核對。
+- 證據：data/evaluation/labor-law/{enable_workspace.py,check_enabled.py,workspace_enabled.json,workspace_verified.json,workspace_chat.sse,workspace_records_chat.sse}；正式操作文件labor_law_setup.md已修正。結束為使用者可點連結試用，本機服務保持執行；未提交／PR／合併或對外發布。後續以條文完整切塊與語意支持檢查處理實測內容缺陷，不因路由啟用而宣稱答案正確。
+
+### 2026-11-17 第七十二筆（使用者試用確認與向量設定說明）
+
+- 使用者回報勞基法工作區能回答自己的問題，問機器學習不提供回應並表示OK；記為當次使用者試用確認，不宣稱所有越界題均拒答或法律品質已驗收。
+- 使用者截圖詢問向量計數0是否使用pgvector。核對compose：AnythingLLM內建VECTOR_DB=lancedb，文件未上傳到該工作區；Generic OpenAI呼叫自建8100，依model選庫，再由程式執行BM25＋pgvector向量檢索。工作區內建向量設定不控制自建RAG。
+- 本輪唯讀SQL：ipas當前索引ce5090f4…有1,389個片段與1,389個向量；labor-law的6f1226f8…有51個片段與51個向量，皆1,024維。CLI預設k=5；兩種排名各取前20、RRF常數60。UI的4段／0.25門檻不是這些參數。
+- 起始與結束階段：操作說明／試用證據補記。未改UI、檢索、模型、資料或服務；未提交發布。後續若要在畫面顯示實際索引狀態與調整自建RAG參數，需另設本專案狀態介面，不能以修改AnythingLLM向量設定冒充完成。
+
+### 2026-11-17 第七十三筆（本批提交與合併授權、交付前收尾）
+
+- 使用者明確表示本次進展可提交、開PR與merge；起始為審查與交付。範圍包括第六十七至七十二筆的文件、一般PDF與分庫功能、勞基法設定及工作區路由；一併納入第六十六筆既有合併補記，不另開文件PR。
+- 受審分支feat/document-knowledge-bases、基底c4bd89d。重新閱讀實際程式／測試diff及新設定／文件，AI review結論可送審，無新阻擋問題；非獨立真人批准。頁內切塊與工時補充語意缺陷沿用，不把使用者此次試用確認提升為全面法律／品質驗收。
+- 本輪實跑：`.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --basetemp=<data/test-tmp/新UUID>`，設定本機PG_TEST_DSN，138 passed、0 skipped（3.55秒）。正式程式未因交付再修改；原始資料不進Git，git diff --check通過，CI將另檢查pg、Compose、容器與runtime。
+- 交付程序：本筆隨功能一起commit／push，建立同一Draft PR，確認受審head CI成功後轉ready，以既有merge commit慣例合併；使用者已授權。最終commit、PR、CI run與merge SHA直接寫入GitHub該PR及本輪回覆，避免為合併後補記反覆開PR。
+- 限制與回復：新手從零生成模型下載仍未完整實測、hosted CI不跑真實PDF或LLM、已知變形工時補充概括過度。若回復程式到舊版，要固定原iPAS index_id，舊版不理解新分庫路由；目前本機索引／PDF／工作區設定與服務保持，合併不自動重啟或公開上線。
