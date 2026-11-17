@@ -2,8 +2,8 @@
 
 用法：uv run python -m ipas_hub.explore2
 輸入都在 data/raw/（不進版控）；輸出 data/index/explore2_results.json（不進版控）
-與 docs/project/discovery/exploration-2-results.md（只含題號與頁碼，不含題目或教材原文）。
-判準見 docs/project/brief.md 的探索二。
+與 docs/internal/project/discovery/exploration-2-results.md（只含題號與頁碼，不含題目或教材原文）。
+判準見 docs/internal/project/brief.md 的探索二。
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def vector_rank(model_name: str, chunk_texts: list[str], queries: list[str], top
 
 def run(root: Path, model_name: str) -> dict:
     guide_pdf, exam_pdf = _required(root / GUIDE_PDF), _required(root / EXAM_PDF)
-    record_path = root / "docs/project/discovery/exploration-1-record.md"
+    record_path = root / "docs/internal/project/discovery/exploration-1-record.md"
     patch_path = root / PATCHES
 
     pages = read_pages(guide_pdf)
