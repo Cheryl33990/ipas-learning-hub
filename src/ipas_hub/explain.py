@@ -177,8 +177,9 @@ def main() -> None:
     from .guide import read_pages
     from .record import parse_record
 
-    exam_pdf = sorted((root / "data/raw/exam").glob("*.pdf"))
-    guide_pdf = sorted((root / "data/raw/guide").glob("*.pdf"))
+    from .explore2 import EXAM_PDF, GUIDE_PDF  # 同一份試題與科目 1 教材
+    exam_pdf = [root / EXAM_PDF] if (root / EXAM_PDF).is_file() else []
+    guide_pdf = [root / GUIDE_PDF] if (root / GUIDE_PDF).is_file() else []
     record = parse_record((root / "docs/project/discovery/exploration-1-record.md").read_text(encoding="utf-8"))
     official = {n: g.answer for n, g in record.items()}
     texts: dict[int, str] = {}
@@ -189,7 +190,7 @@ def main() -> None:
         if disagree:
             sys.exit(f"紀錄表與試題答案欄不一致：{disagree}")
     if len(guide_pdf) != 1:
-        sys.exit("科目 1 教材須恰好一份，拒絕自動選取或略過引用檢查")
+        sys.exit(f"找不到科目 1 教材 {GUIDE_PDF}，拒絕略過引用檢查")
     pages = {p.label: p.text for p in read_pages(guide_pdf[0])}
     additional_pages = {}
     for source, metadata in data.get("additional_guides", {}).items():

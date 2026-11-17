@@ -21,6 +21,14 @@ def test_parse_page_takes_footer_label_and_drops_running_head():
     assert parse_page("序\n本手冊為學習指引") is None
 
 
+def test_running_head_rule_can_be_set_per_textbook():
+    raw = "\uf07d\uf07d\uf07d 第三章 AI 相關技術應用 \n3-34 \n第三章的重點是資料偏見\n常見方法："
+    head = r"^\s*\uf07d+\s*第.{1,3}章.*$"
+    page = parse_page(raw, 40, head)
+    assert page == Page("3-34", "第三章的重點是資料偏見常見方法：", 40)  # 內文中提到「第三章」的句子保留
+    assert parse_page(raw, 40).text.startswith("\uf07d")  # 未設定時沿用原本規則，不影響初級
+
+
 def test_chunks_never_cross_pages_and_cover_whole_page():
     pages = [Page("3-1", "甲" * 700), Page("3-2", "乙" * 100)]
     chunks = chunk_pages(pages, size=400, stride=300)

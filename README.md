@@ -30,8 +30,8 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
 ├── src/ipas_hub/               程式碼
 ├── tests/                      單元測試
 ├── data/                       不進版控，需自行下載
-│   ├── raw/                    官方教材、勘誤表與試題 PDF
-│   └── index/                  切塊與檢索索引
+│   ├── raw/                    官方教材、勘誤表與試題 PDF：beginner／intermediate 下各分 guides、errata、exams
+│   └── index/                  索引（kb/<index_id>/）與勘誤替換檔（errata/）
 └── docs/
     ├── project/                本專案的紀錄：brief、progress 與按需建立的文件
     └── workflow/               工作指南、規則與空白範本
@@ -41,16 +41,20 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
 
 教材、試題、索引與模型都不在 repo 內，需自行下載。以下步驟只在本機執行，所有服務只綁 127.0.0.1。需要：Docker Desktop、[uv](https://docs.astral.sh/uv/)、約 10 GB 顯存的 NVIDIA 顯示卡（本機 LLM 用）、約 4 GB 磁碟（嵌入模型約 2.3 GB，加上資料庫映像與 Python 套件；本機 LLM 的模型另計）。
 
-1. 下載兩份初級學習指引到設定檔指定的位置（來源：[官方學習資源頁](https://ipd.nat.gov.tw/ipas/certification/AIAP/learning-resources)）。建索引時會比對 config/knowledge-base.json 的 SHA-256，檔案版本不同就會停止。
+1. 下載設定檔列出的學習指引（初級 2 份、中級 3 份，約 26 MB；來源：[官方學習資源頁](https://ipd.nat.gov.tw/ipas/certification/AIAP/learning-resources)）。檔名就是官方原名，放在 `data/raw/<級別>/guides/`。建索引時會比對 config/knowledge-base.json 的 SHA-256，檔案版本不同就會停止。
 
    ```powershell
    $base = 'https://www.ipas.org.tw/api/proxy/uploads/certification_resource/bf93f438f7be48d295c1b40a34d79f3d/'
-   New-Item -ItemType Directory -Force data/raw/guide, data/raw/guide-subject2 | Out-Null
-   Invoke-WebRequest ($base + 'AI應用規劃師(初級)-學習指引-科目1_人工智慧基礎概論1141203_20251222172144.pdf') -OutFile 'data/raw/guide/初級-學習指引-科目1_人工智慧基礎概論1141203.pdf'
-   Invoke-WebRequest ($base + 'AI應用規劃師(初級)-學習指引-科目2_生成式AI應用與規劃114123_20251222172159.pdf') -OutFile 'data/raw/guide-subject2/初級-學習指引-科目2_生成式AI應用與規劃114123_20251222172159.pdf'
+   $cfg = Get-Content config/knowledge-base.json -Raw -Encoding UTF8 | ConvertFrom-Json
+   foreach ($s in $cfg.sources) {
+     New-Item -ItemType Directory -Force (Split-Path $s.pdf) | Out-Null
+     Invoke-WebRequest ($base + (Split-Path $s.pdf -Leaf)) -OutFile $s.pdf
+   }
    ```
 
-2. 勘誤：官方勘誤要先整理成替換字串檔（data/index/errata_patches.json 等）才能套用。這些檔含教材原文，不在 repo 內。沒有的話，改用 `config/knowledge-base.no-errata.json` 建索引：索引會記錄 `errata: not_applied`，勘誤頁的回答會依更正前的文字。
+   試題與勘誤表不需要下載也能提問；要的話依同樣網址開頭，放在 `data/raw/<級別>/exams/`、`data/raw/<級別>/errata/`。
+
+2. 勘誤：官方勘誤要先整理成替換字串檔（data/index/errata/beginner-subject1.json 等）才能套用。這些檔含教材原文，不在 repo 內。沒有的話，改用 `config/knowledge-base.no-errata.json` 建索引：索引會記錄 `errata: not_applied`，勘誤頁的回答會依更正前的文字。中級的替換檔是 data/index/errata/intermediate-subject1.json 與 intermediate-subject3.json；中級科目 2 的勘誤只在不進知識庫的職能基準頁，所以沒有替換檔。
 3. 安裝相依並下載嵌入模型（BAAI/bge-m3，約 2.3 GB，只需一次；程式之後只讀本機快取、不自動下載）。排除用不到的 ONNX 版本、圖片與附加權重，否則會多下載約 2.3 GB（程式載入時也忽略同一組檔案）：
 
    ```powershell
@@ -95,7 +99,7 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
 
 ## 執行探索二
 
-需要 [uv](https://docs.astral.sh/uv/)。先把教材、試題各一個 PDF 放到 data/raw/guide/ 與 data/raw/exam/，然後：
+需要 [uv](https://docs.astral.sh/uv/)。探索二固定使用初級科目 1 教材與 115 年第三次第一科試題，檔案位置見 src/ipas_hub/explore2.py 的 GUIDE_PDF、EXAM_PDF（data/raw/beginner/ 下，官方原名），然後：
 
 ```text
 uv sync
@@ -104,7 +108,7 @@ uv run pytest
 uv run python -m ipas_hub.explore2
 ```
 
-第一次執行會從 Hugging Face 下載 BAAI/bge-m3 模型（約 2 GB），之後在本機 CPU 上跑。結果寫到 data/index/explore2_results.json。勘誤的替換字串放在 data/index/errata_patches.json，這個檔含教材原文所以沒有收錄，沒有它程式照樣能跑，只是不套用勘誤。
+第一次執行會從 Hugging Face 下載 BAAI/bge-m3 模型（約 2 GB），之後在本機 CPU 上跑。結果寫到 data/index/explore2_results.json。勘誤的替換字串放在 data/index/errata/beginner-subject1.json，這個檔含教材原文所以沒有收錄，沒有它程式照樣能跑，只是不套用勘誤。
 
 ## 第三輪：Docker 雙科檢索原型
 
@@ -112,7 +116,7 @@ uv run python -m ipas_hub.explore2
 
 第三輪先完成檢索；生成見下方第四輪。尚無自動解題的品質驗收或網頁介面。[設計與限制](docs/project/design/rag-prototype.md)記錄執行契約，[驗證紀錄](docs/project/validation/2026-11-16-docker-retrieval.md)區分本機、容器與尚未執行的 CI／LLM 測試。
 
-Docker Desktop 使用 Linux containers。來源清單是 config/knowledge-base.json：兩份 PDF、版本與 SHA-256 都明列；所有勘誤必須套用成功才建立索引。另需本機的 data/index/errata_patches.json（科目 1）與 data/index/subject2-errata-patches.json（科目 2）。這兩份含原文、不進版控；新環境應依官方勘誤表建立陣列，每筆欄位為 id、old、new。缺檔或未命中更正字串會明確失敗，不略過。
+Docker Desktop 使用 Linux containers。來源清單是 config/knowledge-base.json，目前列出初級兩科與中級三科的 PDF、版本與 SHA-256；設定的勘誤必須套用成功才建立索引。另需設定檔 patches 欄位指定的四份本機替換檔（data/index/errata/ 下，初級科目 1、2 與中級科目 1、3）。這些檔含原文、不進版控；新環境應依官方勘誤表建立陣列，每筆欄位為 id、old、new。設定的檔案缺失或未命中更正字串會明確失敗，不略過；沒有替換檔請使用上方的無勘誤設定。
 
 PowerShell 操作：
 
@@ -185,7 +189,7 @@ $env:LLM_MODEL='qwen3-vl-8b-fp8'; .venv/Scripts/python.exe -m ipas_hub.cli serve
 
 ## 檢查與產生解析
 
-主來源是 docs/project/explanations/115-3-subject1.json，閱讀用 Markdown 由程式產生，請勿直接修改。需要本機科目 1 教材位於 data/raw/guide/、試題位於 data/raw/exam/，各一份 PDF；科目 2 教材的檔名與位置見 JSON 的 additional_guides，存放在 data/raw/guide-subject2/，與探索一、二資料分開。
+主來源是 docs/project/explanations/115-3-subject1.json，閱讀用 Markdown 由程式產生，請勿直接修改。需要本機的科目 1 教材與 115 年第三次第一科試題（位置同探索二）；科目 2 教材的位置見 JSON 的 additional_guides。
 
 ```text
 uv run python -m ipas_hub.explain

@@ -70,7 +70,8 @@ def build_index(root: Path, config_path: Path, output: Path,
             patches, patch_sha = json.loads(patch_bytes), digest(patch_bytes)
         else:  # 勘誤替換檔含教材原文、不進版控；他人重現時可能沒有，此時明確記錄未套用
             patches, patch_sha = [], None
-        pages, report = apply_patches(read_pages(pdf), patches)
+        # 頁首規則屬教材專屬設定；未設定時沿用預設，索引內容與先前相同
+        pages, report = apply_patches(read_pages(pdf, running_head=spec.get("running_head")), patches)
         if not pages or any(not p["applied_on"] for p in report):
             raise ValueError(f"教材頁面或勘誤套用失敗：{source}")
         labels = [p.label for p in pages]
@@ -78,7 +79,8 @@ def build_index(root: Path, config_path: Path, output: Path,
             raise ValueError(f"教材頁碼重複：{source}")
         sources.append({"id": source, "name": spec["name"], "version": spec["version"], "pdf": spec["pdf"],
                         "sha256": sha, "patch_sha256": patch_sha, "patch_report": report,
-                        "errata": "applied" if patches else "not_applied", "pages": len(pages)})
+                        "errata": "applied" if patches else "not_applied", "pages": len(pages),
+                        **({"running_head": spec["running_head"]} if spec.get("running_head") else {})})
         for chunk in chunk_pages(pages, size, stride):
             chunks.append({"id": f"{source}:{chunk.label}:{chunk.index}", "source": source,
                            "page": chunk.label, "text": chunk.text,

@@ -23,13 +23,16 @@ from .text import tokenize
 KS = (1, 3, 5)
 TOP_N = 5
 DEFAULT_MODEL = "BAAI/bge-m3"
+# 探索二固定使用的教材、試題與勘誤（2026-11-17 起 data/raw 依級別與類型分資料夾、檔名用官方原名）
+GUIDE_PDF = "data/raw/beginner/guides/AI應用規劃師(初級)-學習指引-科目1_人工智慧基礎概論1141203_20251222172144.pdf"
+EXAM_PDF = "data/raw/beginner/exams/115年第三次初級AI應用規劃師_第一科_人工智慧基礎概論_公告試題_20260906220418.pdf"
+PATCHES = "data/index/errata/beginner-subject1.json"
 
 
-def _one(folder: Path) -> Path:
-    files = sorted(folder.glob("*.pdf"))
-    if len(files) != 1:
-        sys.exit(f"{folder} 應該只有一個 PDF，找到 {len(files)} 個")
-    return files[0]
+def _required(path: Path) -> Path:
+    if not path.is_file():
+        sys.exit(f"找不到 {path}；請依 README 下載並放在 data/raw/ 的對應位置")
+    return path
 
 
 def _sha(path: Path) -> str:
@@ -47,9 +50,9 @@ def vector_rank(model_name: str, chunk_texts: list[str], queries: list[str], top
 
 
 def run(root: Path, model_name: str) -> dict:
-    guide_pdf, exam_pdf = _one(root / "data/raw/guide"), _one(root / "data/raw/exam")
+    guide_pdf, exam_pdf = _required(root / GUIDE_PDF), _required(root / EXAM_PDF)
     record_path = root / "docs/project/discovery/exploration-1-record.md"
-    patch_path = root / "data/index/errata_patches.json"
+    patch_path = root / PATCHES
 
     pages = read_pages(guide_pdf)
     patches = json.loads(patch_path.read_text(encoding="utf-8")) if patch_path.exists() else []
