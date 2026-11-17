@@ -18,6 +18,8 @@ MAX_WEB_QUERIES = 3
 
 
 def textbook_label(hit: dict) -> str:
+    if hit.get("document_type") == "document":
+        return f"文件 {hit.get('name', hit['source'])}，版本：{hit.get('version', '未提供')}"
     return f"教材 {hit.get('name', hit['source'])} {hit['page']}"
 
 
@@ -218,7 +220,8 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
             if c not in markers:
                 kind = by_id[c]["source_type"]
                 counts[kind] += 1
-                markers[c] = ("教材" if kind == "textbook" else "外部") + str(counts[kind])
+                label = "文件" if by_id[c]["label"].startswith("文件 ") else "教材"
+                markers[c] = (label if kind == "textbook" else "外部") + str(counts[kind])
         text = _strip_ids(item["text"], by_id)
         segments.append({"text": text, "citations": cited, "markers": [markers[c] for c in cited],
                          "check": check_segment(text, [by_id[c]["text"] for c in cited], question) if cited else None})
@@ -257,6 +260,8 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
     """
     basis = {"textbook_only": "只用教材", "external_only": "只用外部資料（教材未涵蓋）",
              "mixed": "教材＋外部資料", "none": "無依據"}[result["basis"]]
+    if any(s["label"].startswith("文件 ") for s in result["sources"]):
+        basis = basis.replace("教材", "文件")
     body = []
     for s in result["segments"]:
         body.append(s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else ""))

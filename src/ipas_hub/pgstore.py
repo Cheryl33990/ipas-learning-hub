@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .knowledge import KnowledgeBase
+from .knowledge import KnowledgeBase, knowledge_base_id
 
 SCHEMA = """
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -138,18 +138,50 @@ def load_index(conn, payload: dict, vectors) -> bool:
         raise ValueError(f"載入資料庫失敗：{exc}") from exc
 
 
-def read_index(conn, index_id: str | None = None, with_vectors: bool = False):
+def select_index(conn, index_id: str | None = None, kb: str | None = None,
+                 with_vectors: bool = False, prefer_vectors: bool = False) -> str:
+    """先限定庫，再選版本；多庫未指定範圍時不採用全域最新。"""
+    try:
+        return _select_index(conn, index_id, kb, with_vectors, prefer_vectors)
+    except _db_errors() as exc:
+        raise ValueError(f"選擇知識庫失敗：{exc}") from exc
+
+
+def _select_index(conn, index_id, kb, with_vectors, prefer_vectors):
+    if not conn.execute("SELECT to_regclass('kb_index')").fetchone()[0]:
+        raise ValueError("資料庫中找不到索引，請先執行 pg-load")
+    if kb is not None:
+        knowledge_base_id({"knowledge_base": kb})
+    if index_id is not None:
+        row = conn.execute("SELECT manifest FROM kb_index WHERE index_id = %s", (index_id,)).fetchone()
+        if not row:
+            raise ValueError(f"資料庫中找不到索引 {index_id}")
+        if kb is not None and knowledge_base_id(row[0]) != kb:
+            raise ValueError("指定索引不屬於選定知識庫")
+        return index_id
+    names = [r[0] for r in conn.execute(
+        "SELECT DISTINCT COALESCE(manifest->>'knowledge_base', 'ipas') FROM kb_index").fetchall()]
+    if kb is None:
+        if len(names) > 1:
+            raise ValueError("有多個知識庫，請指定 --kb 或 --index，拒絕自動跨庫選擇")
+        kb = names[0] if names else "ipas"
+    row = conn.execute(
+        "SELECT index_id FROM kb_index WHERE COALESCE(manifest->>'knowledge_base', 'ipas') = %s"
+        " AND (%s OR dimensions IS NOT NULL)"
+        " ORDER BY (%s AND dimensions IS NOT NULL) DESC, loaded_at DESC, index_id LIMIT 1",
+        (kb, not with_vectors, prefer_vectors)).fetchone()
+    if not row:
+        raise ValueError(f"知識庫 {kb} 找不到適用索引，請先建立並載入")
+    return row[0]
+
+
+def read_index(conn, index_id: str | None = None, with_vectors: bool = False, kb: str | None = None):
     """讀回一份索引；未指定 index_id 時取最近載入的（with_vectors 時只考慮含向量的）。
 
     回傳（索引內容, 向量或 None），尚未驗證。
     """
     try:
-        if index_id is None:
-            row = conn.execute("SELECT index_id FROM kb_index WHERE %s OR dimensions IS NOT NULL"
-                               " ORDER BY loaded_at DESC, index_id LIMIT 1", (not with_vectors,)).fetchone()
-            if not row:
-                raise ValueError("資料庫中找不到" + ("含向量的" if with_vectors else "任何") + "索引，請先執行 pg-load")
-            index_id = row[0]
+        index_id = select_index(conn, index_id, kb, with_vectors)
         index = conn.execute("SELECT index_id, manifest FROM kb_index WHERE index_id = %s", (index_id,)).fetchone()
         if not index:
             raise ValueError(f"資料庫中找不到索引 {index_id}")

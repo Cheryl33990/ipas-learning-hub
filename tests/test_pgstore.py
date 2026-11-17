@@ -185,3 +185,59 @@ def test_db_rows_changed_after_loading_are_rejected(conn):
     conn.execute("UPDATE kb_chunk SET text = '被改過' WHERE ord = 0")
     with pytest.raises(ValueError, match="雜湊"):
         pgstore.open_knowledge_base(conn, data["index_id"])
+
+
+@needs_db
+def test_knowledge_bases_are_explicit_and_vector_queries_stay_in_the_selected_index(conn):
+    first = payload(VEC)
+    second = payload(VEC)
+    second.pop("index_id")
+    second["knowledge_base"] = "labor-law"
+    second["sources"][0]["name"] = "另一組相似文件"
+    second = {"index_id": digest(canonical(second)), **second}
+    pgstore.load_index(conn, first, VEC)
+    pgstore.load_index(conn, second, VEC)
+    with pytest.raises(ValueError, match="多個知識庫"):
+        pgstore.select_index(conn)
+    with pytest.raises(ValueError, match="找不到"):
+        pgstore.select_index(conn, kb="missing")
+    with pytest.raises(ValueError, match="不屬於"):
+        pgstore.select_index(conn, second["index_id"], "ipas")
+    assert pgstore.select_index(conn, kb="ipas", prefer_vectors=True) == first["index_id"]
+    assert pgstore.select_index(conn, kb="labor-law") == second["index_id"]
+    for name, data in (("ipas", first), ("labor-law", second)):
+        selected = pgstore.select_index(conn, kb=name)
+        kb = pgstore.open_knowledge_base(conn, selected, True, Encoder(VEC[1]))
+        hits = kb.search("差分隱私", method="hybrid")
+        assert hits and all(h["index_id"] == data["index_id"] for h in hits)
+        assert kb.knowledge_base == name
+
+
+@needs_db
+def test_prefer_vectors_does_not_pick_newer_vectorless_version(conn):
+    first = payload(VEC)
+    pgstore.load_index(conn, first, VEC)
+    pgstore.load_index(conn, payload(extra_chunk=True), None)
+    assert pgstore.select_index(conn, kb="ipas", prefer_vectors=True) == first["index_id"]
+
+
+@needs_db
+def test_pg_cli_routes_explicit_knowledge_base_and_rejects_ambiguity(conn, tmp_path, monkeypatch, capsys):
+    import json
+    first = payload()
+    second = payload()
+    second.pop("index_id")
+    second["knowledge_base"] = "labor-law"
+    second = {"index_id": digest(canonical(second)), **second}
+    pgstore.load_index(conn, first, None)
+    pgstore.load_index(conn, second, None)
+    monkeypatch.setattr(pgstore, "connect", lambda: conn)
+    base = ["--root", str(tmp_path), "search", "--store", "pg", "--query", "差分隱私", "--method", "bm25"]
+    assert cli.main(base + ["--kb", "labor-law"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["knowledge_base"] == "labor-law"
+    assert all(h["index_id"] == second["index_id"] for h in result["hits"])
+    assert cli.main(base) == 1
+    assert "多個知識庫" in capsys.readouterr().err
+    assert cli.main(base + ["--kb", "ipas", "--index", second["index_id"]]) == 1
+    assert "不屬於" in capsys.readouterr().err

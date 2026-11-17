@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -15,6 +16,14 @@ from .text import tokenize
 
 SCHEMA_VERSION = 1
 VECTOR_POOL = 20  # k 上限與混合檢索各取前 20；外部向量儲存只需回傳這麼多
+
+
+def knowledge_base_id(payload: dict) -> str:
+    """無識別的歷史 iPAS 索引保持相容；新庫名稱須明確且可用於 CLI。"""
+    name = payload.get("knowledge_base", "ipas")
+    if not isinstance(name, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", name):
+        raise ValueError("知識庫名稱須為 1–64 個小寫英數字、底線或連字號")
+    return name
 
 
 def digest(value: bytes) -> str:
@@ -52,6 +61,7 @@ def build_index(root: Path, config_path: Path, output: Path,
     config = json.loads(config_path.read_text(encoding="utf-8"))
     if config.get("schema_version") != SCHEMA_VERSION:
         raise ValueError("不支援的來源設定版本")
+    knowledge_base_id(config)
     size, stride = config["chunk_size"], config["chunk_stride"]
     if not (isinstance(size, int) and isinstance(stride, int) and 0 < stride <= size):
         raise ValueError("切塊設定須為 0 < stride <= size")
@@ -71,7 +81,10 @@ def build_index(root: Path, config_path: Path, output: Path,
         else:  # 勘誤替換檔含教材原文、不進版控；他人重現時可能沒有，此時明確記錄未套用
             patches, patch_sha = [], None
         # 頁首規則屬教材專屬設定；未設定時沿用預設，索引內容與先前相同
-        pages, report = apply_patches(read_pages(pdf, running_head=spec.get("running_head")), patches)
+        options = {"running_head": spec.get("running_head")}
+        if spec.get("parser"):
+            options["parser"] = spec["parser"]
+        pages, report = apply_patches(read_pages(pdf, **options), patches)
         if not pages or any(not p["applied_on"] for p in report):
             raise ValueError(f"教材頁面或勘誤套用失敗：{source}")
         labels = [p.label for p in pages]
@@ -80,7 +93,8 @@ def build_index(root: Path, config_path: Path, output: Path,
         sources.append({"id": source, "name": spec["name"], "version": spec["version"], "pdf": spec["pdf"],
                         "sha256": sha, "patch_sha256": patch_sha, "patch_report": report,
                         "errata": "applied" if patches else "not_applied", "pages": len(pages),
-                        **({"running_head": spec["running_head"]} if spec.get("running_head") else {})})
+                        **({"running_head": spec["running_head"]} if spec.get("running_head") else {}),
+                        **{k: spec[k] for k in ("parser", "url", "download_url", "retrieved_at") if k in spec}})
         for chunk in chunk_pages(pages, size, stride):
             chunks.append({"id": f"{source}:{chunk.label}:{chunk.index}", "source": source,
                            "page": chunk.label, "text": chunk.text,
@@ -110,6 +124,8 @@ def build_index(root: Path, config_path: Path, output: Path,
                "code_version": code_version,
                "code_sha256": code_hashes,
                "lock_sha256": digest((root / "uv.lock").read_bytes())}
+    if "knowledge_base" in config:
+        payload["knowledge_base"] = config["knowledge_base"]
     index_id = digest(canonical(payload))
     folder = data_path(root, str(output)) / index_id
     folder.mkdir(parents=True, exist_ok=True)
@@ -129,6 +145,7 @@ class KnowledgeBase:
         if payload.get("schema_version") != SCHEMA_VERSION:
             raise ValueError("不支援的索引版本")
         self.payload, self.chunks = payload, payload["chunks"]
+        self.knowledge_base = knowledge_base_id(payload)
         self.sources = {s["id"]: s for s in payload["sources"]}
         self.bm25 = BM25([tokenize(c["text"]) for c in self.chunks])
         self.vectors, self.encoder, self.vector_search = vectors, encoder, vector_search
@@ -187,5 +204,6 @@ class KnowledgeBase:
                 ranks = sorted(fused, key=lambda i: (-fused[i], i))
         return [{**self.chunks[i], "name": self.sources[self.chunks[i]["source"]]["name"],
                  "version": self.sources[self.chunks[i]["source"]]["version"],
+                 **({"document_type": "document"} if self.sources[self.chunks[i]["source"]].get("parser") == "pdf" else {}),
                  "rank": rank, "index_id": self.index_id}
                 for rank, i in enumerate(ranks[:k], 1)]

@@ -39,12 +39,20 @@ def parse_page(raw: str, pdf_page: int | None = None, running_head: str | None =
     return Page(labels[-1], normalize(body), pdf_page)
 
 
-def read_pages(pdf_path: Path, running_head: str | None = None) -> list[Page]:
+def read_pages(pdf_path: Path, running_head: str | None = None, parser: str = "ipas") -> list[Page]:
     from pypdf import PdfReader
 
+    if parser not in {"ipas", "pdf"}:
+        raise ValueError(f"不支援的 PDF 解析模式：{parser}")
     pages = []
     for number, p in enumerate(PdfReader(str(pdf_path)).pages, 1):
-        page = parse_page(p.extract_text() or "", number, running_head)
+        raw = p.extract_text() or ""
+        if parser == "pdf":
+            body = re.sub(running_head, "", raw, flags=re.M) if running_head else raw
+            text = normalize(body)
+            page = Page(str(number), text, number) if text else None
+        else:
+            page = parse_page(raw, number, running_head)
         if page:
             pages.append(page)
     return pages
