@@ -54,6 +54,24 @@ def test_hybrid_retrieval_routes_to_matching_vector_and_lexical_source():
     assert kb.search("差分隱私", method="hybrid")[0]["source"] == "s2"
 
 
+def test_local_encoder_ignores_files_the_project_does_not_download(monkeypatch, tmp_path):
+    # 新版 huggingface_hub 會依下載時記下的檔案清單檢查快照是否完整；README 排除的檔案不能被當成缺漏
+    import sys
+    import types
+    from ipas_hub import knowledge
+    seen = {}
+
+    def fake_snapshot_download(model, **kwargs):
+        seen.update(kwargs)
+        return str(tmp_path / "rev123")
+    monkeypatch.setitem(sys.modules, "huggingface_hub", types.SimpleNamespace(snapshot_download=fake_snapshot_download))
+    monkeypatch.setitem(sys.modules, "sentence_transformers",
+                        types.SimpleNamespace(SentenceTransformer=lambda path, **kw: ("encoder", path)))
+    encoder, revision = knowledge.local_encoder("org/model", "abc")
+    assert revision == "rev123" and seen["local_files_only"] is True and seen["revision"] == "abc"
+    assert {"onnx/*", "imgs/*", "*.jpg"} <= set(seen["ignore_patterns"])
+
+
 def test_original_text_outputs_cannot_escape_data_directory(tmp_path):
     with pytest.raises(ValueError, match="data/"):
         data_path(tmp_path, "docs/leak.json")

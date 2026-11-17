@@ -37,6 +37,14 @@ def failure_text(exc: Exception) -> str:
             "以上不是解答，請勿當作有依據的內容。若原因是無法連線 LLM 服務，請先啟動本機模型再重試。")
 
 
+ABOUT_PAGE = """<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><title>API 端點</title>
+<body style="font-family:sans-serif;max-width:40em;margin:3em auto;line-height:1.6">
+<h1>這是 OpenAI 相容的 API 端點，不是網頁</h1>
+<p>請在聊天介面（例如 AnythingLLM）中把這個位址當成模型使用，從聊天介面提問。</p>
+<p>可用路徑：<code>GET /v1/models</code>、<code>POST /v1/chat/completions</code>。</p>
+</body></html>"""
+
+
 def _base(kind: str, model: str) -> dict:
     return {"id": f"chatcmpl-{uuid.uuid4().hex}", "object": kind, "created": int(time.time()), "model": model}
 
@@ -102,6 +110,13 @@ def make_server(answer_fn, port: int, model: str, files: dict | None = None) -> 
             path = self.path.split("?", 1)[0].split("#", 1)[0]
             if path.startswith("/files/") and path[len("/files/"):] in files:
                 self._file(files[path[len("/files/"):]])
+            elif path.rstrip("/") in ("", "/v1"):  # 用瀏覽器直接開時給說明，避免誤以為服務壞了
+                data = ABOUT_PAGE.encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
             elif path.rstrip("/") == "/v1/models":
                 self._json(200, {"object": "list", "data": [{"id": model, "object": "model", "owned_by": "local"}]})
             else:

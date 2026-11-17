@@ -252,18 +252,20 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
     """給人看的版本：每句後標明教材或外部，可能掛錯的引用加 ⚠。
 
     教材引用把章節頁碼與 PDF 頁並列。link_for(來源) 回傳可開啟的網址或 None，未提供時只用來源自帶的網址；
-    markdown 為真時依據清單寫成 Markdown 連結，供會渲染 Markdown 的聊天介面使用。
+    markdown 為真時依據清單寫成 Markdown 連結，且每句、每個 ⚠ 各自成段（聊天介面會把單一換行併成同一段），
+    供會渲染 Markdown 的聊天介面使用。
     """
     basis = {"textbook_only": "只用教材", "external_only": "只用外部資料（教材未涵蓋）",
              "mixed": "教材＋外部資料", "none": "無依據"}[result["basis"]]
-    lines = [f"狀態：{'有依據' if result['status'] == 'supported' else '依據不足'}（{basis}）", ""]
+    body = []
     for s in result["segments"]:
-        lines.append(s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else ""))
+        body.append(s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else ""))
         if s["check"] and s["check"]["flagged"]:
-            lines.append("  ⚠ 引用可能不支持此句：" + "；".join(s["check"]["reasons"]))
+            body.append(("" if markdown else "  ") + "⚠ 引用可能不支持此句：" + "；".join(s["check"]["reasons"]))
     if result.get("choice_expected") and not result.get("answer_choice"):
-        lines.append("⚠ 模型未明寫答案選項，請依上方逐項說明自行判斷。")
-    lines += ["", "依據："]
+        body.append("⚠ 模型未明寫答案選項，請依上方逐項說明自行判斷。")
+    status = f"狀態：{'有依據' if result['status'] == 'supported' else '依據不足'}（{basis}）"
+    lines = [status, "", *(["\n\n".join(body)] if markdown else body), "", "依據："]
     for s in result["sources"]:
         label = s["label"] + (f"（PDF 第 {s['pdf_page']} 頁）" if s.get("pdf_page") else "")
         url = (link_for(s) if link_for else None) or s.get("url")
@@ -277,5 +279,5 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
     cited = sum(1 for s in result["segments"] if s["citations"])
     lines += ["", f"核對：{cited} 句有引用，其中 {result['flagged_segments']} 句可能不支持"
               "（字詞比對，非語意驗證；未引用的句子不檢查）。",
-              "提醒：程式只檢查引用存在與字詞重疊，不保證解答正確。"]
+              *([""] if markdown else []), "提醒：程式只檢查引用存在與字詞重疊，不保證解答正確。"]
     return "\n".join(lines)

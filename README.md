@@ -39,7 +39,7 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
 
 ## 從零重現：教材 → PostgreSQL＋pgvector → 聊天介面（Windows PowerShell）
 
-教材、試題、索引與模型都不在 repo 內，需自行下載。以下步驟只在本機執行，所有服務只綁 127.0.0.1。需要：Docker Desktop、[uv](https://docs.astral.sh/uv/)、約 10 GB 顯存的 NVIDIA 顯示卡（本機 LLM 用）、約 6 GB 磁碟（嵌入模型 4.3 GB 加映像）。
+教材、試題、索引與模型都不在 repo 內，需自行下載。以下步驟只在本機執行，所有服務只綁 127.0.0.1。需要：Docker Desktop、[uv](https://docs.astral.sh/uv/)、約 10 GB 顯存的 NVIDIA 顯示卡（本機 LLM 用）、約 4 GB 磁碟（嵌入模型約 2.3 GB，加上資料庫映像與 Python 套件；本機 LLM 的模型另計）。
 
 1. 下載兩份初級學習指引到設定檔指定的位置（來源：[官方學習資源頁](https://ipd.nat.gov.tw/ipas/certification/AIAP/learning-resources)）。建索引時會比對 config/knowledge-base.json 的 SHA-256，檔案版本不同就會停止。
 
@@ -51,17 +51,18 @@ iPAS AI 應用規劃師的備考輔助。目標是讓每一道題目都能找到
    ```
 
 2. 勘誤：官方勘誤要先整理成替換字串檔（data/index/errata_patches.json 等）才能套用。這些檔含教材原文，不在 repo 內。沒有的話，改用 `config/knowledge-base.no-errata.json` 建索引：索引會記錄 `errata: not_applied`，勘誤頁的回答會依更正前的文字。
-3. 安裝相依並下載嵌入模型（BAAI/bge-m3，約 4.3 GB，只需一次；程式之後只讀本機快取、不自動下載）：
+3. 安裝相依並下載嵌入模型（BAAI/bge-m3，約 2.3 GB，只需一次；程式之後只讀本機快取、不自動下載）。排除用不到的 ONNX 版本、圖片與附加權重，否則會多下載約 2.3 GB（程式載入時也忽略同一組檔案）：
 
    ```powershell
    uv sync --extra pg --extra embeddings
-   uv run hf download BAAI/bge-m3
+   uv run hf download BAAI/bge-m3 --exclude "onnx/*" --exclude "imgs/*" --exclude "*.jpg" --exclude "*.pt"
    ```
 
 4. 在 repo 根目錄的 `.env`（不進版控）設定資料庫密碼與 LLM 模型所在的 volume，例如：
 
    ```text
    PG_PASSWORD=自行設定的密碼（英數字）
+   # 本機 5433 埠已被占用時才需要：PG_PORT=5434，並把下一步 PG_DSN 的 port 改成相同的值
    LLM_MODEL_VOLUME=存放 Hugging Face 快取的 Docker volume 名稱
    ```
 
