@@ -3,6 +3,7 @@
 只綁本機迴路位址；不含任何領域邏輯，回答文字由呼叫端提供的 answer_fn 產生。
 另可唯讀提供呼叫端明列的檔案（/files/<名稱>），讓回答中的引用連結能在瀏覽器開啟原始文件。
 """
+
 from __future__ import annotations
 
 import json
@@ -23,8 +24,9 @@ def last_user_message(payload: dict) -> str:
         if isinstance(message, dict) and message.get("role") == "user":
             content = message.get("content")
             if isinstance(content, list):  # OpenAI 的分段格式，只取文字段
-                content = "\n".join(p.get("text", "") for p in content
-                                    if isinstance(p, dict) and p.get("type") == "text")
+                content = "\n".join(
+                    p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text"
+                )
             if isinstance(content, str) and content.strip():
                 return content.strip()
             break
@@ -32,9 +34,11 @@ def last_user_message(payload: dict) -> str:
 
 
 def failure_text(exc: Exception) -> str:
-    return ("⚠ 無法產生有依據的解答\n\n"
-            f"原因：{exc}\n\n"
-            "以上不是解答，請勿當作有依據的內容。若原因是無法連線 LLM 服務，請先啟動本機模型再重試。")
+    return (
+        "⚠ 無法產生有依據的解答\n\n"
+        f"原因：{exc}\n\n"
+        "以上不是解答，請勿當作有依據的內容。若原因是無法連線 LLM 服務，請先啟動本機模型再重試。"
+    )
 
 
 ABOUT_PAGE = """<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><title>API 端點</title>
@@ -62,10 +66,11 @@ def chat_response(payload: dict, answer_fn, model: str) -> tuple[int, dict]:
     except ValueError as exc:
         return 400, {"error": {"message": str(exc), "type": "invalid_request_error"}}
     text = answer_or_failure(question, answer_fn)
-    return 200, {**_base("chat.completion", model),
-                 "choices": [{"index": 0, "message": {"role": "assistant", "content": text},
-                              "finish_reason": "stop"}],
-                 "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
+    return 200, {
+        **_base("chat.completion", model),
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+    }
 
 
 def sse_chunks(text: str, model: str):
@@ -77,8 +82,9 @@ def sse_chunks(text: str, model: str):
     yield "data: [DONE]\n\n"
 
 
-def make_server(answer_fn, port: int, model: str, files: dict | None = None,
-                models: dict | None = None) -> ThreadingHTTPServer:
+def make_server(
+    answer_fn, port: int, model: str, files: dict | None = None, models: dict | None = None
+) -> ThreadingHTTPServer:
     """files 是「名稱 → 檔案路徑」的允許清單；只比對完整名稱，不把請求路徑接到檔案系統上。"""
     files = dict(files or {})
     routes = dict(models) if models is not None else None
@@ -100,8 +106,9 @@ def make_server(answer_fn, port: int, model: str, files: dict | None = None,
                 return self._json(404, {"error": {"message": "檔案無法讀取", "type": "invalid_request_error"}})
             with handle:
                 self.send_response(200)
-                self.send_header("Content-Type", "application/pdf" if path.suffix.lower() == ".pdf"
-                                 else "application/octet-stream")
+                self.send_header(
+                    "Content-Type", "application/pdf" if path.suffix.lower() == ".pdf" else "application/octet-stream"
+                )
                 self.send_header("Content-Disposition", "inline")
                 self.send_header("Content-Length", str(size))
                 self.send_header("X-Content-Type-Options", "nosniff")
@@ -110,8 +117,8 @@ def make_server(answer_fn, port: int, model: str, files: dict | None = None,
 
         def do_GET(self):
             path = self.path.split("?", 1)[0].split("#", 1)[0]
-            if path.startswith("/files/") and path[len("/files/"):] in files:
-                self._file(files[path[len("/files/"):]])
+            if path.startswith("/files/") and path[len("/files/") :] in files:
+                self._file(files[path[len("/files/") :]])
             elif path.rstrip("/") in ("", "/v1"):  # 用瀏覽器直接開時給說明，避免誤以為服務壞了
                 data = ABOUT_PAGE.encode("utf-8")
                 self.send_response(200)
@@ -120,9 +127,16 @@ def make_server(answer_fn, port: int, model: str, files: dict | None = None,
                 self.end_headers()
                 self.wfile.write(data)
             elif path.rstrip("/") == "/v1/models":
-                self._json(200, {"object": "list", "data": [
-                    {"id": name, "object": "model", "owned_by": "local"}
-                    for name in (routes if routes is not None else [model])]})
+                self._json(
+                    200,
+                    {
+                        "object": "list",
+                        "data": [
+                            {"id": name, "object": "model", "owned_by": "local"}
+                            for name in (routes if routes is not None else [model])
+                        ],
+                    },
+                )
             else:
                 self._json(404, {"error": {"message": "找不到此路徑", "type": "invalid_request_error"}})
 
@@ -141,8 +155,9 @@ def make_server(answer_fn, port: int, model: str, files: dict | None = None,
             if routes is not None:
                 selected_model = payload.get("model")
                 if not isinstance(selected_model, str) or selected_model not in routes:
-                    return self._json(400, {"error": {"message": "請指定已設定的模型／知識庫名稱",
-                                                      "type": "invalid_request_error"}})
+                    return self._json(
+                        400, {"error": {"message": "請指定已設定的模型／知識庫名稱", "type": "invalid_request_error"}}
+                    )
                 selected_answer = routes[selected_model]
             if not payload.get("stream"):
                 return self._json(*chat_response(payload, selected_answer, selected_model))

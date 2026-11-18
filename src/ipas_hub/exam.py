@@ -1,4 +1,5 @@
 """公告試題：把擷取文字切成一題一題（題組情境、題幹加四個選項）。"""
+
 from __future__ import annotations
 
 import re
@@ -24,7 +25,7 @@ _FULLWIDTH_OFFSET = ord("Ａ") - ord("A")
 class Question:
     number: int
     answer: str  # 官方答案欄的字母（A–D）
-    text: str    # 題組情境（若有）加題幹與四個選項，正規化後
+    text: str  # 題組情境（若有）加題幹與四個選項，正規化後
 
 
 def _split_group_context(segment: str) -> tuple[str, str | None, range]:
@@ -56,8 +57,9 @@ def parse_questions(raw: str) -> list[Question]:
         letter = m.group(1)
         answer = chr(ord(letter) - _FULLWIDTH_OFFSET) if letter >= "Ａ" else letter
         parsed.append((int(m.group(2)), answer, text))
-    return [Question(number, answer, normalize(contexts.get(number, "") + "\n" + text))
-            for number, answer, text in parsed]
+    return [
+        Question(number, answer, normalize(contexts.get(number, "") + "\n" + text)) for number, answer, text in parsed
+    ]
 
 
 def read_questions(pdf_path) -> list[Question]:

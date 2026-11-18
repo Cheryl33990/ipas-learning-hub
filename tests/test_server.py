@@ -1,4 +1,5 @@
 """OpenAI 相容端點的合成測試：不連 LLM、不連網路。"""
+
 import json
 import threading
 from types import SimpleNamespace
@@ -21,7 +22,9 @@ def test_takes_the_last_user_message_and_ignores_platform_prompts():
 
 
 def test_accepts_content_given_as_text_parts():
-    payload = {"messages": [{"role": "user", "content": [{"type": "text", "text": "甲"}, {"type": "text", "text": "乙"}]}]}
+    payload = {
+        "messages": [{"role": "user", "content": [{"type": "text", "text": "甲"}, {"type": "text", "text": "乙"}]}]
+    }
     assert last_user_message(payload) == "甲\n乙"
 
 
@@ -39,12 +42,18 @@ def test_answer_text_is_returned_unchanged_in_openai_shape():
     assert choice["finish_reason"] == "stop"
 
 
-@pytest.mark.parametrize("exc", [ValueError("無法連線 LLM 服務：連線被拒"),
-                                 ValueError("模型引用不存在或回答缺少引用，修正一次後仍不合格"),
-                                 OSError("索引檔不存在")])
+@pytest.mark.parametrize(
+    "exc",
+    [
+        ValueError("無法連線 LLM 服務：連線被拒"),
+        ValueError("模型引用不存在或回答缺少引用，修正一次後仍不合格"),
+        OSError("索引檔不存在"),
+    ],
+)
 def test_failures_are_shown_as_a_warning_not_as_an_answer(exc):
     def failing(question):
         raise exc
+
     status, result = chat_response(body(("user", "題目")), failing, "rag")
     text = result["choices"][0]["message"]["content"]
     assert status == 200  # 讓聊天畫面顯示原因，而不是平台的通用錯誤
@@ -86,7 +95,9 @@ def test_http_server_binds_loopback_and_serves_models_chat_and_stream(running):
     ctype, text = post(running + "/v1/chat/completions", body(("user", "你好"), stream=True))
     assert ctype.startswith("text/event-stream") and "回覆：你好" in "".join(
         json.loads(line[6:])["choices"][0]["delta"].get("content", "")
-        for line in text.split("\n\n") if line.startswith("data: {"))
+        for line in text.split("\n\n")
+        if line.startswith("data: {")
+    )
     assert text.rstrip().endswith("data: [DONE]")
 
 
@@ -100,7 +111,9 @@ def test_browser_visit_to_root_or_v1_gets_an_explanation_not_an_error(running):
 
 def test_http_server_rejects_bad_json_and_unknown_paths(running):
     with pytest.raises(HTTPError) as bad:
-        urlopen(Request(running + "/v1/chat/completions", b"{not json", {"Content-Type": "application/json"}), timeout=10)
+        urlopen(
+            Request(running + "/v1/chat/completions", b"{not json", {"Content-Type": "application/json"}), timeout=10
+        )
     assert bad.value.code == 400
     with pytest.raises(HTTPError) as missing:
         urlopen(running + "/v1/other", timeout=10)
@@ -121,6 +134,7 @@ def test_answer_text_reuses_ask_and_render_and_reports_search_failure(monkeypatc
     def fake_ask(question, hits, args):
         seen.update(question=question, hits=hits)
         return {"web": {"error": "維基百科 HTTP 429"}, "generation": {"marker": "g"}}
+
     monkeypatch.setattr(cli, "ask", fake_ask)
     monkeypatch.setattr(cli, "render_text", lambda generation, *a, **k: f"rendered:{generation['marker']}")
     args = SimpleNamespace(k=5, method="bm25")
@@ -149,8 +163,14 @@ def test_only_listed_files_are_served_read_only(tmp_path):
             assert res.headers.get("Content-Type") == "application/pdf"
             assert res.headers.get("Content-Disposition") == "inline"
             assert res.read() == b"%PDF-synthetic"
-        for path in ("/files/secret.txt", "/files/../secret.txt", "/files/book.pdf", "/files/s1.pdf/../secret.txt",
-                     "/files/%2e%2e/secret.txt", "/files/"):
+        for path in (
+            "/files/secret.txt",
+            "/files/../secret.txt",
+            "/files/book.pdf",
+            "/files/s1.pdf/../secret.txt",
+            "/files/%2e%2e/secret.txt",
+            "/files/",
+        ):
             with pytest.raises(HTTPError) as err:
                 urlopen(base + path, timeout=10)
             assert err.value.code == 404
@@ -168,15 +188,21 @@ def test_served_files_must_match_the_indexed_version(tmp_path, capsys):
     good.write_bytes(b"good")
     bad.write_bytes(b"changed")
     from ipas_hub.knowledge import digest
-    sources = [{"id": "s1", "pdf": "data/good.pdf", "sha256": digest(b"good")},
-               {"id": "s2", "pdf": "data/bad.pdf", "sha256": digest(b"original")},
-               {"id": "s3", "pdf": "data/missing.pdf", "sha256": "x"},
-               {"id": "old-index-without-path", "sha256": "x"}]
+
+    sources = [
+        {"id": "s1", "pdf": "data/good.pdf", "sha256": digest(b"good")},
+        {"id": "s2", "pdf": "data/bad.pdf", "sha256": digest(b"original")},
+        {"id": "s3", "pdf": "data/missing.pdf", "sha256": "x"},
+        {"id": "old-index-without-path", "sha256": "x"},
+    ]
     files = cli.source_files(tmp_path, sources)
     assert files == {"s1.pdf": good.resolve()}
     assert "s2" in capsys.readouterr().err
     link = cli.textbook_link("http://127.0.0.1:8100/", files)
-    assert link({"source_type": "textbook", "source": "s1", "pdf_page": 42}) == "http://127.0.0.1:8100/files/s1.pdf#page=42"
+    assert (
+        link({"source_type": "textbook", "source": "s1", "pdf_page": 42})
+        == "http://127.0.0.1:8100/files/s1.pdf#page=42"
+    )
     assert link({"source_type": "textbook", "source": "s2", "pdf_page": 42}) is None
     assert link({"source_type": "textbook", "source": "s1"}) is None
     assert link({"source_type": "external", "url": "https://example.org/a"}) == "https://example.org/a"

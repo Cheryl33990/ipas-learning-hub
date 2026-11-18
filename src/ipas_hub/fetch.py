@@ -4,6 +4,7 @@
 網址取 source.download_url；沒有時用設定頂層的 download_base 接上 pdf 檔名。
 download_base 放在頂層而非各來源，是因為來源欄位會寫入索引內容，放進去會改變既有 index_id。
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -48,13 +49,17 @@ def fetch_sources(root: Path, config_path: Path, opener=urlopen, timeout: float 
         target.parent.mkdir(parents=True, exist_ok=True)
         partial = target.with_name(target.name + ".part")
         try:
-            with opener(Request(url, headers={"User-Agent": "ipas-hub-fetch"}), timeout=timeout) as response, \
-                    partial.open("wb") as out:
+            with (
+                opener(Request(url, headers={"User-Agent": "ipas-hub-fetch"}), timeout=timeout) as response,
+                partial.open("wb") as out,
+            ):
                 for block in iter(lambda: response.read(CHUNK), b""):
                     out.write(block)
             if _sha256(partial) != spec["sha256"]:
-                raise ValueError(f"{spec['id']} 下載內容與設定的 SHA-256 不符；發布者可能已更新檔案，"
-                                 "請確認新版本後再更新設定，不要只改雜湊")
+                raise ValueError(
+                    f"{spec['id']} 下載內容與設定的 SHA-256 不符；發布者可能已更新檔案，"
+                    "請確認新版本後再更新設定，不要只改雜湊"
+                )
             partial.replace(target)
         finally:
             partial.unlink(missing_ok=True)

@@ -1,4 +1,5 @@
 """fetch：依設定檔的官方網址下載文件，SHA-256 不符就不留下檔案。"""
+
 import hashlib
 import io
 import json
@@ -23,6 +24,7 @@ def opener(body=CONTENT, seen=None):
         if seen is not None:
             seen.append(request.full_url)
         return io.BytesIO(body)
+
     return open_url
 
 
@@ -43,8 +45,10 @@ def test_source_download_url_takes_priority(tmp_path):
 def test_file_already_present_with_matching_hash_is_not_downloaded(tmp_path):
     (tmp_path / "data/raw").mkdir(parents=True)
     (tmp_path / "data/raw/guide 1.pdf").write_bytes(CONTENT)
+
     def unexpected(request, timeout):
         raise AssertionError("不應下載")
+
     assert fetch_sources(tmp_path, config(tmp_path), unexpected) == [{"id": "s1", "status": "present"}]
 
 
@@ -73,7 +77,11 @@ def test_plain_http_and_missing_url_are_rejected(tmp_path):
 
 def test_target_outside_data_is_rejected(tmp_path):
     path = tmp_path / "kb.json"
-    path.write_text(json.dumps({"download_base": "https://example.org/",
-                                "sources": [{"id": "s1", "pdf": "../evil.pdf", "sha256": SHA}]}), encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            {"download_base": "https://example.org/", "sources": [{"id": "s1", "pdf": "../evil.pdf", "sha256": SHA}]}
+        ),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="data/"):
         fetch_sources(tmp_path, path, opener())

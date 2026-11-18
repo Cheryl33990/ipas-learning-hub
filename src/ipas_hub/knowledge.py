@@ -1,4 +1,5 @@
 """雙科知識庫：只收教材，版本化保存來源、勘誤與可選本機向量。"""
+
 from __future__ import annotations
 
 import hashlib
@@ -56,8 +57,7 @@ def local_encoder(model: str, revision: str | None = None):
     return encoder, Path(path).name
 
 
-def build_index(root: Path, config_path: Path, output: Path,
-                embedding_model: str | None = None) -> Path:
+def build_index(root: Path, config_path: Path, output: Path, embedding_model: str | None = None) -> Path:
     config = json.loads(config_path.read_text(encoding="utf-8"))
     if config.get("schema_version") != SCHEMA_VERSION:
         raise ValueError("不支援的來源設定版本")
@@ -90,27 +90,50 @@ def build_index(root: Path, config_path: Path, output: Path,
         labels = [p.label for p in pages]
         if len(labels) != len(set(labels)):
             raise ValueError(f"教材頁碼重複：{source}")
-        sources.append({"id": source, "name": spec["name"], "version": spec["version"], "pdf": spec["pdf"],
-                        "sha256": sha, "patch_sha256": patch_sha, "patch_report": report,
-                        "errata": "applied" if patches else "not_applied", "pages": len(pages),
-                        **({"running_head": spec["running_head"]} if spec.get("running_head") else {}),
-                        **{k: spec[k] for k in ("parser", "url", "download_url", "retrieved_at") if k in spec}})
+        sources.append(
+            {
+                "id": source,
+                "name": spec["name"],
+                "version": spec["version"],
+                "pdf": spec["pdf"],
+                "sha256": sha,
+                "patch_sha256": patch_sha,
+                "patch_report": report,
+                "errata": "applied" if patches else "not_applied",
+                "pages": len(pages),
+                **({"running_head": spec["running_head"]} if spec.get("running_head") else {}),
+                **{k: spec[k] for k in ("parser", "url", "download_url", "retrieved_at") if k in spec},
+            }
+        )
         for chunk in chunk_pages(pages, size, stride):
-            chunks.append({"id": f"{source}:{chunk.label}:{chunk.index}", "source": source,
-                           "page": chunk.label, "text": chunk.text,
-                           **({"pdf_page": chunk.pdf_page} if chunk.pdf_page else {})})
+            chunks.append(
+                {
+                    "id": f"{source}:{chunk.label}:{chunk.index}",
+                    "source": source,
+                    "page": chunk.label,
+                    "text": chunk.text,
+                    **({"pdf_page": chunk.pdf_page} if chunk.pdf_page else {}),
+                }
+            )
     if not chunks:
         raise ValueError("知識庫不可為空")
     model_meta, vectors = None, None
     if embedding_model:
         encoder, revision = local_encoder(embedding_model)
-        vectors = np.asarray(encoder.encode([c["text"] for c in chunks],
-                             normalize_embeddings=True, batch_size=8,
-                             show_progress_bar=False), dtype=np.float32)
+        vectors = np.asarray(
+            encoder.encode(
+                [c["text"] for c in chunks], normalize_embeddings=True, batch_size=8, show_progress_bar=False
+            ),
+            dtype=np.float32,
+        )
         if vectors.ndim != 2 or len(vectors) != len(chunks) or not np.isfinite(vectors).all():
             raise ValueError("模型輸出向量無效")
-        model_meta = {"name": embedding_model, "revision": revision,
-                      "dimensions": vectors.shape[1], "sha256": digest(vectors.tobytes())}
+        model_meta = {
+            "name": embedding_model,
+            "revision": revision,
+            "dimensions": vectors.shape[1],
+            "sha256": digest(vectors.tobytes()),
+        }
     code_version = os.getenv("IPAS_CODE_VERSION", "unavailable")
     try:
         result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True)
@@ -119,11 +142,17 @@ def build_index(root: Path, config_path: Path, output: Path,
     except FileNotFoundError:
         pass  # runtime 映像不需要安裝 Git，仍保存實際程式檔案雜湊。
     code_hashes = {p.name: digest(p.read_bytes()) for p in Path(__file__).parent.glob("*.py")}
-    payload = {"schema_version": SCHEMA_VERSION, "sources": sources, "chunks": chunks,
-               "chunk_size": size, "chunk_stride": stride, "embedding": model_meta,
-               "code_version": code_version,
-               "code_sha256": code_hashes,
-               "lock_sha256": digest((root / "uv.lock").read_bytes())}
+    payload = {
+        "schema_version": SCHEMA_VERSION,
+        "sources": sources,
+        "chunks": chunks,
+        "chunk_size": size,
+        "chunk_stride": stride,
+        "embedding": model_meta,
+        "code_version": code_version,
+        "code_sha256": code_hashes,
+        "lock_sha256": digest((root / "uv.lock").read_bytes()),
+    }
     if "knowledge_base" in config:
         payload["knowledge_base"] = config["knowledge_base"]
     index_id = digest(canonical(payload))
@@ -151,9 +180,12 @@ class KnowledgeBase:
         self.vectors, self.encoder, self.vector_search = vectors, encoder, vector_search
         meta = payload["embedding"]
         if vectors is not None:
-            if (not meta or vectors.shape != (len(self.chunks), meta["dimensions"])
-                    or not np.isfinite(vectors).all()
-                    or digest(vectors.tobytes()) != meta["sha256"]):
+            if (
+                not meta
+                or vectors.shape != (len(self.chunks), meta["dimensions"])
+                or not np.isfinite(vectors).all()
+                or digest(vectors.tobytes()) != meta["sha256"]
+            ):
                 raise ValueError("向量檔與索引版本不一致")
 
     @classmethod
@@ -180,8 +212,7 @@ class KnowledgeBase:
         if method not in {"bm25", "vector", "hybrid"}:
             raise ValueError("不支援的檢索方法")
         lexical = self.bm25.scores(tokenize(query))
-        keyword = sorted((i for i, s in enumerate(lexical) if s > 0),
-                         key=lambda i: (-lexical[i], i))
+        keyword = sorted((i for i, s in enumerate(lexical) if s > 0), key=lambda i: (-lexical[i], i))
         ranks = keyword
         if method in {"vector", "hybrid"}:
             if (self.vectors is None and self.vector_search is None) or self.encoder is None:
@@ -202,8 +233,18 @@ class KnowledgeBase:
                     for rank, i in enumerate(ranking, 1):
                         fused[i] = fused.get(i, 0) + 1 / (60 + rank)
                 ranks = sorted(fused, key=lambda i: (-fused[i], i))
-        return [{**self.chunks[i], "name": self.sources[self.chunks[i]["source"]]["name"],
-                 "version": self.sources[self.chunks[i]["source"]]["version"],
-                 **({"document_type": "document"} if self.sources[self.chunks[i]["source"]].get("parser") == "pdf" else {}),
-                 "rank": rank, "index_id": self.index_id}
-                for rank, i in enumerate(ranks[:k], 1)]
+        return [
+            {
+                **self.chunks[i],
+                "name": self.sources[self.chunks[i]["source"]]["name"],
+                "version": self.sources[self.chunks[i]["source"]]["version"],
+                **(
+                    {"document_type": "document"}
+                    if self.sources[self.chunks[i]["source"]].get("parser") == "pdf"
+                    else {}
+                ),
+                "rank": rank,
+                "index_id": self.index_id,
+            }
+            for rank, i in enumerate(ranks[:k], 1)
+        ]

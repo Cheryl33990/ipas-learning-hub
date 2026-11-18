@@ -3,6 +3,7 @@
 預設只允許本機端點；遠端端點須明確開啟且使用 https，避免誤呼叫付費服務。
 API 金鑰只從環境變數讀取，不寫入執行紀錄。
 """
+
 from __future__ import annotations
 
 import json
@@ -26,12 +27,13 @@ class LLMConfig:
     max_tokens: int = 1500
 
     @classmethod
-    def from_env(cls, base_url: str | None = None, model: str | None = None,
-                 allow_remote: bool = False) -> "LLMConfig":
-        return cls(base_url=base_url or os.getenv("LLM_BASE_URL", "http://127.0.0.1:8000/v1"),
-                   model=model or os.getenv("LLM_MODEL", ""),
-                   api_key=os.getenv("LLM_API_KEY") or None,
-                   allow_remote=allow_remote or os.getenv("LLM_ALLOW_REMOTE") == "1")
+    def from_env(cls, base_url: str | None = None, model: str | None = None, allow_remote: bool = False) -> "LLMConfig":
+        return cls(
+            base_url=base_url or os.getenv("LLM_BASE_URL", "http://127.0.0.1:8000/v1"),
+            model=model or os.getenv("LLM_MODEL", ""),
+            api_key=os.getenv("LLM_API_KEY") or None,
+            allow_remote=allow_remote or os.getenv("LLM_ALLOW_REMOTE") == "1",
+        )
 
     def describe(self) -> dict:
         """可寫入執行紀錄的設定，不含金鑰。"""
@@ -52,7 +54,9 @@ def check_config(cfg: LLMConfig) -> None:
             raise ValueError("LLM 端點須為 http 或 https")
         return
     if not cfg.allow_remote:
-        raise ValueError("遠端 LLM 端點預設停用：本機以外的服務可能收費，須以 --allow-remote 或 LLM_ALLOW_REMOTE=1 明確開啟")
+        raise ValueError(
+            "遠端 LLM 端點預設停用：本機以外的服務可能收費，須以 --allow-remote 或 LLM_ALLOW_REMOTE=1 明確開啟"
+        )
     if url.scheme != "https":
         raise ValueError("遠端 LLM 端點必須使用 https")
 
@@ -61,7 +65,7 @@ def parse_json_content(content: str) -> dict:
     text = content.strip()
     if text.startswith("```"):
         text = text.strip("`")
-        text = text[text.find("{"):] if "{" in text else text
+        text = text[text.find("{") :] if "{" in text else text
     try:
         value = json.loads(text)
     except json.JSONDecodeError as exc:
@@ -74,14 +78,19 @@ def parse_json_content(content: str) -> dict:
 def chat_json(cfg: LLMConfig, system: str, user: str, opener=urlopen) -> dict:
     """送出一次聊天請求並解析 JSON 回覆；失敗一律拋錯，不回傳替代答案。"""
     check_config(cfg)
-    body = {"model": cfg.model, "temperature": 0, "max_tokens": cfg.max_tokens,
-            "response_format": {"type": "json_object"},
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+    body = {
+        "model": cfg.model,
+        "temperature": 0,
+        "max_tokens": cfg.max_tokens,
+        "response_format": {"type": "json_object"},
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+    }
     headers = {"Content-Type": "application/json"}
     if cfg.api_key:
         headers["Authorization"] = f"Bearer {cfg.api_key}"
-    req = Request(cfg.base_url.rstrip("/") + "/chat/completions", data=json.dumps(body).encode(),
-                  headers=headers, method="POST")
+    req = Request(
+        cfg.base_url.rstrip("/") + "/chat/completions", data=json.dumps(body).encode(), headers=headers, method="POST"
+    )
     started = time.perf_counter()
     try:
         with opener(req, timeout=cfg.timeout) as response:
@@ -95,6 +104,9 @@ def chat_json(cfg: LLMConfig, system: str, user: str, opener=urlopen) -> dict:
         raise ValueError("LLM 服務沒有回傳內容")
     if choices[0].get("finish_reason") == "length":
         raise ValueError("模型回覆超過長度上限而被截斷")
-    return {"output": parse_json_content(choices[0]["message"]["content"]),
-            "model": data.get("model", cfg.model), "usage": data.get("usage"),
-            "elapsed_ms": round((time.perf_counter() - started) * 1000, 1)}
+    return {
+        "output": parse_json_content(choices[0]["message"]["content"]),
+        "model": data.get("model", cfg.model),
+        "usage": data.get("usage"),
+        "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
+    }
