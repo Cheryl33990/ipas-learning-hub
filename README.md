@@ -89,7 +89,7 @@ flowchart LR
 | 想做什麼 | 需要 | 文件 |
 |---|---|---|
 | 看 iPAS 範例由哪些檔案組成、怎麼跑 | — | [examples/ipas](examples/ipas/README.md) |
-| 架設五科 iPAS＋混合檢索＋聊天 UI | NVIDIA GPU、Docker | [Windows 完整安裝](docs/setup.md) |
+| 架設五科 iPAS＋混合檢索＋聊天 UI | NVIDIA GPU、Docker | [Windows 完整安裝](docs/setup.md)；環境變數見 [.env.example](.env.example) |
 | 換成自己的 PDF 與領域設定 | 檢索只需 CPU | [換成自己的資料](docs/custom-data.md) |
 
 換資料要改的只有三樣：**來源設定**（路徑、版本、SHA-256、可選的下載網址）、**profile**（助理角色、文件名稱、領域規則），以及可選的**路由**（聊天介面的 model 名稱對應哪個庫）。

@@ -93,7 +93,7 @@ $documentIndex = ($indexOutput | ConvertFrom-Json).index
 uv run python -m ipas_hub.cli search --index $documentIndex --kb my-docs --method hybrid --query '文件中想查的問題'
 ```
 
-需先完成本機 LLM 設定並確認服務可用，才執行以下生成／介面命令。`LLM_MODEL` 必須與端點提供的模型名稱一致；既有 Compose 預設名稱是 qwen3-vl-8b-fp8。
+需先完成本機 LLM 設定並確認服務可用，才執行以下生成／介面命令。`LLM_MODEL` 必須與端點提供的模型名稱一致；既有 Compose 預設名稱是 qwen3-vl-8b-fp8。改用其他 OpenAI 相容端點時的 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_ALLOW_REMOTE` 見 [.env.example](../.env.example)。
 
 ```powershell
 $env:LLM_MODEL = 'qwen3-vl-8b-fp8'

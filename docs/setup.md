@@ -1,7 +1,7 @@
 <!--
 title: Windows 新手操作手冊
 status: in-review
-updated: 2026-11-17
+updated: 2026-11-18
 -->
 
 # Windows 新手操作手冊
@@ -23,7 +23,7 @@ uv --version
 uv sync --locked --extra pg --extra embeddings
 ```
 
-repo 目前為 private，clone 需要有存取權的 GitHub 帳號。已有專案時，進入既有資料夾即可。`docker version` 必須同時顯示 Client 與 Server。
+已有專案時，進入既有資料夾即可。`docker version` 必須同時顯示 Client 與 Server。
 
 ## 2. 下載五科教材
 
@@ -49,10 +49,11 @@ uv run hf download BAAI/bge-m3 --exclude "onnx/*" --exclude "imgs/*" --exclude "
 
 ## 4. 啟動資料庫並建立索引
 
-用編輯器在專案根目錄建立 `.env`，先只需填入以下內容，把範例密碼換成自己的英數字密碼；檔名不是 `.env.txt`。已有 `.env` 時加入所缺欄位，不覆寫原內容。
+在專案根目錄由範本建立 `.env`，再用編輯器把 `PG_PASSWORD=` 後面的 `<choose-a-strong-password>` 換成自己的英數字密碼；其他行先維持註解即可。已有 `.env` 時不要覆寫，只從 [.env.example](../.env.example) 補上所缺欄位。所有環境變數的用途、是否必填與預設值都列在 `.env.example`。
 
-```dotenv
-PG_PASSWORD=ReplaceWithYourOwnPassword
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
 ```
 
 ```powershell
@@ -86,10 +87,10 @@ docker run --rm -v ipas-llm-models:/hf python:3.12-slim sh -c 'pip install huggi
 
 此步會下載額外映像、套件與大型生成模型；時間與容量尚未實測，請先檢查磁碟。下載失敗可先保留第 5 步的教材搜尋功能。新下載 volume 的路徑與檔案完整性須由實際啟動確認。
 
-在 `.env` 加上（若沿用既有 volume，填其名稱）：
+volume 名稱是預設的 `ipas-llm-models` 時不需改 `.env`；沿用其他名稱的既有 volume 時，取消 `.env` 中 `LLM_MODEL_VOLUME` 那行的註解並填入名稱：
 
 ```dotenv
-LLM_MODEL_VOLUME=ipas-llm-models
+LLM_MODEL_VOLUME=<docker-volume-name>
 ```
 
 ## 7. 啟動聊天
@@ -128,7 +129,7 @@ docker compose --profile ui up -d ui
 
 ## 8. 下次啟動、停止與排錯
 
-下次不用重建索引：啟動 Docker Desktop，啟動 db、vllm、ui，於新的 PowerShell 重設第 4 步的 `PG_DSN`／`PGPASSWORD` 及第 7 步的 `LLM_MODEL`，再執行 `serve --store pg --kb ipas --profile examples/ipas/profile.json`。`.env` 不會自動變成主機 Python 的環境變數。加入第二個庫後，請明確指定 --kb 或 --index，不能再依全域最新索引猜測範圍。
+下次不用重建索引：啟動 Docker Desktop，啟動 db、vllm、ui，於新的 PowerShell 重設第 4 步的 `PG_DSN`／`PGPASSWORD` 及第 7 步的 `LLM_MODEL`，再執行 `serve --store pg --kb ipas --profile examples/ipas/profile.json`。`.env` 只由 Docker Compose 讀取，不會自動變成主機 Python 的環境變數（見 `.env.example` 的 B 區）。加入第二個庫後，請明確指定 --kb 或 --index，不能再依全域最新索引猜測範圍。
 
 停止：serve 視窗按 Ctrl+C，再執行：
 
