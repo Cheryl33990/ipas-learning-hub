@@ -6,6 +6,8 @@ updated: 2026-11-18
 
 # 進度與接手
 
+目前階段與前進判斷（2026-11-18，收尾）：PR #34 已由使用者合併（6922836）。使用者在 AnythingLLM 畫面確認排版正常（結尾核對統計分段、⚠ 標示、依據連結），本輪「確認 ⚠ 排版」完成，此為使用者試用確認，不是正式驗收。使用者詢問本專案 RAG 與 AnythingLLM 內建文件 RAG 的差異，已口頭說明；兩者未在同一批題目上正式比較，使用者決定先不做。目前沒有進行中的任務；serve 仍由 Claude Code session 背景執行，session 結束可能停止。本筆隨下一個分支一起提交。
+
 目前階段與前進判斷（2026-11-18，PR #33 合併後重啟本機服務）：PR #33 已由使用者合併（f343701），CI run 44279003831 通過。使用者要求重啟：停止前一次背景啟動的 serve，以 main f343701 相同參數重新啟動（PGPASSWORD 同樣在單一指令內從 .env 讀入，未印出、未寫入檔案；服務仍掛在 Claude Code session 底下）。驗證：/v1/models 回 rag 與 labor-law；以「請問ADAM 跟 SGD 的差異在哪」呼叫 /v1/chat/completions，回覆中「核對：…」「模型核對 5 句：皆直接支持…」「提醒：…」各自成段，回覆不含「答案」。AnythingLLM 畫面待使用者確認。這是本機服務重啟，不是部署或驗收。下一步：使用者確認畫面；若要長期使用，建議使用者在自己的終端機啟動 serve。
 
 目前階段與前進判斷（2026-11-18，本機服務重啟，等待使用者在畫面確認排版）：PR #32 已由使用者合併（2fd31b8），CI run 44277252794 通過。使用者同意後重啟本機 serve：停止 2026-11-17 啟動的舊 process（--store pg --routes config/rag-routes.json --port 8100），以 main 2fd31b8 的程式重新啟動相同參數；PG_DSN 指向 Compose db（127.0.0.1:5433），PGPASSWORD 在單一指令內從 .env 讀入環境變數，未印出、未寫入檔案。服務掛在 Claude Code session 底下，session 結束可能隨之停止。驗證：/v1/models 回 rag 與 labor-law；以顯著性圖原題呼叫 /v1/chat/completions（model rag，開外搜），回覆 Markdown 中模型核對 ⚠ 各自成段，結尾有「模型核對 5 句：1 句未直接支持、1 句部分支持」。Chrome 擴充未連線，AnythingLLM 畫面排版未由 AI 檢視。使用者截圖（問 ADAM 與 SGD 差異）回報：⚠ 各自成段、依據連結正常，但結尾「核對：…」與「模型核對…」併成同一段。修正（分支 fix/markdown-verify-line，基於 2fd31b8）：render_text 的 Markdown 版在模型核對統計前空一行，終端機版不變；先寫失敗測試再修，全部 171 passed／7 skipped，ruff 通過。修正需再重啟 serve 才會生效，尚未重啟。使用者另回報「不是解題也會出現答案或選擇」：掃描 data/runs 中 30 筆無選項的提問，4 筆含「答案：B」（差分隱私與 K 匿名化，11-18 11:14 左右），都由 11-17 啟動的舊 serve 回答；移除多餘答案的 drop_unasked_choice 於 399f3d5（11-18 11:49）才加入，舊 process 沒有載入。重啟後 ADAM 那題模型仍寫了「答案：D」，已由程式移除（removed_choice=D），畫面上未出現。其餘紀錄沒有選項式用語，判定不需再改程式。這是本機服務重啟，不是部署或驗收。
