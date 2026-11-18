@@ -206,3 +206,30 @@ def test_served_files_must_match_the_indexed_version(tmp_path, capsys):
     assert link({"source_type": "textbook", "source": "s2", "pdf_page": 42}) is None
     assert link({"source_type": "textbook", "source": "s1"}) is None
     assert link({"source_type": "external", "url": "https://example.org/a"}) == "https://example.org/a"
+
+
+def test_server_binds_loopback_by_default_and_another_address_only_when_asked():
+    default = make_server(lambda q: "", 0, "rag")
+    wide = make_server(lambda q: "", 0, "rag", host="0.0.0.0")  # 只給容器用：主機上由 Compose 限制在 127.0.0.1
+    try:
+        assert default.server_address[0] == "127.0.0.1"
+        assert wide.server_address[0] == "0.0.0.0"
+    finally:
+        default.server_close()
+        wide.server_close()
+
+
+def test_serve_command_defaults_to_loopback_host(monkeypatch):
+    from ipas_hub import cli
+
+    seen = []
+
+    def fake_open(root, args, *rest):
+        seen.append(args.host)
+        raise SystemExit(0)  # 只看參數，不真的開索引
+
+    monkeypatch.setattr(cli, "open_kb", fake_open)
+    for extra in ([], ["--host", "0.0.0.0"]):
+        with pytest.raises(SystemExit):
+            cli.main(["serve", "--index", "x", *extra])
+    assert seen == ["127.0.0.1", "0.0.0.0"]

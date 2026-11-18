@@ -113,6 +113,8 @@ uv run python -m ipas_hub.cli serve --index $documentIndex --kb my-docs --web no
 
 聊天介面選 model `my-docs` 就只查 my-docs 庫；未設定的 model 名稱一律拒絕。使用 `--routes` 時，profile 寫在路由裡，不另加 `--profile`。
 
+用 Docker Compose 的 serve 容器（見[操作手冊](setup.md#方法-a全部用-docker-啟動建議)）時，路由檔與其中的 profile 都要放在 `config/`（容器唯讀掛入），並在 `.env` 設 `RAG_ROUTES=config/<路由檔>`，再執行 `docker compose restart serve`；放在 `data/` 的 profile 容器讀不到。
+
 換領域後的回答品質需要用自己的題目驗證；測試只證明管線與設定正確，不代表新領域已驗收。外搜先關閉，模型仍只能依提供證據回答。PDF、索引和含片段的執行紀錄都保留在 data/，測試題及預期答案應另外存放，不能加入檢索文件。
 
 ## 5. 版本更新與驗證

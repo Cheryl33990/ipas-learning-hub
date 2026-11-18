@@ -91,6 +91,7 @@ def test_route_callbacks_keep_kb_policy_and_namespaced_links(tmp_path, monkeypat
         allow_remote=False,
         link_base=None,
         port=0,
+        host="0.0.0.0",  # 容器內才會這樣設；引用連結仍給瀏覽器用的 127.0.0.1
         method="hybrid",
     )
     encoder = object()
@@ -119,6 +120,7 @@ def test_route_callbacks_keep_kb_policy_and_namespaced_links(tmp_path, monkeypat
 
     monkeypatch.setattr(ipas_hub.server, "make_server", lambda *a, **kw: kw)
     server = cli.routed_server(tmp_path, args)
+    assert server["host"] == "0.0.0.0"
     server["models"]["rag"]("question")
     server["models"]["labor-law"]("question")
     assert loaded == [("ipas", None), ("labor-law", encoder)]

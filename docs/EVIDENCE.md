@@ -71,7 +71,7 @@ README 的每項主張，以及證明它的程式與測試。測試名稱都在 
 
 | 主張 | 證據 |
 |---|---|
-| 服務只綁 127.0.0.1，提供 OpenAI 相容端點，可直接接 AnythingLLM | `server.py`；`test_http_server_binds_loopback_and_serves_models_chat_and_stream` |
+| 服務預設只綁 127.0.0.1，提供 OpenAI 相容端點，可直接接 AnythingLLM；只有指定 `--host` 才改綁（Compose 的 serve 容器用 0.0.0.0，主機端埠號限制在 127.0.0.1） | `server.py`、`compose.yaml`；`test_http_server_binds_loopback_and_serves_models_chat_and_stream`、`test_server_binds_loopback_by_default_and_another_address_only_when_asked`、`test_serve_command_defaults_to_loopback_host` |
 | 用 model 名稱路由到指定的知識庫與外搜政策；未設定的名稱一律拒絕 | `test_http_model_routing_streaming_unknown_models_and_scoped_files`、`test_invalid_routes_rejected_before_loading` |
 | 資料庫查詢必須明確指定知識庫，向量查詢不會跨到其他索引 | `test_knowledge_bases_are_explicit_and_vector_queries_stay_in_the_selected_index`¹、`test_pg_cli_routes_explicit_knowledge_base_and_rejects_ambiguity`¹ |
 | PDF 只提供白名單內、且與索引記錄版本相符的檔案 | `test_only_listed_files_are_served_read_only`、`test_served_files_must_match_the_indexed_version` |

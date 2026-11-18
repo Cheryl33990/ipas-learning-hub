@@ -244,7 +244,9 @@ def routed_server(root: Path, args):
             f"profile {spec.get('profile', '通用')}",
             flush=True,
         )
-    return make_server(None, args.port, next(iter(callbacks)), files, models=callbacks)
+    return make_server(
+        None, args.port, next(iter(callbacks)), files, models=callbacks, host=getattr(args, "host", HOST)
+    )
 
 
 def main(argv=None) -> int:
@@ -280,7 +282,12 @@ def main(argv=None) -> int:
             cmd.add_argument("--cases", type=Path, required=True)
         elif name == "serve":
             cmd.add_argument("--routes", type=Path, help="模型名稱到知識庫／外搜政策的 JSON 設定（pg）")
-            cmd.add_argument("--port", type=int, default=8100, help="只綁 127.0.0.1")
+            cmd.add_argument("--port", type=int, default=8100)
+            cmd.add_argument(
+                "--host",
+                default="127.0.0.1",
+                help="綁定位址，預設只綁本機；0.0.0.0 只給容器使用，主機端埠號須限制在 127.0.0.1（見 compose.yaml）",
+            )
             cmd.add_argument("--served-name", default="rag", help="聊天介面看到的模型名稱")
             cmd.add_argument(
                 "--link-base", help="引用連結的網址開頭（給瀏覽器開，不是給容器）；預設 http://127.0.0.1:<port>"
@@ -349,10 +356,14 @@ def main(argv=None) -> int:
                 files = source_files(root, kb.payload["sources"])
                 link_for = textbook_link(args.link_base or f"http://{HOST}:{args.port}", files)
                 server = make_server(
-                    lambda q: answer_text(kb, q, args, root, link_for), args.port, args.served_name, files
+                    lambda q: answer_text(kb, q, args, root, link_for),
+                    args.port,
+                    args.served_name,
+                    files,
+                    host=args.host,
                 )
                 print(
-                    f"OpenAI 相容端點：http://{HOST}:{server.server_address[1]}/v1（模型名稱 {args.served_name}）；Ctrl+C 結束",
+                    f"OpenAI 相容端點：http://{server.server_address[0]}:{server.server_address[1]}/v1（模型名稱 {args.served_name}）；Ctrl+C 結束",
                     flush=True,
                 )
                 print(f"知識庫：{kb.knowledge_base}；索引：{kb.index_id}", flush=True)

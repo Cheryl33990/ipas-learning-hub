@@ -22,7 +22,7 @@ services:
   # 以 .env 的 LLM_MODEL_VOLUME 指定存放模型的 volume（例如電腦上已下載好的 Hugging Face 快取）。
   vllm:
     image: vllm/vllm-openai:v0.26.0@sha256:ffb2d59b1c059a5bd8d781320c9f5189de8293693b7d95da54befddaa54abf52
-    profiles: [llm]
+    profiles: [llm, serve]
     gpus: all
     environment:
       HF_HOME: /hf
@@ -50,8 +50,50 @@ services:
       - --tool-call-parser=hermes
       - --host=0.0.0.0
       - --port=8000
+  # RAG 端點（--profile serve）：多知識庫路由，連 db 與 vllm；不必在主機另開視窗執行 serve。
+  # 容器內綁 0.0.0.0 讓 ui 與主機連得到，主機端只公開在 127.0.0.1。
+  # 混合檢索要在容器內算問題向量，所以映像含 embeddings（Linux 用 CPU 版 torch）；
+  # 嵌入模型從主機的 Hugging Face 快取唯讀掛入（.env 的 HF_CACHE_DIR），不在容器內下載。
+  serve:
+    build:
+      context: .
+      target: runtime
+      args:
+        EMBEDDINGS: "true"
+    image: ipas-hub:serve
+    profiles: [serve]
+    # Docker 重啟後自動恢復端點；設定錯誤時會反覆重啟，用 docker compose logs serve 查原因
+    restart: unless-stopped
+    # 啟用 serve profile 時一併啟動 db 與 vllm
+    depends_on:
+      db:
+        condition: service_healthy
+      vllm:
+        condition: service_started
+    environment:
+      LLM_BASE_URL: http://vllm:8000/v1
+      LLM_MODEL: ${LLM_SERVED_NAME:-qwen3-vl-8b-fp8}
+      PG_DSN: host=db port=5432 dbname=ipas user=ipas
+      PGPASSWORD: ${PG_PASSWORD:-}
+    volumes:
+      - ./data/raw:/app/data/raw:ro
+      - ./data/runs:/app/data/runs
+      # 路由與自訂 profile 放 config/，改了只要重啟 serve，不必重建映像
+      - ./config:/app/config:ro
+      - ${HF_CACHE_DIR:-hf-cache}:/models/huggingface:ro
+    ports:
+      - "127.0.0.1:${RAG_PORT:-8100}:8100"
+    command:
+      - serve
+      - --store=pg
+      # 預設只有 iPAS（rag）；多知識庫在 .env 設 RAG_ROUTES，例如 config/rag-routes.json
+      - --routes=${RAG_ROUTES:-examples/ipas/routes.json}
+      - --host=0.0.0.0
+      - --port=8100
+      # 引用連結給瀏覽器開，所以是主機上的位址
+      - --link-base=http://127.0.0.1:${RAG_PORT:-8100}
   # 聊天介面（AnythingLLM，MIT 授權）。只在 --profile ui 啟動。
-  # 把主機上 `ipas_hub.cli serve` 的端點當成模型；工作區不要上傳文件，檢索與外部搜尋都由本專案負責。
+  # 把 RAG 端點（serve 容器，或主機上執行的 `ipas_hub.cli serve`）當成模型；工作區不要上傳文件，檢索與外部搜尋都由本專案負責。
   ui:
     image: mintplexlabs/anythingllm:latest@sha256:be5f75b6744e0e6697162dfd2c14b0351514f2b3f8cb1a71bbd349488383e0d2
     profiles: [ui]
@@ -74,7 +116,7 @@ services:
   # 密碼由 .env 的 PG_PASSWORD 提供；未設定時容器會拒絕啟動，不使用預設密碼。
   db:
     image: pgvector/pgvector:0.8.6-pg17@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f
-    profiles: [db]
+    profiles: [db, serve]
     environment:
       POSTGRES_USER: ipas
       POSTGRES_DB: ipas

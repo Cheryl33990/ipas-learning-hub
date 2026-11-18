@@ -64,7 +64,7 @@ $env:PGPASSWORD = (Select-String '^PG_PASSWORD=(.*)' .env).Matches[0].Groups[1].
 uv run python -m ipas_hub.cli index --config examples/ipas/knowledge-base.no-errata.json --embedding-model BAAI/bge-m3 --to-pg
 ```
 
-等資料庫顯示 healthy，再執行建索引；CPU 建向量可能需要數分鐘。成功輸出會包含 `index_id` 與資料庫載入結果，請保留。資料存於 Docker volume；檔案索引在 `data/index/kb/`。不要刪 volume 來解決連線問題。
+等資料庫顯示 healthy，再執行建索引；CPU 建向量需要數分鐘（作者電腦約 6 分鐘）。成功輸出會包含 `index_id` 與資料庫載入結果，請保留。資料存於 Docker volume；檔案索引在 `data/index/kb/`。不要刪 volume 來解決連線問題。
 
 ## 5. 先確認混合搜尋可用
 
@@ -95,6 +95,31 @@ LLM_MODEL_VOLUME=<docker-volume-name>
 
 ## 7. 啟動聊天
 
+### 方法 A：全部用 Docker 啟動（建議）
+
+RAG 端點也在容器內執行，不必另開視窗。容器要用第 3 步下載的嵌入模型，先在 `.env` 加一行，指向自己的 Hugging Face 快取資料夾（唯讀掛入，容器不會下載模型）：
+
+```dotenv
+HF_CACHE_DIR=C:/Users/<你的使用者名稱>/.cache/huggingface
+```
+
+```powershell
+docker compose --profile serve --profile ui up -d
+docker compose logs --tail 40 vllm serve
+```
+
+`serve` profile 會一併啟動 db、vllm 與 RAG 端點；第一次會建立含嵌入模型套件的映像（約 3 GB，作者電腦約 2 分鐘）。等 serve 的紀錄出現「多知識庫端點」，再確認：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8100/v1/models
+```
+
+應列出 `rag`。端點預設使用 [examples/ipas/routes.json](../examples/ipas/routes.json)（只有 iPAS），只公開在本機 127.0.0.1；已另外建立其他知識庫（見[自訂資料](custom-data.md)）時，在 `.env` 設 `RAG_ROUTES`，例如 `config/rag-routes.json`。路由列出的知識庫都必須已建索引並載入，否則端點會在啟動時停止。
+
+### 方法 B：在主機執行端點
+
+適合修改程式時測試，程式改完不必重建映像。
+
 ```powershell
 docker compose --profile llm up -d vllm
 docker compose logs --tail 40 vllm
@@ -114,6 +139,10 @@ uv run python -m ipas_hub.cli serve --store pg --kb ipas --profile examples/ipas
 docker compose --profile ui up -d ui
 ```
 
+兩種方法都使用 8100 埠，同時只能執行一種。
+
+### 設定聊天介面
+
 瀏覽器開 `http://localhost:3001`，依畫面完成首次設定並建立工作區。模型供應者應為 OpenAI (Generic)，值與 compose 相同：
 
 | 欄位 | 值 |
@@ -129,12 +158,12 @@ docker compose --profile ui up -d ui
 
 ## 8. 下次啟動、停止與排錯
 
-下次不用重建索引：啟動 Docker Desktop，啟動 db、vllm、ui，於新的 PowerShell 重設第 4 步的 `PG_DSN`／`PGPASSWORD` 及第 7 步的 `LLM_MODEL`，再執行 `serve --store pg --kb ipas --profile examples/ipas/profile.json`。`.env` 只由 Docker Compose 讀取，不會自動變成主機 Python 的環境變數（見 `.env.example` 的 B 區）。加入第二個庫後，請明確指定 --kb 或 --index，不能再依全域最新索引猜測範圍。
+下次不用重建索引：啟動 Docker Desktop。方法 A 只要執行 `docker compose --profile serve --profile ui up -d`；程式更新後加上 `--build` 重建端點映像。方法 B 啟動 db、vllm、ui，於新的 PowerShell 重設第 4 步的 `PG_DSN`／`PGPASSWORD` 及第 7 步的 `LLM_MODEL`，再執行 `serve --store pg --kb ipas --profile examples/ipas/profile.json`。`.env` 只由 Docker Compose 讀取，不會自動變成主機 Python 的環境變數（見 `.env.example` 的 B 區）。加入第二個庫後，請明確指定 --kb 或 --index，不能再依全域最新索引猜測範圍。
 
-停止：serve 視窗按 Ctrl+C，再執行：
+停止：方法 B 先在 serve 視窗按 Ctrl+C，再執行：
 
 ```powershell
-docker compose --profile llm --profile ui --profile db stop
+docker compose --profile llm --profile ui --profile db --profile serve stop
 ```
 
 | 情況 | 先檢查 |
@@ -146,6 +175,8 @@ docker compose --profile llm --profile ui --profile db stop
 | vLLM 模型不在快取 | volume 名稱、固定 revision 與 `/hf/hub` 結構是否一致 |
 | GPU 記憶體不足 | 先停止占用 GPU 的工作；保留錯誤訊息，不宣稱所有 GPU 均可用 |
 | UI 回答無教材引用 | Base URL 是否指向 8100/v1、模型是否為 rag |
-| 更新索引後仍用舊資料 | Ctrl+C 停止 serve 後重啟；執行中的程序不會自動換索引 |
+| 更新索引後仍用舊資料 | Ctrl+C 停止 serve 後重啟（方法 A：`docker compose restart serve`）；執行中的程序不會自動換索引 |
+| serve 容器啟動失敗、找不到嵌入模型 | `.env` 的 `HF_CACHE_DIR` 是否指向含 `hub/models--BAAI--bge-m3` 的資料夾；`docker compose logs serve` 看錯誤 |
+| 8100 被占用 | 方法 A 與 B 是否同時在跑；只保留一種 |
 
-完整新手驗證尚待實際找一位新使用者，依本手冊逐步操作，記錄卡點與最終版本。已存在快取的作者電腦通過，不代表新機安裝通過。
+2026-11-18 作者電腦重新 clone 到新資料夾，依本手冊執行第 1–5 步與第 7 步方法 A（全新資料庫；套件、嵌入模型、生成模型與 Docker 映像沿用既有快取，第 6 步未執行），全部通過；過程中發現預設路由含未建立的知識庫，已修正。完整新手驗證仍待實際找一位新使用者在乾淨電腦依本手冊操作；作者電腦通過不代表新機安裝通過。
