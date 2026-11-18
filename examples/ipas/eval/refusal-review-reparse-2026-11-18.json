@@ -1,0 +1,45 @@
+{
+  "name": "修正切題後三方法皆拒答題：原因判讀",
+  "reviewer": "Claude 起草，作者 2026-11-18 逐題確認（非獨立第三方）",
+  "date": "2026-11-18",
+  "population": "248 題補充結果（正式 225 題＋修正解析後重跑 23 題）中 BM25、向量、混合皆回依據不足的 13 題",
+  "method": "題目文字未變的 9 題沿用先前判讀；其餘 4 題以修正後題目重跑混合（k=5、外搜關閉、qwen3-vl-8b-fp8、索引 ce5090f4…），皆仍拒答，混合 top-5 與重跑評估相同；另取三方法 top-20，並以關鍵詞搜尋全部 1,389 個教材片段",
+  "scale": {
+    "未涵蓋": "五科教材沒有作答所需內容",
+    "圖表": "作答所需資料在圖或表中，題目文字擷取不到",
+    "題幹解析": "題目文字解析錯誤（例如混入下一題組）導致檢索偏離",
+    "檢索失敗": "教材有直接依據但不在 top-5"
+  },
+  "summary": {
+    "未涵蓋": 12,
+    "圖表": 1,
+    "題幹解析": 0,
+    "檢索失敗": 0
+  },
+  "changes_from_previous": {
+    "removed": {
+      "i115-1-s2-47": "修正後三方法答對",
+      "i115-1-s3-43": "修正後三方法答對",
+      "i115-1-s3-47": "圖題；修正後 BM25 與混合答錯、向量仍拒答"
+    },
+    "added": {
+      "i115-1-s2-39": "修正解析後新切出"
+    }
+  },
+  "previous": "refusal-review-2026-11-18.json（243 題、15 題；不改寫）",
+  "judgments": [
+    {"case": "b115-2-s1-29", "category": "未涵蓋", "note": "GRPO／推理強化：五科教材無 GRPO、Group Relative、DeepSeek 等詞", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "b115-2-s1-46", "category": "未涵蓋", "note": "AutoSkill 框架：教材無 AutoSkill 或技能模組", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "b115-2-s2-03", "category": "未涵蓋", "note": "LLM 無狀態、需帶入對話歷史：教材無 Chat History／對話歷史；「記憶」只見於 RNN／LSTM 與工具鏈列舉", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "b115-2-s2-14", "category": "未涵蓋", "note": "Agentic Coding 工具能力：教材無 Agentic Coding、Claude Code、終端機操作；Copilot 只出現一次", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "b115-2-s2-18", "category": "未涵蓋", "note": "合約審查的上下文設計（保留原文精確性）：教材無上下文工程；「逐字」只出現於生成原理與 RNN 說明", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "b115-2-s2-36", "category": "未涵蓋", "note": "Agent 的任務規劃器：教材的「任務分解」是專案管理與資料管線；「自動任務規劃」只是應用列舉，無 Agent 元件說明", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "b115-2-s2-40", "category": "未涵蓋", "note": "Solution Graph：教材無 Solution Graph、有向無環圖；DAG 只出現於中級科目 3 其他脈絡", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "i115-1-s1-16", "category": "未涵蓋", "note": "ReAct Agent 設計：教材無 ReAct／Thought；幻覺只有一般說明，且不在任何方法 top-20", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "i115-1-s2-19", "category": "圖表", "note": "Apriori：概念有涵蓋且三方法第 1 名即命中，但交易紀錄表在圖中，題目文字無資料，無法計算", "basis": "題目文字未變，沿用 refusal-review-2026-11-18.json"},
+    {"case": "i115-1-s2-39", "category": "未涵蓋", "note": "Python 函式的可變預設參數：程式碼在圖中、題目文字沒有；教材亦無預設參數、def、append 等內容，即使取得程式碼也沒有作答依據", "basis": "修正切題後重新判讀"},
+    {"case": "i115-1-s2-45", "category": "未涵蓋", "note": "Pandas groupby／nlargest：教材只提到 Pandas 名稱，無這些語法；加回題組情境（客戶資料表說明）後結論不變", "basis": "修正切題後重新判讀"},
+    {"case": "i115-1-s2-46", "category": "未涵蓋", "note": "Pandas 布林篩選：教材無此語法；加回題組情境後結論不變", "basis": "修正切題後重新判讀"},
+    {"case": "i115-1-s3-41", "category": "未涵蓋", "note": "水平翻轉破壞 b/d/p/q 方向語義：教材只把翻轉列為一般影像資料增強，未說明不適用情境；混合 top-5 已含資料增強片段，不是檢索失敗；截掉混入文字後結論不變", "basis": "修正切題後重新判讀"}
+  ]
+}
