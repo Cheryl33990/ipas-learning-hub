@@ -959,3 +959,14 @@ def test_ask_turns_verification_on_from_args(monkeypatch):
     calls.clear()
     record = ask("題目", BOOK, SimpleNamespace(**base))  # 例如 exam_eval 組的參數沒有 verify：維持關閉
     assert len(calls) == 1 and record["generation"]["verification"] == {"status": "off"}
+
+
+def test_markdown_puts_the_model_verification_summary_in_its_own_paragraph():
+    # AnythingLLM 會把「核對：…」與「模型核對…」之間的單一換行併成同一段（2026-11-18 使用者截圖）
+    verdicts = {"results": [{"n": 1, "verdict": "supported", "note": ""}, {"n": 2, "verdict": "supported"}]}
+    result = answer("題目 (A) 甲 (B) 乙", BOOK, WEB, scripted(answered(), verdicts), verify=True)
+    md = render_text(result, markdown=True)
+    assert "未引用的句子不檢查）。\n\n模型核對 2 句：" in md
+    assert "仍可能有誤）。\n\n提醒：" in md
+    plain = render_text(result)
+    assert "未引用的句子不檢查）。\n模型核對 2 句：" in plain
