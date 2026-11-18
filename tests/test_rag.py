@@ -55,7 +55,7 @@ def test_sources_are_labelled_by_program_not_by_model():
 
 
 def test_each_segment_gets_program_markers_numbered_per_source_type():
-    result = answer("題目", BOOK, WEB, reply(status="supported", segments=[
+    result = answer("題目 (A) 甲 (B) 乙", BOOK, WEB, reply(status="supported", segments=[
         seg("迴歸預測連續數值", "subject1:3-36:0"), seg("MAE 是絕對誤差平均", "wiki:1"), seg("答案：B")]))
     assert [s["markers"] for s in result["segments"]] == [["教材1"], ["外部1"], []]
     assert [s["marker"] for s in result["sources"]] == ["教材1", "外部1"]
@@ -82,7 +82,7 @@ def test_pdf_page_is_shown_next_to_the_printed_page_and_can_become_a_link():
 
 def test_markdown_puts_each_sentence_and_warning_in_its_own_paragraph():
     # 聊天介面把單一換行併成同一段；Markdown 版每句之間空一行，依據清單仍是清單
-    result = answer("題目", BOOK, WEB, reply(status="supported", segments=[
+    result = answer("題目 (A) 甲 (B) 乙", BOOK, WEB, reply(status="supported", segments=[
         seg("迴歸預測連續數值", "subject1:3-36:0"), seg("MAE 用於迴歸預測連續數值", "subject1:3-36:0"), seg("答案：B")]))
     md = render_text(result, markdown=True)
     assert "迴歸預測連續數值 [教材1]\n\nMAE 用於迴歸預測連續數值 [教材1]\n\n⚠ 引用可能不支持此句" in md
@@ -536,3 +536,39 @@ def test_ask_records_web_failure_and_still_answers_from_textbook(monkeypatch):
     assert record["web"]["error"] == "MAE：維基百科搜尋失敗：offline" and record["external_hits"] == []
     assert record["generation"]["basis"] == "textbook_only" and len(calls) == 2
     assert record["llm"] == {"base_url": "http://127.0.0.1:8000/v1", "model": "qwen", "remote": False}
+
+
+# ---- 外部內容授權告知 ----
+
+def test_wikipedia_sources_carry_license_and_modification_notice():
+    result = answer("題目", BOOK, WEB, reply(status="supported", segments=[seg("MAE 是絕對誤差平均", "wiki:1")]))
+    assert result["sources"][0]["license"] == "CC BY-SA 4.0"
+    text = render_text(result)
+    assert "CC BY-SA 4.0" in text and "creativecommons.org/licenses/by-sa/4.0" in text and "改寫" in text
+
+
+def test_textbook_only_answer_has_no_wikipedia_notice():
+    result = answer("題目", BOOK, WEB, reply(status="supported", segments=[seg("迴歸預測連續數值", "subject1:3-36:0")]))
+    assert "license" not in result["sources"][0] and "CC BY-SA" not in render_text(result)
+
+
+# ---- 非選擇題不顯示答案選項 ----
+
+def test_choice_written_for_a_question_without_options_is_removed_and_recorded():
+    result = answer("請問差分隱私與K匿名化的差異", BOOK, [], reply(status="supported", segments=[
+        seg("迴歸預測連續數值", "subject1:3-36:0"), seg("答案：B")]))
+    assert result["answer_choice"] is None and result["removed_choice"] == "B"
+    assert [s["text"] for s in result["segments"]] == ["迴歸預測連續數值"]
+    assert "答案" not in render_text(result)
+
+
+def test_choice_inside_a_sentence_is_stripped_but_the_sentence_is_kept():
+    result = answer("兩者差在哪？", BOOK, [], reply(status="supported", segments=[
+        seg("迴歸預測連續數值，答案：(C)。", "subject1:3-36:0")]))
+    assert result["segments"][0]["text"] == "迴歸預測連續數值，" and result["removed_choice"] == "C"
+
+
+def test_multiple_choice_question_keeps_its_answer():
+    result = answer("何者正確？(A) 甲 (B) 乙", BOOK, [], reply(status="supported", segments=[
+        seg("迴歸預測連續數值", "subject1:3-36:0"), seg("答案：B")]))
+    assert result["answer_choice"] == "B" and result["removed_choice"] is None

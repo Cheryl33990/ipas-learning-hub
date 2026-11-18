@@ -65,7 +65,7 @@ Python 3.12 是現行 CI 安裝版本；Windows 本機及 Linux CI 的驗證不�
 | 需求／來源 | 實作或證據 | 未達條件 |
 |---|---|---|
 | iPAS 問題可回查來源／brief 原始情境 | 頁碼引用、勘誤設定、靜態解析、rag.py | 理由與引用的完整人工品質判定 |
-| 替換自有文件／brief 產品方向 | parser=pdf、來源 manifest；勞基法案例 | prompt 仍有 iPAS 假設；非任意格式、排版或領域保證 |
+| 替換自有文件／brief 產品方向 | parser=pdf、來源 manifest、profile；[換成自己的資料](custom-data.md) | 非 iPAS 領域回答品質未另驗證；非任意格式、排版或領域保證 |
 | 知識庫隔離／brief 文件範圍 | --kb、index_id、model 路由；test_documents／test_pgstore／test_routing | 只隔離檢索範圍，不包含身份與授權 |
 | 外部知識補強／brief 產品方向 | 維基百科、web none、外部引用 | 通用外搜、模型記憶補充未交付；新領域外搜需驗證 |
 | 可供他人參考／brief 完整參考專案 | README、環境說明、新手手冊、CI | 乾淨新機全流程、可分享展示素材、品質評估集與 LICENSE 決定 |

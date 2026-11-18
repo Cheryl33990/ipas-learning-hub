@@ -1,10 +1,14 @@
 <!--
 title: 進度與接手
 status: draft
-updated: 2026-11-17
+updated: 2026-11-18
 -->
 
 # 進度與接手
+
+目前階段與前進判斷（2026-11-18，通用管線＋iPAS 單一範例，審查與交付）：分支 docs/public-presentation（基於 09947fb），未提交。第一段：參考 Hsiang-Tang/canopus 的公開呈現，新增離線示範、docs/EVIDENCE.md、docs/STATUS.md、SECURITY.md，重寫 README，CI 加示範步驟，pyproject 描述更新。第二段（使用者 2026-11-18 決定：勞基法只移出公開文件、示範改用自寫 iPAS 筆記、套件名維持 ipas_hub）：參考 Azure-Samples/azure-search-openai-demo、zylon-ai/private-gpt、Langchain-Chatchat 等做法，新增 profile.py（prompts/answer.txt 改為共用契約＋{{intro}} 等欄位；iPAS profile 組出的 prompt 雜湊等於抽出前 b9e2e2a7…，歷史 prompt_sha256 可比較；未指定時用通用設定），ask／serve 加 --profile，路由可選 profile（rag 指向 iPAS，labor-law 改用通用設定）；新增 fetch.py 與 cli fetch（https、SHA-256 不符不留檔、不覆寫不同內容；download_base 放設定頂層以免改變既有 index_id）；維基來源標示 CC BY-SA 4.0、授權連結與「經模型改寫」；iPAS 設定搬到 examples/ipas/（knowledge-base*.json、profile.json、sample/notes.json 自寫筆記、README），index 預設 --config 同步；demo 改用自寫筆記與 iPAS profile；docs/documents.md 改為 docs/custom-data.md（換資料三要素），docs/examples/labor-law.md 移到 docs/internal/project/examples/ 並修連結；setup、architecture、environment、THIRD_PARTY_NOTICES、EVIDENCE、STATUS 同步；Dockerfile／.dockerignore 加入 examples。驗證：Windows 159 passed／7 skipped（pg 未設 DSN 略過）；Docker test 目標 159 passed／7 skipped，runtime 映像 --network none 可跑 demo；cli fetch 對本機五份教材皆 present，另實際自官方下載初級科目 1 至暫存路徑、雜湊相符後刪除；EVIDENCE 55 個測試名稱皆存在；74 份 Markdown 只剩既有範本佔位連結 1 個；README 示範輸出與實際一致；uv lock --check、git diff --check 通過；hosted CI 未跑；真實 LLM 未重跑。未決（作者決定）：LICENSE、explanations 逐選項解析的權利、repo 公開與 GitHub 描述、操作畫面錄製。補充（同日）：使用者錄製 GIF（真實 vLLM、iPAS profile、rag 路由）時，非選擇題「請問差分隱私與K匿名化的差異」回答末尾出現「答案：B」；送出的 prompt 與改版前相同，屬既有行為。新增 rag.drop_unasked_choice：題目無選項時由程式移除「答案：X」並記錄 removed_choice，選擇題不變；3 項新測試，2 項既有選擇題測試補上選項；Windows 162 passed／7 skipped。使用者重啟 serve 後重錄（非選擇題「請問差分隱私跟同態加密的差異」，回答末尾已無「答案：X」，引用連到 PDF 第 172 頁），即為本版在真實 vLLM 上的人工確認。GIF 由原檔（桌面，2466×1365、37 秒，未修改）裁切聊天欄與 PDF 區、輸入 2 倍速、等待 4 倍速並加字幕、PDF 留 3 秒、縮至 960px，輸出 docs/assets/demo.gif（16.6 秒、4.6 MB），放入 README「實際畫面」。下一步：使用者看 diff，授權後提交與開 PR。
+
+目前階段與前進判斷（2026-11-17，分支清理完成）：使用者明確要求檢查並刪除雲端舊分支。本機／遠端 main 為 09947fb，工作樹開始時乾淨；原遠端共 18 個分支、無開啟中的 PR。17 個非 main 分支逐一以 merge-base 與 rev-list 核對，皆為 main 祖先、未合併提交數 0，且對應 PR #1–#17 全部已合併、head SHA 相符；刪除前的名稱／SHA 存於 data/review/branch-cleanup-20261117.json。已以 atomic push 與各分支預期 SHA 的 force-with-lease 完成 17 個遠端分支刪除，fetch --prune 後 ls-remote --heads 確認只剩 main，SHA 未變。本機分支保留，程式與服務未改，不執行應用測試。本輪清理完成，無待刪遠端分支；本段為本機未提交紀錄，不另開補記 PR。
 
 目前階段與前進判斷（2026-11-17，文件整理提交與合併）：使用者詢問 docs/internal 是否應忽略，並明確授權討論後提交、開 PR 與 merge。判斷為保留版控：此處含設計／驗證及解析工具所需紀錄，internal 並非私密；README／gitignore 註解已說明，本機草稿沿用 data/review。GitHub 查核目前 repo 為 private，本輪不改可見性。開始為審查與交付；沿用前輪程式 131 passed／7 skipped 與連結／產生器驗證，提交前再檢查實際 staged diff、機敏資料與搬移完整性；CI 須對應本批 head 通過才依授權合併。保留智慧財產與公開準備缺口，AI 自查不冒充真人批准。最終提交、PR、CI 與 merge 識別記在該 PR 和回覆，不另開補記 PR；此紀錄隨本批提交。
 

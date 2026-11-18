@@ -37,6 +37,8 @@ jobs:
           version: "0.9.11"
       - run: uv sync --locked --python 3.12 --extra pg
       - run: uv run --no-sync pytest -p no:cacheprovider
+      - name: 離線示範（每個情境須達到預期結果）
+        run: uv run --no-sync python -m ipas_hub.demo
       - name: 確認原始資料未追蹤
         run: test -z "$(git ls-files data)"
       - name: 驗證 Compose 設定

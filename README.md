@@ -1,20 +1,70 @@
-# iPAS Learning Hub
+# iPAS Learning Hub — 每句回答都能回到 PDF 原頁的本機 RAG
 
-**可回查 PDF 來源的本機 RAG 知識助理。**
+一套在本機執行的 RAG 管線：從 PDF 檢索證據，由本機 LLM 逐句回答，每句都標出引用，點開就能看到 PDF 原頁。管線本身不綁定領域；repo 附帶的範例是 **iPAS AI 應用規劃師**的備考，換成自己的文件只需要改設定，不需要改程式。
 
-從 iPAS AI 應用規劃師備考出發，將「找教材 → 比對證據 → 回答 → 開啟原頁」串成一個流程。使用 BM25 與向量混合檢索、本機 LLM 和逐句引用，並以勞動基準法獨立知識庫示範延伸到非 iPAS 的文字型 PDF。
+重點不是「接上一個向量資料庫」，而是**模型捏造引用時要攔得住、資料改版時要追得到、找不到依據時要敢說不知道**。
 
-[架構與設計](docs/architecture.md) · [實際執行環境](docs/environment.md) · [快速開始](docs/documents.md) · [評估結果](docs/evaluation.md) · [開源工具與授權](THIRD_PARTY_NOTICES.md)
+> [docs/EVIDENCE.md](docs/EVIDENCE.md) 列出每項主張，以及證明它的測試。
 
-## 專案重點
+## 實際畫面
 
-- **文件可追溯**：保存來源版本、SHA-256、PDF 頁碼、勘誤與 embedding revision，可指定舊索引回查。
-- **混合檢索**：提供 BM25 基線、向量搜尋與 RRF 融合，支援檔案索引及 PostgreSQL＋pgvector。
-- **依據導向回答**：本機模型依片段生成逐句引用，檢查引用 ID、提示字詞落差，依據不足時明確回報。
-- **知識庫分離**：明確指定庫與版本，或以 model 路由到不同庫及外搜政策；避免 iPAS 與其他文件混查。
-- **可替換文件**：iPAS 專用解析與一般 PDF 解析共用後續管線；一般 PDF 以實際頁序引用。
+![在 AnythingLLM 提問，回答逐句標示教材引用，點引用開啟 PDF 對應頁](docs/assets/demo.gif)
 
-主要實作在文件處理、版本化索引、檢索融合、引用檢查及服務路由。聊天 UI 使用 AnythingLLM，模型服務使用 vLLM，均為第三方成果。
+本機 vLLM（Qwen3-VL-8B）＋五科 iPAS 索引＋iPAS profile，在 AnythingLLM 提問「請問差分隱私跟同態加密的差異」：回答逐句標示 [教材N]，點引用直接開到官方學習指引的 PDF 第 172 頁。等待生成的片段已快轉 4 倍，實際生成約需 16 秒。畫面中的教材頁面只用來示範引用跳頁，教材本身不在 repo 內。
+
+## 為什麼做這個
+
+拿 LLM 查教材時，以下問題會反覆出現：
+
+| 常見問題 | 這個專案的做法 |
+|---|---|
+| 模型引用了不存在的來源 | 引用 ID 必須屬於本次實際檢索到的片段；退回修正一次，仍錯就拒絕顯示為有依據的回答 |
+| 有附引用，內容卻對不上 | 逐句比對數字、英文術語與中文字詞，對不上就標 ⚠（明寫是字詞核對，不是語意驗證） |
+| 找不到資料也硬答 | 檢索沒有命中時不呼叫模型，直接回報依據不足 |
+| 教材改版或勘誤後，不知道答案依據哪一版 | 記錄 PDF 的 SHA-256、勘誤、embedding revision；索引 ID 是內容雜湊，被改過就拒絕載入 |
+| 換一個領域就要改 prompt 和程式 | 共用的證據規則固定，助理角色與領域規則放在 profile 設定檔 |
+| 「用了向量資料庫應該比較準」 | 保留 BM25 基線，以 RRF 融合向量結果，並公開目前樣本太小、尚不足以宣稱勝出 |
+
+## 一分鐘看懂
+
+只需要 Python 3.11+ 與 [uv](https://docs.astral.sh/uv/)，不需要 GPU、教材、資料庫或網路：
+
+```sh
+uv sync --locked
+uv run python -m ipas_hub.demo      # 以 iPAS 範例重播六種情境
+uv run pytest                       # 全部測試
+```
+
+示範使用作者自寫的 iPAS 主題筆記（不是官方教材）、iPAS 的 profile，以及「照腳本回覆的替身模型」；其餘都是正式程式：索引完整性檢查、BM25 檢索、引用檢查與修正、字詞核對、輸出格式。以下是選擇題情境的實際輸出：
+
+```text
+━━ grounded-answer ━━ 選擇題逐項說明並引用檢索到的頁面，最後給出答案
+問題：下列何者屬於監督式學習的常見任務？(A) 分群 (B) 降維 (C) 分類 (D) 關聯規則探勘
+檢索（BM25，前 3）：
+  #1 notes:1-1:0　監督式學習：訓練資料附有標籤（正確答案），模型學習從…
+  #2 notes:3-1:0　過擬合：模型在訓練資料上表現很好，在新資料上表現變差…
+模型呼叫：1 次（腳本化替身）
+
+狀態：有依據（只用教材）
+
+(A) 分群是非監督式學習的常見任務。 [教材1]
+(B) 降維也是非監督式學習的常見任務。 [教材1]
+(C) 分類使用附有標籤的資料，屬於監督式學習。 [教材1]
+(D) 關聯規則探勘不需要標籤，片段未提及，此為推論。
+答案：C
+
+依據：
+- [教材1] 教材 iPAS 主題自寫筆記（示範用） 1-1
+```
+
+| 情境 | 發生什麼事 | 結果 |
+|---|---|---|
+| `grounded-answer` | 選擇題逐項引用實際檢索到的頁面 | 有依據，最後給出「答案：C」 |
+| `repaired-citation` | 第一次引用不存在的片段 | 退回修正一次後通過，並記錄修正次數 |
+| `fabricated-citation` | 修正後仍捏造引用 | 拒絕顯示為有依據的回答 |
+| `mis-cited-sentence` | 引用存在，但句中術語不在片段裡 | 保留回答，句子標 ⚠ |
+| `out-of-scope` | 筆記裡沒有相關內容 | 不呼叫模型，回報依據不足 |
+| `tampered-index` | 索引片段被改過 | 雜湊不符，拒絕載入 |
 
 ## 架構
 
@@ -24,70 +74,75 @@ flowchart LR
     Index --> Search[BM25 + 向量 + RRF]
     UI[CLI / AnythingLLM] --> Route[知識庫路由]
     Route --> Search
+    Profile[領域 profile] --> LLM
     Search --> LLM[本機 vLLM]
     Web[可選維基百科] --> LLM
     LLM --> Answer[引用檢查 + 回答 + PDF 連結]
 ```
 
-檔案索引可獨立使用，或載入 PostgreSQL＋pgvector。BM25 與融合在 Python 執行，資料庫負責向量距離查詢；AnythingLLM 只提供聊天介面，不需上傳文件。模組位置、資料流與設計取捨見 [架構文件](docs/architecture.md)。
+檔案索引可以單獨使用，也可以載入 PostgreSQL＋pgvector：資料庫負責向量距離查詢，BM25 與融合在 Python 執行。AnythingLLM 只當聊天介面，不需要上傳文件。模組位置、資料流與設計取捨見 [架構文件](docs/architecture.md)。
 
-## 實際執行環境
+**我自己寫的部分**：文件解析與勘誤、版本化索引、檢索融合、引用檢查、領域 profile、OpenAI 相容端點與知識庫路由。聊天 UI（AnythingLLM）、模型服務（vLLM）、嵌入模型（BGE-M3）與生成模型（Qwen3）都是第三方成果。
 
-作者的開發／自用配置，於 2026-11-17 查核；**不是最低需求**。
+## 範例與自己的資料
 
-| 項目 | 配置 |
-|---|---|
-| CPU／RAM | AMD Ryzen 7 9800X3D，8 核心／16 執行緒；32 GiB RAM |
-| GPU | NVIDIA GeForce RTX 5070 Ti，16 GB VRAM |
-| 系統 | Windows 11 專業版＋Docker Desktop Linux containers |
-| 嵌入模型 | BAAI/bge-m3，CPU 執行、1,024 維 |
-| 生成模型 | Qwen3-VL-8B-Instruct-FP8，vLLM／GPU，僅載入文字部分 |
+| 想做什麼 | 需要 | 文件 |
+|---|---|---|
+| 看 iPAS 範例由哪些檔案組成、怎麼跑 | — | [examples/ipas](examples/ipas/README.md) |
+| 架設五科 iPAS＋混合檢索＋聊天 UI | NVIDIA GPU、Docker | [Windows 完整安裝](docs/setup.md) |
+| 換成自己的 PDF 與領域設定 | 檢索只需 CPU | [換成自己的資料](docs/custom-data.md) |
 
-驅動、Python／Docker 版本與模型參數見 [環境文件](docs/environment.md)。只做 PDF＋BM25 檢索不需要 GPU、資料庫或生成模型。
+換資料要改的只有三樣：**來源設定**（路徑、版本、SHA-256、可選的下載網址）、**profile**（助理角色、文件名稱、領域規則），以及可選的**路由**（聊天介面的 model 名稱對應哪個庫）。
 
-## 開始使用
+作者的實際配置：Ryzen 7 9800X3D、32 GiB RAM、RTX 5070 Ti 16 GB、Windows 11＋Docker Desktop；嵌入模型 BAAI/bge-m3 在 CPU 執行，生成模型 Qwen3-VL-8B-Instruct-FP8 在 vLLM／GPU 執行。這**不是**最低需求，詳見 [執行環境](docs/environment.md)。
 
-在 repo 根目錄執行（Python ≥3.11，使用 uv）：
+## 教材、模型與外部內容
 
-```powershell
-uv sync --locked
-uv run python -m ipas_hub.cli --help
-uv run pytest -p no:cacheprovider
-```
+| 素材 | repo 內有什麼 | 如何取得 |
+|---|---|---|
+| iPAS 學習指引 | 只有官方網址與 SHA-256 | `cli fetch` 從官方下載並核對雜湊；PDF、切塊原文與索引都不進版控 |
+| 範例筆記 | 作者自寫的全文 | 隨 repo 提供，與程式採相同授權 |
+| 嵌入與生成模型 | 只有模型名稱與固定 revision | 使用者自行從 Hugging Face 下載，repo 不附權重 |
+| 維基百科補充 | 無 | 執行時查詢；引用標示 CC BY-SA 4.0、條目版本連結，並註明經模型改寫 |
 
-這會安裝基本依賴並執行測試；完整聊天另需模型及服務。套件由 [pyproject.toml](pyproject.toml) 與 [uv.lock](uv.lock) 管理。
+各項授權與查核來源見 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)。
 
-| 使用方式 | 操作文件 |
-|---|---|
-| 用自己的 PDF，先在 CPU 上檢索 | [一般 PDF 快速開始](docs/documents.md) |
-| 安裝五科 iPAS＋混合檢索＋聊天 UI | [Windows 完整安裝](docs/setup.md) |
-| 看非 iPAS 文件與多工作區範例 | [勞基法案例](docs/examples/labor-law.md) |
+## 評估與限制
 
-教材、模型與索引不附在 repo 中。iPAS 沒有本機勘誤替換檔時使用 `config/knowledge-base.no-errata.json`，回答依據仍可能包含更正前文字。
+歷史小樣本比較中（14 題，舊初級索引），混合檢索的選項一致數為 11 題，BM25 與向量各 10 題。差異小，**尚不足以宣稱混合檢索穩定較好**；找到正確頁碼與測試通過，也不等於回答正確。分母、版本與測法見 [評估證據](docs/evaluation.md)。
 
-## 評估與目前限制
+目前限制：只支援可擷取文字的 PDF（沒有 OCR 或圖表理解）；非 iPAS 領域的回答品質要用自己的題目驗證；聊天是單輪，SSE 在完整生成後才送出；知識庫分離不等於多人權限隔離。目前狀態與下一步見 [STATUS](docs/STATUS.md)。
 
-已有單元測試、HTTP／分庫測試、可選 PostgreSQL 整合測試與 Docker CI。歷史小樣本比較顯示混合檢索值得持續評估，但尚不足以宣稱穩定勝過 BM25；頁碼命中與測試通過也不等於回答正確。結果、分母、版本與測法見 [評估證據](docs/evaluation.md)。
+## 設計原則
 
-目前定位為可自用與展示的本機原型。僅支援可擷取文字的 PDF，沒有 OCR、Word 或圖表理解；生成 prompt 仍有 iPAS 身份設定。聊天採單輪問題，SSE 於完整生成後傳送；分庫不等同多人權限隔離。後續重點是通用 prompt、可分享示範與保留測試集、乾淨新機重現。
+- **可追溯優先於方便**：回答必須能回到哪份文件、哪一版、哪一頁。
+- **不知道就說不知道**：沒有依據時拒答，不拿模型的常識補空白。
+- **檢查要由程式執行**：引用合法性由程式驗證，不靠 prompt 裡的一句「請務必引用」。
+- **領域是設定，不是程式**：證據規則所有領域共用，領域差異只放在 profile。
+- **先有基線再談改進**：BM25 是對照組；混合檢索要用資料證明值得多花的延遲。
+- **誠實標示檢查的範圍**：字詞核對就寫字詞核對，不包裝成事實查核。
+- **不再散布別人的內容**：教材只記網址與雜湊，模型不附權重，外部內容標示授權。
 
-## 開源工具與資料授權
-
-使用 Python、NumPy、pypdf、Sentence Transformers、Psycopg、PostgreSQL／pgvector、vLLM、AnythingLLM、uv、Docker Compose 與 pytest。完整用途、模型授權、官方來源及尚待查核項目見 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)。
-
-這是獨立學習專案，不代表 iPAS 主辦單位或第三方工具官方背書。程式 LICENSE 尚未選定；教材、模型、維基內容與程式各有不同權利條件，公開準備尚未完成。內部文件建議使用本機模型與 `--web none`；`data/runs/` 會保存問題及證據片段。
-
-<details>
-<summary>專案結構與維護紀錄</summary>
+## 專案結構
 
 ```text
-src/ipas_hub/       RAG、CLI 與聊天服務
-tests/             自動化測試
-config/            文件來源與知識庫路由
-docs/              架構、環境、安裝、評估與案例
-docs/internal/     開發歷史、驗證證據及協作範本
+src/ipas_hub/       通用管線：檢索、RAG、profile、fetch、CLI、聊天服務與離線示範
+examples/ipas/      iPAS 範例：來源設定、profile、自寫示範筆記
+config/             聊天端點的知識庫路由
+tests/              合成資料單元測試、HTTP 路由測試、可選 pgvector 整合測試
+docs/               架構、環境、安裝、換資料、評估、證據對照與目前狀態
+docs/internal/      開發歷程、歷史驗證與 AI 協作紀錄（非閱讀必要）
 ```
 
-[所有文件](docs/README.md) · [維護紀錄](docs/internal/README.md) · [AI 協作入口](AGENTS.md)
+## 驗證與資料安全
 
-</details>
+- `uv run pytest` 執行全部測試；需要資料庫的測試在沒有 `PG_TEST_DSN` 時會略過。
+- GitHub Actions 在每個 PR 執行：pgvector 整合測試、離線示範、確認 `data/` 未被追蹤、容器內測試、建立執行映像與啟動檢查。
+- 測試只使用合成資料與替身模型，證明的是流程行為，不是回答品質。
+- 哪些資料不得進版控、執行時資料會流向哪裡，見 [SECURITY.md](SECURITY.md)。
+
+## 授權
+
+程式授權**尚未選定**；在加入 LICENSE 之前，保留所有權利。教材、模型、維基內容與程式各有不同的權利條件，見上方「教材、模型與外部內容」與 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)。
+
+這是獨立學習專案，不代表 iPAS 主辦單位或任何第三方工具的官方立場。
