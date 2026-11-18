@@ -59,8 +59,10 @@ def test_knowledge_base_name_and_document_source_label():
 def test_document_answer_uses_document_markers_version_and_pdf_page():
     hits = [{"id": "doc:2:0", "source": "doc", "name": "合成規範", "version": "v1",
              "page": "2", "pdf_page": 2, "text": "合成規範：資料保存五年", "document_type": "document"}]
-    generate = lambda *a: {"output": {"status": "supported", "segments": [
-        {"text": "資料保存五年", "citations": ["doc:2:0"]}]}}
+    def generate(*_):
+        return {"output": {"status": "supported", "segments": [
+            {"text": "資料保存五年", "citations": ["doc:2:0"]}]}}
+
     result = answer("資料保存多久", hits, [], generate)
     text = render_text(result)
     assert "只用文件" in text and "[文件1]" in text and "版本：v1（PDF 第 2 頁）" in text

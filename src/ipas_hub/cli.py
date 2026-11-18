@@ -42,7 +42,9 @@ def evaluate(kb: KnowledgeBase, cases: list[dict], method: str, k: int) -> dict:
 
 def ask(question: str, hits: list[dict], args) -> dict:
     cfg = LLMConfig.from_env(args.llm_url, args.model, args.allow_remote)
-    generate = lambda system, user: chat_json(cfg, system, user)
+    def generate(system, user):
+        return chat_json(cfg, system, user)
+
     record = {"llm": cfg.describe(), "web": {"provider": args.web, "queries": [], "error": None}}
     external = []
     if args.web != "none":

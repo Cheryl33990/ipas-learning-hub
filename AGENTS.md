@@ -9,7 +9,7 @@ updated: 2026-11-17
 本檔是跨 AI 工具的唯一工作規則入口。不要建立另一份工具專屬規則副本。若工具不會自動讀取，使用者可在第一則指令要求讀本檔。
 
 ## 1．先讀什麼
-1. [使用指南](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/guide.md)。流程指南與空白範本保存在作者的範本 repo `problem-def-template`（私人，commit `4c73a73`），不放在本 repo；範本中的 `docs/project/` 對應本 repo 的 `docs/internal/project/`，metadata 依本專案用 HTML 註解。
+1. [使用指南](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/guide.md)。流程指南與空白範本保存在作者的範本 repo `problem-def-template`（公開，commit `4c73a73`），不放在本 repo；範本中的 `docs/project/` 對應本 repo 的 `docs/internal/project/`，metadata 依本專案用 HTML 註解。
 2. [brief](docs/internal/project/brief.md)：原始描述、範圍、AC 及確認紀錄。
 3. [progress](docs/internal/project/progress.md)：目前任務、實際檔案路徑、未完成與下一步。
 4. 本輪相關且實際存在的設計、ADR、測試與證據；不要要求尚未建立的文件先齊全。

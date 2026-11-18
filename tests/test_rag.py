@@ -73,7 +73,9 @@ def test_pdf_page_is_shown_next_to_the_printed_page_and_can_become_a_link():
     assert result["sources"][0]["label"] == "教材 科目一 3-36"  # 給模型的標籤不變
     plain = render_text(result)
     assert "- [教材1] 教材 科目一 3-36（PDF 第 42 頁）" in plain and "/files/" not in plain
-    link = lambda s: f"http://127.0.0.1:8100/files/{s['source']}.pdf#page={s['pdf_page']}" if s.get("pdf_page") else None
+    def link(s):
+        return f"http://127.0.0.1:8100/files/{s['source']}.pdf#page={s['pdf_page']}" if s.get("pdf_page") else None
+
     assert "- [教材1] 教材 科目一 3-36（PDF 第 42 頁）  http://127.0.0.1:8100/files/subject1.pdf#page=42" in render_text(result, link)
     md = render_text(result, link, markdown=True)
     assert "- [教材1] [教材 科目一 3-36（PDF 第 42 頁）](http://127.0.0.1:8100/files/subject1.pdf#page=42)" in md

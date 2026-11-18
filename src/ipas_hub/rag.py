@@ -54,7 +54,9 @@ def plan_web_queries(question: str, generate) -> list[dict]:
             item = {"zh": item}
         if not isinstance(item, dict) or not isinstance(item.get("zh"), str):
             raise ValueError("搜尋詞規劃回覆不符合格式")
-        text = lambda key, limit: (item[key].strip()[:limit] or None) if isinstance(item.get(key), str) else None
+        def text(key, limit, item=item):
+            return (item[key].strip()[:limit] or None) if isinstance(item.get(key), str) else None
+
         zh = item["zh"].strip()
         if zh and zh not in seen and len(zh) <= 40:
             seen.add(zh)
@@ -225,6 +227,71 @@ def _strip_ids(text: str, by_id: dict) -> str:
     return BRACKET.sub(drop, text).strip()
 
 
+def _generate_checked(template: str, user: str, by_id: dict, choice_expected: bool,
+                      generate, completed: list) -> tuple[dict, int]:
+    """呼叫模型並檢查引用；不合格只給一次修正機會，仍不合格就拒絕，不自行刪改引用。
+
+    選擇題只缺「答案：X」時也會要求修正一次，但修正後仍缺只照常顯示並註明，不拒絕。
+    回傳 (generated, 修正次數)。
+    """
+    generated = generate(template, user)
+    complete_chunk_ids(generated["output"], by_id, completed)
+    problems = _check_output(generated["output"], by_id)
+    if (not problems and choice_expected and generated["output"]["status"] == "supported"
+            and not answer_choice(generated["output"]["segments"])):
+        problems = ["選擇題的最後一個 segment 須為「答案：X」（X 為 A、B、C 或 D）"]
+    if not problems:
+        return generated, 0
+    feedback = ("你上一次的回覆不合格：" + "；".join(problems)
+                + "。請只使用 evidence 中實際存在的 id，依相同規則重新回覆完整 JSON。")
+    generated = generate(template, user + "\n\n" + feedback)
+    complete_chunk_ids(generated["output"], by_id, completed)
+    still = _check_output(generated["output"], by_id)
+    if still:
+        raise ValueError("模型引用不存在或回答缺少引用，修正一次後仍不合格，拒絕顯示為有依據回答："
+                         + "；".join(still))
+    return generated, 1
+
+
+def _mark_segments(raw_segments: list[dict], by_id: dict, question: str) -> tuple[list[dict], dict]:
+    """依首次出現順序替引用編號（教材N／文件N／外部N），去掉模型寫進句中的 id，並逐句做字詞核對。"""
+    markers, counts = {}, {"textbook": 0, "external": 0}
+    segments = []
+    for item in raw_segments:
+        cited = list(dict.fromkeys(item.get("citations", [])))
+        for c in cited:
+            if c not in markers:
+                kind = by_id[c]["source_type"]
+                counts[kind] += 1
+                label = "文件" if by_id[c]["label"].startswith("文件 ") else "教材"
+                markers[c] = (label if kind == "textbook" else "外部") + str(counts[kind])
+        text = _strip_ids(item["text"], by_id)
+        segments.append({"text": text, "citations": cited, "markers": [markers[c] for c in cited],
+                         "check": check_segment(text, [by_id[c]["text"] for c in cited], question) if cited else None})
+    return segments, markers
+
+
+def _build_sources(markers: dict, by_id: dict, located: dict, licensed: set) -> list[dict]:
+    """每個被引用的片段一筆來源；來源類型、網址、授權與 PDF 頁都由程式依片段資料填入。"""
+    sources = [{"id": c, "marker": markers[c], "source_type": by_id[c]["source_type"], "label": by_id[c]["label"],
+                **({"url": by_id[c]["url"]} if by_id[c].get("url") else {}),
+                **({"license": WIKIPEDIA_LICENSE} if c in licensed else {}),
+                **{key: located[c][key] for key in ("source", "pdf_page") if located.get(c, {}).get(key)}}
+               for c in markers]
+    labels = [s["label"] for s in sources]
+    for s in sources:  # 同頁多個片段時標出第幾段，避免兩個標記看起來指向同一處
+        if labels.count(s["label"]) > 1 and s["id"].rsplit(":", 1)[-1].isdigit():
+            s["label"] += f" 第{int(s['id'].rsplit(':', 1)[-1]) + 1}段"
+    return sources
+
+
+def _basis(sources: list[dict]) -> str:
+    types = {s["source_type"] for s in sources}
+    return ("mixed" if types == {"textbook", "external"} else
+            "textbook_only" if types == {"textbook"} else
+            "external_only" if types == {"external"} else "none")
+
+
 def answer(question: str, textbook: list[dict], external: list[dict], generate,
            prompt: str | None = None) -> dict:
     """prompt 是 profile 組好的系統提示；未指定時用通用設定（見 profile.py）。"""
@@ -241,24 +308,9 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate,
     located = {h["id"]: h for h in textbook}  # 來源識別與 PDF 頁只給程式顯示用，不送進模型
     licensed = {h["id"] for h in external if str(h.get("provider", "")).startswith("wikipedia")}
     choice_expected = has_options(question)
-    generated = generate(template, user)
     completed = []
-    complete_chunk_ids(generated["output"], by_id, completed)
-    problems = _check_output(generated["output"], by_id)
-    if (not problems and choice_expected and generated["output"]["status"] == "supported"
-            and not answer_choice(generated["output"]["segments"])):
-        problems = ["選擇題的最後一個 segment 須為「答案：X」（X 為 A、B、C 或 D）"]
-    repairs = 0
-    if problems:  # 只給一次修正機會；結構仍不合格就拒絕，不自行刪改引用；只缺答案選項則照常顯示並註明
-        repairs = 1
-        feedback = ("你上一次的回覆不合格：" + "；".join(problems)
-                    + "。請只使用 evidence 中實際存在的 id，依相同規則重新回覆完整 JSON。")
-        generated = generate(template, user + "\n\n" + feedback)
-        complete_chunk_ids(generated["output"], by_id, completed)
-        still = _check_output(generated["output"], by_id)
-        if still:
-            raise ValueError("模型引用不存在或回答缺少引用，修正一次後仍不合格，拒絕顯示為有依據回答："
-                             + "；".join(still))
+    generated, repairs = _generate_checked(template, user, by_id, choice_expected, generate, completed)
+
     output = generated["output"]
     removed_choice = None
     if not choice_expected:
@@ -268,43 +320,19 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate,
         output = {**output, "segments": [{"text": "教材與外部資料不足以判定此題，模型未說明缺少的內容。",
                                           "citations": []}]}
 
-    markers, counts = {}, {"textbook": 0, "external": 0}
-    segments = []
-    for item in output["segments"]:
-        cited = list(dict.fromkeys(item.get("citations", [])))
-        for c in cited:
-            if c not in markers:
-                kind = by_id[c]["source_type"]
-                counts[kind] += 1
-                label = "文件" if by_id[c]["label"].startswith("文件 ") else "教材"
-                markers[c] = (label if kind == "textbook" else "外部") + str(counts[kind])
-        text = _strip_ids(item["text"], by_id)
-        segments.append({"text": text, "citations": cited, "markers": [markers[c] for c in cited],
-                         "check": check_segment(text, [by_id[c]["text"] for c in cited], question) if cited else None})
-    citations = list(markers)
-    sources = [{"id": c, "marker": markers[c], "source_type": by_id[c]["source_type"], "label": by_id[c]["label"],
-                **({"url": by_id[c]["url"]} if by_id[c].get("url") else {}),
-                **({"license": WIKIPEDIA_LICENSE} if c in licensed else {}),
-                **{key: located[c][key] for key in ("source", "pdf_page") if located.get(c, {}).get(key)}}
-               for c in citations]
-    labels = [s["label"] for s in sources]
-    for s in sources:  # 同頁多個片段時標出第幾段，避免兩個標記看起來指向同一處
-        if labels.count(s["label"]) > 1 and s["id"].rsplit(":", 1)[-1].isdigit():
-            s["label"] += f" 第{int(s['id'].rsplit(':', 1)[-1]) + 1}段"
-    types = {s["source_type"] for s in sources}
-    basis = ("mixed" if types == {"textbook", "external"} else
-             "textbook_only" if types == {"textbook"} else
-             "external_only" if types == {"external"} else "none")
+    segments, markers = _mark_segments(output["segments"], by_id, question)
+    sources = _build_sources(markers, by_id, located, licensed)
     lines = [s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else "")
              for s in segments]
     return {"status": output["status"], "answer": "\n".join(lines), "segments": segments,
             "answer_choice": answer_choice(segments),
             "choice_expected": choice_expected and output["status"] == "supported",
-            "citations": citations, "sources": sources, "basis": basis,
+            "citations": list(markers), "sources": sources, "basis": _basis(sources),
             "flagged_segments": sum(1 for s in segments if s["check"] and s["check"]["flagged"]),
             "model": generated.get("model"), "usage": generated.get("usage"),
             "llm_elapsed_ms": generated.get("elapsed_ms"), "prompt_sha256": digest(template.encode()),
-            "repair_attempts": repairs, "removed_choice": removed_choice, "completed_citations": completed, "low_overlap_threshold": LOW_OVERLAP,
+            "repair_attempts": repairs, "removed_choice": removed_choice, "completed_citations": completed,
+            "low_overlap_threshold": LOW_OVERLAP,
             "validation": "citation_ids_and_lexical_check_not_semantic_verification"}
 
 
