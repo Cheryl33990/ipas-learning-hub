@@ -12,6 +12,7 @@ RUN if [ "$EMBEDDINGS" = "true" ]; then uv sync --locked --extra pg --extra embe
     else uv sync --locked --extra pg --no-dev --no-install-project; fi
 COPY src ./src
 COPY config ./config
+COPY examples ./examples
 RUN if [ "$EMBEDDINGS" = "true" ]; then uv sync --locked --extra pg --extra embeddings --no-dev --no-editable; \
     else uv sync --locked --extra pg --no-dev --no-editable; fi
 

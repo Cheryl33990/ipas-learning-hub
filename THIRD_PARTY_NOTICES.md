@@ -59,6 +59,7 @@ Docker Desktop **不等於 Docker Compose 的開源授權**。它適用 Docker S
 | iPAS 學習指引、勘誤及試題 | [官方學習資源](https://ipd.nat.gov.tw/ipas/certification/AIAP/learning-resources)可取得；既有 PDF 檢查記錄有版權聲明，見 [brief](docs/internal/project/brief.md) | 不推定可下載就是開放授權。PDF、原文切塊、勘誤替換檔、索引及含原文日誌不進版控；公開重製或服務前需確認適用權利依據 |
 | 法律條文本身 | 臺灣著作權法第 9 條列法律等不作為著作權標的 | 不把此規則擴張成所有政府網站內容皆無權利；第三方註釋、圖像或教材另判斷。保留來源與版本，非官方背書。[法條來源](https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=J0070017) |
 | 維基百科文字 | 依頁面適用授權；通常可選 CC BY-SA 4.0，例外內容須另看 | 再利用時保留來源／作者歸屬方式、授權連結與修改標示；涉及改作分享時遵守相同方式分享。不能把 AI 改寫當作自動免除條件。[Wikimedia 條款](https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use)、[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| 範例筆記 `examples/ipas/sample/notes.json` | 作者自寫的 iPAS 主題短文，不是官方教材的內容或摘錄 | 與程式採相同授權；供離線示範，不代表教材原文 |
 | 自有或公司 PDF | 匯入者須具備使用該內容的權限 | 公司文件還涉及保密／個資與外送政策；本機使用亦不自動解除義務，先用本機模型與 web none |
 | 學習解析、報告、展示截圖 | repo 已有 AI 整理的逐選項解析與部分來源術語；未附 PDF 不代表沒有第三方表達 | 公開前逐份複核引用長度、改寫、圖像及原文重現；AI 作者標示不是權利清除證明。示範優先用自寫、可分享文件 |
 
@@ -68,7 +69,7 @@ Docker Desktop **不等於 Docker Compose 的開源授權**。它適用 Docker S
 
 1. **本專案程式授權**：由作者確認可授權的自有內容及採用條款；保留模板來源 `problem-def-template` commit `4c73a73`，其原始授權尚未查核，不以重新放一份 MIT 覆蓋來源權利。
 2. **公開展示內容審查**：iPAS 解析／短引、截圖及其他文件未完成逐項權利確認；展示素材先採自寫文件。
-3. **維基輸出告知**：現有程式保存條目網址／revision 並呈現引用，但沒有完整來源授權欄位與修改告知；公開分享含維基摘錄／改作的輸出前需補相應告知。單純條目連結不是全部合規義務。
+3. **維基輸出告知**：2026-11-18 起，維基來源帶 `license: CC BY-SA 4.0`，輸出在引用後標示授權、附授權連結與條目 revision 連結，並註明句子由模型改寫、非原文（`rag.py`；`test_wikipedia_sources_carry_license_and_modification_notice`）。作者歸屬以條目版本連結（含編輯歷史）呈現；改作後再分享時的相同方式分享義務仍由分享者判斷，本程式不代為處理。
 4. **二進位／映像再散布**：精確模型 snapshot、所有傳遞依賴、OS／CUDA、LICENSE／NOTICE 與適用原始碼提供方式尚未驗證，不能標成已可再散布。
 
 本輪證據：`git ls-files data` 及追蹤 PDF／PNG／JPG／NPY／safetensors 查詢均無結果；`.dockerignore` 採 allowlist 排除資料及模型。這只代表當前追蹤／建置邊界，不是所有歷史提交、文字引用與授權均已清查。本輪沒有對外發布，也沒有修改既有服務。

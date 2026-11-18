@@ -27,23 +27,15 @@ repo 目前為 private，clone 需要有存取權的 GitHub 帳號。已有專�
 
 ## 2. 下載五科教材
 
-以下從官方下載，設定檔決定檔名與儲存位置。教材不在 Git 裡。
+以下從官方下載，設定檔決定網址、檔名、儲存位置與預期的 SHA-256。教材不在 Git 裡；`fetch` 只用 https，已存在且雜湊相符的檔案會跳過，雜湊不符就不留下檔案。
 
 ```powershell
-$base = 'https://www.ipas.org.tw/api/proxy/uploads/certification_resource/bf93f438f7be48d295c1b40a34d79f3d/'
-$cfg = Get-Content config/knowledge-base.no-errata.json -Raw -Encoding UTF8 | ConvertFrom-Json
-foreach ($s in $cfg.sources) {
-  New-Item -ItemType Directory -Force (Split-Path $s.pdf) | Out-Null
-  Invoke-WebRequest ($base + (Split-Path $s.pdf -Leaf)) -OutFile $s.pdf
-  if ((Get-FileHash -LiteralPath $s.pdf -Algorithm SHA256).Hash.ToLower() -ne $s.sha256) {
-    throw "教材版本不符：$($s.id)"
-  }
-}
+uv run python -m ipas_hub.cli fetch --config examples/ipas/knowledge-base.no-errata.json
 ```
 
-成功：五個檔案都下載完，沒有出現版本不符。官方若更換檔案，保留錯誤並回報，不要為了通過而改雜湊。
+成功：五個來源都顯示 `downloaded` 或 `present`。官方若更換檔案，保留錯誤並回報，不要為了通過而改雜湊。
 
-本手冊使用「無勘誤替換檔」設定：可獨立重現，但文字尚未套用官方勘誤，回答可能引用更正前內容。已有經核對的四份本機替換檔，才改用 `config/knowledge-base.json`；替換檔位置由該設定的 patches 欄位指定，每檔為含 id、old、new 的陣列，缺檔或替換字串未命中會停止建索引。替換檔含教材原文，不進版控；兩種索引的內容與識別不同。
+本手冊使用「無勘誤替換檔」設定：可獨立重現，但文字尚未套用官方勘誤，回答可能引用更正前內容。已有經核對的四份本機替換檔，才改用 `examples/ipas/knowledge-base.json`；替換檔位置由該設定的 patches 欄位指定，每檔為含 id、old、new 的陣列，缺檔或替換字串未命中會停止建索引。替換檔含教材原文，不進版控；兩種索引的內容與識別不同。
 
 ## 3. 下載嵌入模型
 
@@ -68,7 +60,7 @@ docker compose --profile db up -d db
 docker compose ps db
 $env:PG_DSN = 'host=127.0.0.1 port=5433 dbname=ipas user=ipas'
 $env:PGPASSWORD = (Select-String '^PG_PASSWORD=(.*)' .env).Matches[0].Groups[1].Value
-uv run python -m ipas_hub.cli index --config config/knowledge-base.no-errata.json --embedding-model BAAI/bge-m3 --to-pg
+uv run python -m ipas_hub.cli index --config examples/ipas/knowledge-base.no-errata.json --embedding-model BAAI/bge-m3 --to-pg
 ```
 
 等資料庫顯示 healthy，再執行建索引；CPU 建向量可能需要數分鐘。成功輸出會包含 `index_id` 與資料庫載入結果，請保留。資料存於 Docker volume；檔案索引在 `data/index/kb/`。不要刪 volume 來解決連線問題。
@@ -112,7 +104,7 @@ docker compose logs --tail 40 vllm
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/v1/models
 $env:LLM_MODEL = 'qwen3-vl-8b-fp8'
-uv run python -m ipas_hub.cli serve --store pg --kb ipas
+uv run python -m ipas_hub.cli serve --store pg --kb ipas --profile examples/ipas/profile.json
 ```
 
 最後一行會持續執行，請保持視窗開啟。另開一個 PowerShell 回到專案資料夾：
@@ -136,7 +128,7 @@ docker compose --profile ui up -d ui
 
 ## 8. 下次啟動、停止與排錯
 
-下次不用重建索引：啟動 Docker Desktop，啟動 db、vllm、ui，於新的 PowerShell 重設第 4 步的 `PG_DSN`／`PGPASSWORD` 及第 7 步的 `LLM_MODEL`，再執行 `serve --store pg --kb ipas`。`.env` 不會自動變成主機 Python 的環境變數。加入第二個庫後，請明確指定 --kb 或 --index，不能再依全域最新索引猜測範圍。
+下次不用重建索引：啟動 Docker Desktop，啟動 db、vllm、ui，於新的 PowerShell 重設第 4 步的 `PG_DSN`／`PGPASSWORD` 及第 7 步的 `LLM_MODEL`，再執行 `serve --store pg --kb ipas --profile examples/ipas/profile.json`。`.env` 不會自動變成主機 Python 的環境變數。加入第二個庫後，請明確指定 --kb 或 --index，不能再依全域最新索引猜測範圍。
 
 停止：serve 視窗按 Ctrl+C，再執行：
 

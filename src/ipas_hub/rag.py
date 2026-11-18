@@ -10,11 +10,14 @@ import re
 from pathlib import Path
 
 from .knowledge import digest
+from .profile import DEFAULT_PROFILE, answer_prompt
 
 PROMPTS = Path(__file__).with_name("prompts")
-ANSWER_PROMPT = PROMPTS / "answer.txt"
 QUERY_PROMPT = PROMPTS / "web_queries.txt"
 MAX_WEB_QUERIES = 3
+# 維基百科文字通常以 CC BY-SA 4.0 授權；回答是模型改寫，需標示來源、授權與「經改寫」
+WIKIPEDIA_LICENSE = "CC BY-SA 4.0"
+WIKIPEDIA_LICENSE_URL = "https://creativecommons.org/licenses/by-sa/4.0/"
 
 
 def textbook_label(hit: dict) -> str:
@@ -126,6 +129,27 @@ def has_options(question: str) -> bool:
     return len(set(OPTION.findall(question))) >= 2
 
 
+STRAY_CHOICE = re.compile(r"\s*答案\s*[:：]\s*[(（]?\s*([A-D])\s*[)）]?(?![A-Za-z])[。.]?")
+
+
+def drop_unasked_choice(segments: list[dict]) -> tuple[list[dict], str | None]:
+    """題目沒有選項時，模型仍可能照選擇題習慣補一句「答案：X」；由程式移除，不靠 prompt 約束。
+
+    回傳移除後的 segments 與被移除的最後一個選項代號；只剩答案的 segment 整個刪除。
+    """
+    kept, removed = [], None
+    for item in segments:
+        found = STRAY_CHOICE.findall(item["text"])
+        if not found:
+            kept.append(item)
+            continue
+        removed = found[-1]
+        text = STRAY_CHOICE.sub("", item["text"]).strip()
+        if text:
+            kept.append({**item, "text": text})
+    return kept, removed
+
+
 def answer_choice(segments: list[dict]) -> str | None:
     """從最後一句往前找「答案：X」；找不到回傳 None。"""
     for item in reversed(segments):
@@ -179,7 +203,9 @@ def _strip_ids(text: str, by_id: dict) -> str:
     return BRACKET.sub(drop, text).strip()
 
 
-def answer(question: str, textbook: list[dict], external: list[dict], generate) -> dict:
+def answer(question: str, textbook: list[dict], external: list[dict], generate,
+           prompt: str | None = None) -> dict:
+    """prompt 是 profile 組好的系統提示；未指定時用通用設定（見 profile.py）。"""
     evidence = build_evidence(textbook, external)
     if not evidence:
         text = "教材與外部搜尋都沒有取得依據，無法解答。"
@@ -187,10 +213,11 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
                 "segments": [{"text": text, "citations": [], "markers": [], "check": None}],
                 "citations": [], "sources": [], "basis": "none", "flagged_segments": 0,
                 "validation": "no_evidence", "prompt_sha256": None}
-    template = ANSWER_PROMPT.read_text(encoding="utf-8")
+    template = prompt if prompt is not None else answer_prompt(DEFAULT_PROFILE)
     user = json.dumps({"question": question, "evidence": evidence}, ensure_ascii=False)
     by_id = {e["id"]: e for e in evidence}
     located = {h["id"]: h for h in textbook}  # 來源識別與 PDF 頁只給程式顯示用，不送進模型
+    licensed = {h["id"] for h in external if str(h.get("provider", "")).startswith("wikipedia")}
     choice_expected = has_options(question)
     generated = generate(template, user)
     problems = _check_output(generated["output"], by_id)
@@ -208,6 +235,10 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
             raise ValueError("模型引用不存在或回答缺少引用，修正一次後仍不合格，拒絕顯示為有依據回答："
                              + "；".join(still))
     output = generated["output"]
+    removed_choice = None
+    if not choice_expected:
+        segments_kept, removed_choice = drop_unasked_choice(output["segments"])
+        output = {**output, "segments": segments_kept}
     if not output["segments"]:  # 模型判定依據不足卻未說明時，由程式補一句，不視為格式錯誤
         output = {**output, "segments": [{"text": "教材與外部資料不足以判定此題，模型未說明缺少的內容。",
                                           "citations": []}]}
@@ -228,6 +259,7 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
     citations = list(markers)
     sources = [{"id": c, "marker": markers[c], "source_type": by_id[c]["source_type"], "label": by_id[c]["label"],
                 **({"url": by_id[c]["url"]} if by_id[c].get("url") else {}),
+                **({"license": WIKIPEDIA_LICENSE} if c in licensed else {}),
                 **{key: located[c][key] for key in ("source", "pdf_page") if located.get(c, {}).get(key)}}
                for c in citations]
     labels = [s["label"] for s in sources]
@@ -247,7 +279,7 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate) 
             "flagged_segments": sum(1 for s in segments if s["check"] and s["check"]["flagged"]),
             "model": generated.get("model"), "usage": generated.get("usage"),
             "llm_elapsed_ms": generated.get("elapsed_ms"), "prompt_sha256": digest(template.encode()),
-            "repair_attempts": repairs, "low_overlap_threshold": LOW_OVERLAP,
+            "repair_attempts": repairs, "removed_choice": removed_choice, "low_overlap_threshold": LOW_OVERLAP,
             "validation": "citation_ids_and_lexical_check_not_semantic_verification"}
 
 
@@ -278,9 +310,12 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
             label = "[" + label.replace("[", "\\[").replace("]", "\\]") + f"]({url})"
         elif url:
             label += f"  {url}"
-        lines.append(f"- [{s['marker']}] {label}")
+        lines.append(f"- [{s['marker']}] {label}" + (f"  授權：{s['license']}" if s.get("license") else ""))
     if not result["sources"]:
         lines.append("- （無）")
+    if any(s.get("license") == WIKIPEDIA_LICENSE for s in result["sources"]):
+        lines += ["", f"維基百科內容依 {WIKIPEDIA_LICENSE}（{WIKIPEDIA_LICENSE_URL}）授權；"
+                  "上方句子由模型依條目改寫，非原文，原始版本見各條目連結。"]
     cited = sum(1 for s in result["segments"] if s["citations"])
     lines += ["", f"核對：{cited} 句有引用，其中 {result['flagged_segments']} 句可能不支持"
               "（字詞比對，非語意驗證；未引用的句子不檢查）。",

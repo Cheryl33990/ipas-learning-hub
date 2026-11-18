@@ -1,7 +1,7 @@
 [project]
 name = "ipas-hub"
 version = "0.0.1"
-description = "iPAS AI 應用規劃師備考輔助：題目找教材出處（探索階段）"
+description = "本機 RAG 知識助理：混合檢索、逐句引用檢查、可回查 PDF 原頁與版本"
 requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.26",

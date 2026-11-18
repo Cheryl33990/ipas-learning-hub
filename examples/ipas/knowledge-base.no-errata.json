@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "download_base": "https://www.ipas.org.tw/api/proxy/uploads/certification_resource/bf93f438f7be48d295c1b40a34d79f3d/",
   "chunk_size": 400,
   "chunk_stride": 300,
   "_comment": "沒有勘誤替換檔時使用（勘誤替換檔含教材原文，不在 repo 內）。建出的索引會記錄 errata: not_applied，勘誤頁為更正前文字。",

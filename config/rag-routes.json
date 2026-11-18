@@ -1,4 +1,4 @@
 {
-  "rag": {"knowledge_base": "ipas", "web": "wikipedia"},
+  "rag": {"knowledge_base": "ipas", "web": "wikipedia", "profile": "examples/ipas/profile.json"},
   "labor-law": {"knowledge_base": "labor-law", "web": "none"}
 }

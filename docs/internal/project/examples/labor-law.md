@@ -6,18 +6,20 @@ updated: 2026-11-17
 
 # 勞動基準法獨立知識庫
 
+> 內部紀錄：2026-11-18 起公開文件只保留 iPAS 範例，本頁移到 internal 保存；勞基法設定與路由仍可使用。路由未指定 profile 時使用通用設定，不再帶 iPAS 身份。
+
 本案例驗證一般 PDF 匯入、不同知識庫的搜尋隔離與文件引用。僅涵蓋指定 PDF，不包含施行細則、函釋、判決或其他勞動法規；文件問答不等於完整法律判斷。第一輪關閉外部搜尋。
 
 ## 來源與版本
 
 - [官方所有條文頁](https://law.moj.gov.tw/LawClass/LawAll.aspx?PCode=N0030001)，頁面與 PDF 標示民國 113 年 07 月 31 日修正。
 - [官方 PDF 下載入口](https://law.moj.gov.tw/LawClass/FilesType.aspx?DataId=N0030001&md=m)，取得日期 2026-11-17。
-- 本機 PDF：`data/raw/labor-law/labor-standards-act.pdf`；19 頁、302,061 bytes，SHA-256 記在 [設定檔](../../config/knowledge-base.labor-law.json)。原始檔與本機 manifest 不進版控。
+- 本機 PDF：`data/raw/labor-law/labor-standards-act.pdf`；19 頁、302,061 bytes，SHA-256 記在 [設定檔](../../../../config/knowledge-base.labor-law.json)。原始檔與本機 manifest 不進版控。
 - 官方下載入口可能隨修法更新。新版本應另核對、更新設定並建新索引，不自動略過 SHA-256 驗證；本案例沒有自動更新法規功能。
 
 ## 重現下載與建索引
 
-先完成 [新手手冊](../setup.md) 的工具、套件、bge-m3 與資料庫準備，再於專案根目錄 PowerShell 執行：
+先完成 [新手手冊](../../../setup.md) 的工具、套件、bge-m3 與資料庫準備，再於專案根目錄 PowerShell 執行：
 
 ```powershell
 $cfg = Get-Content config/knowledge-base.labor-law.json -Raw -Encoding UTF8 | ConvertFrom-Json

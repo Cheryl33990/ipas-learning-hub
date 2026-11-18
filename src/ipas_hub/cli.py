@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .knowledge import KnowledgeBase, build_index, data_path, digest, knowledge_base_id
 from .llm import LLMConfig, chat_json, check_config
+from .profile import answer_prompt, load_profile
 from .rag import answer, gather_external, plan_web_queries, render_text
 from .websearch import make_search
 
@@ -52,7 +53,7 @@ def ask(question: str, hits: list[dict], args) -> dict:
         external = gather_external(record["web"]["queries"], make_search(args.web), 2, args.web_k, errors)
         record["web"]["error"] = "；".join(errors) or None
     record["external_hits"] = external
-    record["generation"] = answer(question, hits, external, generate)
+    record["generation"] = answer(question, hits, external, generate, getattr(args, "answer_prompt", None))
     return record
 
 
@@ -168,11 +169,14 @@ def routed_server(root: Path, args):
         raise ValueError("模型路由設定須為非空物件")
     for name, spec in config.items():
         knowledge_base_id({"knowledge_base": name})
-        if not isinstance(spec, dict) or set(spec) != {"knowledge_base", "web"}:
-            raise ValueError("每個路由須指定 knowledge_base 與 web")
+        if (not isinstance(spec, dict) or not {"knowledge_base", "web"} <= set(spec) <= {"knowledge_base", "web", "profile"}
+                or not isinstance(spec.get("profile", ""), str)):
+            raise ValueError("每個路由須指定 knowledge_base 與 web，可選 profile（路徑字串）")
         knowledge_base_id(spec)
         if spec["web"] not in {"none", "wikipedia"}:
             raise ValueError("路由 web 須為 none 或 wikipedia")
+    if getattr(args, "profile", None):
+        raise ValueError("使用 --routes 時，請在路由設定中為每個模型指定 profile，不另用 --profile")
     if args.store != "pg" or args.index or args.kb:
         raise ValueError("--routes 需搭配 --store pg，且不能另指定 --kb／--index")
     check_config(LLMConfig.from_env(args.llm_url, args.model, args.allow_remote))
@@ -181,6 +185,7 @@ def routed_server(root: Path, args):
     for name, spec in config.items():
         selected = copy.copy(args)
         selected.kb, selected.web = spec["knowledge_base"], spec["web"]
+        selected.answer_prompt = answer_prompt(load_profile(root, Path(spec["profile"]) if spec.get("profile") else None))
         kb = open_kb(root, selected, encoder)
         if kb.encoder is not None:
             meta = kb.payload["embedding"]
@@ -192,7 +197,8 @@ def routed_server(root: Path, args):
         files.update({prefix + key: path for key, path in local_files.items()})
         link = textbook_link(base, local_files, prefix)
         callbacks[name] = lambda q, kb=kb, selected=selected, link=link: answer_text(kb, q, selected, root, link)
-        print(f"模型 {name} → 知識庫 {kb.knowledge_base}；索引 {kb.index_id}；web {selected.web}", flush=True)
+        print(f"模型 {name} → 知識庫 {kb.knowledge_base}；索引 {kb.index_id}；web {selected.web}；"
+              f"profile {spec.get('profile', '通用')}", flush=True)
     return make_server(None, args.port, next(iter(callbacks)), files, models=callbacks)
 
 
@@ -201,10 +207,12 @@ def main(argv=None) -> int:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     sub = parser.add_subparsers(dest="command", required=True)
     index = sub.add_parser("index", help="建立雙科索引，模型僅使用本機快取")
-    index.add_argument("--config", type=Path, default=Path("config/knowledge-base.json"))
+    index.add_argument("--config", type=Path, default=Path("examples/ipas/knowledge-base.json"))
     index.add_argument("--output", type=Path, default=Path("data/index/kb"))
     index.add_argument("--embedding-model")
     index.add_argument("--to-pg", action="store_true", help="建好後載入 PostgreSQL（連線讀 PG_DSN）")
+    fetch = sub.add_parser("fetch", help="依來源設定從發布者下載文件並核對 SHA-256（只用 https）")
+    fetch.add_argument("--config", type=Path, required=True)
     load = sub.add_parser("pg-load", help="把檔案索引驗證後載入 PostgreSQL＋pgvector（連線讀 PG_DSN）")
     load.add_argument("--index", required=True, type=Path)
     for name in ("search", "ask", "evaluate", "serve"):
@@ -235,6 +243,8 @@ def main(argv=None) -> int:
                              help="允許本機以外的 LLM 端點（可能收費）；金鑰只讀 LLM_API_KEY")
             cmd.add_argument("--web", choices=("wikipedia", "none"), default="wikipedia")
             cmd.add_argument("--web-k", type=int, default=4, help="外部片段上限")
+            cmd.add_argument("--profile", type=Path,
+                             help="領域設定 JSON（角色與領域規則），例如 examples/ipas/profile.json；省略則用通用設定")
             if name == "ask":
                 cmd.add_argument("--format", choices=("json", "text"), default="json")
     args = parser.parse_args(argv)
@@ -243,11 +253,17 @@ def main(argv=None) -> int:
     root = args.root.resolve()
     started = time.perf_counter()
     try:
+        if args.command in ("ask", "serve") and not getattr(args, "routes", None):
+            args.answer_prompt = answer_prompt(load_profile(root, args.profile))
         if args.command == "index":
             path = build_index(root, root / args.config, args.output, args.embedding_model)
             result = {"index": str(path.relative_to(root)), "status": "built"}
             if args.to_pg:
                 result.update(load_to_pg(path))
+        elif args.command == "fetch":
+            from .fetch import fetch_sources
+            print(json.dumps({"sources": fetch_sources(root, root / args.config)}, ensure_ascii=False, indent=2))
+            return 0
         elif args.command == "pg-load":
             result = load_to_pg(data_path(root, str(args.index)))
         elif args.command == "serve" and args.routes:

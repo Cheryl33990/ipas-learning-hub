@@ -43,13 +43,16 @@ flowchart TD
 |---|---|
 | [guide.py](../src/ipas_hub/guide.py)、[knowledge.py](../src/ipas_hub/knowledge.py) | 解析、勘誤、切塊、索引、BM25／向量／融合 |
 | [pgstore.py](../src/ipas_hub/pgstore.py) | 資料庫載入、完整性驗證與向量查詢 |
-| [rag.py](../src/ipas_hub/rag.py)、[prompts](../src/ipas_hub/prompts) | 證據、生成契約、引用檢查與輸出 |
+| [rag.py](../src/ipas_hub/rag.py)、[prompts](../src/ipas_hub/prompts) | 證據、共用生成契約、引用檢查與輸出 |
+| [profile.py](../src/ipas_hub/profile.py) | 把助理角色與領域規則（profile）填入共用契約；範例見 [examples/ipas/profile.json](../examples/ipas/profile.json) |
+| [fetch.py](../src/ipas_hub/fetch.py) | 依來源設定的 https 網址下載文件並核對 SHA-256 |
+| [demo.py](../src/ipas_hub/demo.py) | 以 iPAS 自寫筆記與替身模型離線重播六種情境 |
 | [llm.py](../src/ipas_hub/llm.py)、[websearch.py](../src/ipas_hub/websearch.py) | 模型 API 與外部搜尋 |
 | [cli.py](../src/ipas_hub/cli.py)、[server.py](../src/ipas_hub/server.py) | 命令列、OpenAI 相容聊天端點、分庫與 PDF 服務 |
 | [tests](../tests) | 合成單元測試、HTTP 路由及可選真實 pg 整合測試 |
 
 ## 延伸邊界
 
-替換文字 PDF 可透過來源 JSON 與 `parser: pdf` 完成，不需改資料表。新格式需要 parser；新的外搜提供者需遵守 [WebSearch](../src/ipas_hub/websearch.py) 的回傳契約。改嵌入模型需重建索引，共用路由目前要求模型名稱、revision 與維度一致。
+替換文字 PDF 只需來源 JSON（`parser: pdf`）與 profile，不需改程式或資料表，步驟見 [換成自己的資料](custom-data.md)。新格式需要 parser；新的外搜提供者需遵守 [WebSearch](../src/ipas_hub/websearch.py) 的回傳契約。改嵌入模型需重建索引，共用路由目前要求模型名稱、revision 與維度一致。
 
-生成 prompt 仍有 iPAS 身份設定，非 iPAS 品質須另驗證。端點只處理最後一則使用者問題；SSE 是生成完後傳送完整回答。知識庫路由不是使用者授權；目前僅供本機使用，無多人權限或負載驗收。詳細歷史設計保存在 [內部紀錄](internal/README.md)。
+共用契約與 profile 分離後，非 iPAS 領域的回答品質仍需用該領域的題目驗證。端點只處理最後一則使用者問題；SSE 是生成完後傳送完整回答。知識庫路由不是使用者授權；目前僅供本機使用，無多人權限或負載驗收。詳細歷史設計保存在 [內部紀錄](internal/README.md)。
