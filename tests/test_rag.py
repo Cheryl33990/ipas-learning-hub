@@ -572,3 +572,27 @@ def test_multiple_choice_question_keeps_its_answer():
     result = answer("何者正確？(A) 甲 (B) 乙", BOOK, [], reply(status="supported", segments=[
         seg("迴歸預測連續數值", "subject1:3-36:0"), seg("答案：B")]))
     assert result["answer_choice"] == "B" and result["removed_choice"] is None
+
+
+# ---- 引用省略片段序號 ----
+
+def test_citation_missing_chunk_index_is_completed_when_unique_and_recorded():
+    calls = []
+    def generate(system, user):
+        calls.append(user)
+        return {"output": {"status": "supported", "segments": [seg("迴歸預測連續數值", "subject1:3-36")]}}
+    result = answer("題目", BOOK, [], generate)
+    assert len(calls) == 1 and result["repair_attempts"] == 0
+    assert result["segments"][0]["citations"] == ["subject1:3-36:0"]
+    assert result["completed_citations"] == [{"cited": "subject1:3-36", "completed": "subject1:3-36:0"}]
+
+
+def test_ambiguous_citation_without_chunk_index_is_still_rejected():
+    book = BOOK + [{**BOOK[0], "id": "subject1:3-36:1", "text": "合成教材：同頁第二段"}]
+    with pytest.raises(ValueError, match="不存在的 id"):
+        answer("題目", book, [], reply(status="supported", segments=[seg("迴歸預測連續數值", "subject1:3-36")]))
+
+
+def test_external_ids_are_not_completed():
+    with pytest.raises(ValueError, match="不存在的 id"):
+        answer("題目", [], WEB, reply(status="supported", segments=[seg("MAE 是絕對誤差平均", "wiki")]))

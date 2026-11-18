@@ -87,6 +87,28 @@ def gather_external(queries: list[dict], search, per_query: int, limit: int, err
     return hits[:limit]
 
 
+def complete_chunk_ids(output, by_id: dict, completed: list) -> None:
+    """模型常把教材片段 id「來源:頁:序號」少寫最後的「:序號」；只對應到唯一一個教材片段時由程式補全。
+
+    同頁有多個片段（無法判斷是哪一段）或外部來源時不補，照常交給 _check_output 判為不存在。
+    補全紀錄附加到 completed，寫進執行紀錄以便追查。結構不合格的回覆不處理，交給 _check_output。
+    """
+    if not isinstance(output, dict) or not isinstance(output.get("segments"), list):
+        return
+    for item in output["segments"]:
+        citations = item.get("citations") if isinstance(item, dict) else None
+        if not isinstance(citations, list):
+            continue
+        for n, c in enumerate(citations):
+            if not isinstance(c, str) or c in by_id:
+                continue
+            matches = [i for i in by_id if by_id[i]["source_type"] == "textbook"
+                       and re.fullmatch(re.escape(c) + r":\d+", i)]
+            if len(matches) == 1:
+                citations[n] = matches[0]
+                completed.append({"cited": c, "completed": matches[0]})
+
+
 def _check_output(output, by_id: dict) -> list[str]:
     """回傳問題清單；空清單代表結構與引用 id 都合格。"""
     if not isinstance(output, dict) or output.get("status") not in {"supported", "insufficient"}:
@@ -220,6 +242,8 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate,
     licensed = {h["id"] for h in external if str(h.get("provider", "")).startswith("wikipedia")}
     choice_expected = has_options(question)
     generated = generate(template, user)
+    completed = []
+    complete_chunk_ids(generated["output"], by_id, completed)
     problems = _check_output(generated["output"], by_id)
     if (not problems and choice_expected and generated["output"]["status"] == "supported"
             and not answer_choice(generated["output"]["segments"])):
@@ -230,6 +254,7 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate,
         feedback = ("你上一次的回覆不合格：" + "；".join(problems)
                     + "。請只使用 evidence 中實際存在的 id，依相同規則重新回覆完整 JSON。")
         generated = generate(template, user + "\n\n" + feedback)
+        complete_chunk_ids(generated["output"], by_id, completed)
         still = _check_output(generated["output"], by_id)
         if still:
             raise ValueError("模型引用不存在或回答缺少引用，修正一次後仍不合格，拒絕顯示為有依據回答："
@@ -279,7 +304,7 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate,
             "flagged_segments": sum(1 for s in segments if s["check"] and s["check"]["flagged"]),
             "model": generated.get("model"), "usage": generated.get("usage"),
             "llm_elapsed_ms": generated.get("elapsed_ms"), "prompt_sha256": digest(template.encode()),
-            "repair_attempts": repairs, "removed_choice": removed_choice, "low_overlap_threshold": LOW_OVERLAP,
+            "repair_attempts": repairs, "removed_choice": removed_choice, "completed_citations": completed, "low_overlap_threshold": LOW_OVERLAP,
             "validation": "citation_ids_and_lexical_check_not_semantic_verification"}
 
 

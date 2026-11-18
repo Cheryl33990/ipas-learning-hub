@@ -40,6 +40,7 @@ README 的每項主張，以及證明它的程式與測試。測試名稱都在 
 |---|---|
 | 沒有檢索到任何依據時不呼叫模型，直接回報依據不足 | `test_no_evidence_does_not_call_model`、demo `out-of-scope` |
 | 模型引用不存在的片段時，退回修正一次；仍錯就拒絕顯示為有依據的回答 | `rag.py:answer`；`test_invented_or_missing_citations_are_rejected_after_one_repair`、`test_repair_feedback_names_the_bad_id_and_good_retry_is_accepted`、demo `repaired-citation`、`fabricated-citation` |
+| 模型少寫片段序號時，只對應到唯一教材片段才由程式補全並記錄；同頁多段或外部來源不補 | `rag.py:complete_chunk_ids`；`test_citation_missing_chunk_index_is_completed_when_unique_and_recorded`、`test_ambiguous_citation_without_chunk_index_is_still_rejected`、`test_external_ids_are_not_completed` |
 | 來源類型與標記由程式依片段資料決定，不採信模型自稱的來源 | `test_sources_are_labelled_by_program_not_by_model`、`test_ids_the_model_writes_inside_text_are_removed` |
 | 句子中的數字、英文術語不在被引用片段中時標 ⚠；只是提示，不拒答 | `test_missing_english_term_is_flagged_but_not_rejected`、`test_low_chinese_overlap_is_flagged_and_uncited_segments_are_not_checked`、demo `mis-cited-sentence` |
 | 題目沒有 (A)(B) 選項時，模型多寫的「答案：X」由程式移除並記錄在 `removed_choice`；選擇題保留答案 | `rag.py:drop_unasked_choice`；`test_choice_written_for_a_question_without_options_is_removed_and_recorded`、`test_choice_inside_a_sentence_is_stripped_but_the_sentence_is_kept`、`test_multiple_choice_question_keeps_its_answer` |
@@ -56,6 +57,14 @@ README 的每項主張，以及證明它的程式與測試。測試名稱都在 
 | 未指定 profile 時使用通用設定，不含 iPAS 身份或考試規則 | `test_default_profile_has_no_exam_identity_but_keeps_the_evidence_contract`、`test_missing_profile_path_means_default` |
 | profile 欄位不齊、多欄或空值會被拒；路徑不能跳出專案目錄 | `test_profile_with_bad_fields_is_rejected`、`test_profile_missing_a_field_is_rejected`、`test_profile_path_cannot_escape_root` |
 | 實際送給模型的是 profile 組好的提示，且執行紀錄保存其雜湊 | `test_answer_sends_the_given_prompt_and_records_its_hash`、`test_demo_uses_the_ipas_profile` |
+
+## 評估
+
+| 主張 | 證據 |
+|---|---|
+| 保留題依設定讀取，試題檔 SHA-256 不符就拒絕，排除開發期間用過的題號 | `exam_eval.py`；`test_cases_skip_excluded_numbers_and_keep_official_answers`、`test_changed_exam_file_is_rejected` |
+| 每題每方法一筆結果、可中斷續跑且不重跑，方法順序逐題輪換 | `test_batch_records_each_method_and_resumes_without_repeating`、`test_method_order_rotates_between_questions` |
+| 彙總要求各方法題目一致，報答對／答錯／依據不足／錯誤、延遲 p50／p95 與成對 bootstrap 信賴區間；報告不含題目原文 | `test_summary_counts_outcomes_latency_and_paired_changes`、`test_summary_rejects_methods_with_different_questions`、`test_report_is_markdown_without_question_text` |
 
 ## 服務與邊界
 
