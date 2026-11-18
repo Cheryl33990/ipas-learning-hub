@@ -1,8 +1,6 @@
 from ipas_hub.bm25 import BM25
 from ipas_hub.exam import parse_questions
 from ipas_hub.guide import Page, apply_patches, chunk_pages, parse_page
-from ipas_hub.record import parse_record
-from ipas_hub.scoring import first_hit_rank, hit_at_k
 from ipas_hub.text import normalize, tokenize
 
 
@@ -70,25 +68,6 @@ def test_parse_questions_splits_on_answer_and_number_and_drops_page_furniture():
     assert [(q.number, q.answer) for q in qs] == [(1, "A"), (2, "D")]
     assert qs[0].text == "題幹一第一行第二行？(A)甲；(B)乙(C)丙；(D)丁"
     assert qs[1].text == "題幹二1.不是新題(A)子"
-
-
-def test_parse_record_reads_type_and_basis_pages():
-    md = (
-        "| 題號 | 正確答案 | 依據頁碼 | 類型 A/B/C | Ctrl+F 是否找得到 | 備註 |\n|---|---|---|---|---|---|\n"
-        "| 1 | A | 3-13、3-36 | B | 是 | 另見 3-99 |\n| 5 | B | 找不到 | C | 否 | |\n| 7 |  |  |  |  |  |\n"
-    )
-    gold = parse_record(md)
-    assert gold[1].type == "B" and gold[1].pages == {"3-13", "3-36"}
-    assert gold[5].type == "C" and gold[5].pages == frozenset()
-    assert gold[7].type == ""
-
-
-def test_hit_at_k_counts_only_the_first_k_results():
-    ranked = ["3-2", "3-9", "3-13", "3-13", "3-40"]
-    assert not hit_at_k(ranked, {"3-13"}, 1)
-    assert hit_at_k(ranked, {"3-13"}, 3)
-    assert first_hit_rank(ranked, {"3-13"}) == 3
-    assert first_hit_rank(ranked, {"3-50"}) is None
 
 
 def test_read_pages_keeps_pdf_page_order_even_when_unlabelled_pages_are_skipped(monkeypatch):

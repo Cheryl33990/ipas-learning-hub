@@ -17,3 +17,5 @@
 | [使用指南（範本 repo）](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/guide.md) | 協作方法與規則；2026-11-18 起不放在本 repo |
 
 2026-11-17 整理時，原 `docs/project/` 移至 `docs/internal/project/`，原 `docs/workflow/` 移至 `docs/internal/workflow/`；操作／環境／評估文件提取至 docs/。程式產生器與連結同步調整，無刪除歷史驗證或把草案改標成已接受。2026-11-18 依使用者決定移除 `docs/internal/workflow/`（範本 repo 的改路徑副本，差異僅路徑與 metadata 格式），改參照範本 repo `4c73a73`；原內容保留在 git 歷史 `5f0f098`。
+
+2026-11-18 公開前整理：探索期工具 `ipas_hub.explore2`、`explain`、`record`、`scoring` 及其測試已自套件移除，只服務本目錄的歷史探索與解析產生，不屬於通用管線。本目錄提到的 `uv run python -m ipas_hub.explore2`／`ipas_hub.explain` 需在 commit `5891f4c` 執行；`project/explanations/` 的 Markdown 不再自動重新產生。

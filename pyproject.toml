@@ -17,7 +17,10 @@ pg = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "ruff==0.14.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -28,3 +31,8 @@ packages = ["src/ipas_hub"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# 只啟用預設的 lint 規則（pyflakes 與 pycodestyle 錯誤類）；尚未採用 ruff format
+[tool.ruff]
+target-version = "py311"
+line-length = 120
