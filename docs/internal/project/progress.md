@@ -6,6 +6,8 @@ updated: 2026-11-18
 
 # 進度與接手
 
+目前階段與前進判斷（2026-11-18，repo 公開）：PR #25 已由使用者合併（bd860a5）。使用者自行將 repo 改為 Public；已以 gh repo view 確認 visibility=PUBLIC，未登入的 HTTP 請求取得 200。本分支 docs/status-public 更新 STATUS 可見性與公開前準備區塊。公開前準備（檢核、PR #22–#25、About／topics）全部完成。可選後續（未授權、未開始）：ruff format（約 31 檔）；三方法皆拒答 15 題逐題判讀；引用主題相近但未直接支持的改善。
+
 目前階段與前進判斷（2026-11-18，GitHub About 與 topics）：PR #24 已由使用者合併。使用者同意照提案修改 About 與 topics（對外動作），已以 gh repo edit 執行並讀回確認：description「Local RAG that cites every answer sentence back to the exact PDF page and version, with BM25/vector/RRF hybrid retrieval, pgvector and vLLM. Example: Taiwan iPAS AI Application Planner exam prep.」；topics bm25、citations、hybrid-search、llm-evaluation、local-llm、pgvector、postgresql、python、rag、retrieval-augmented-generation、traditional-chinese、vllm；homepage 留空。repo 仍為 PRIVATE：改為 Public 使用者尚未同意，未執行。下一步：等使用者決定是否公開（指令：gh repo edit Cheryl33990/ipas-learning-hub --visibility public --accept-visibility-change-consequences）；之後可做 ruff format 與拒答 15 題判讀。
 
 目前階段與前進判斷（2026-11-18，PR C：雙語 README）：PR #23 已由使用者合併（fd0a4f1）。分支 docs/bilingual-readme（基於 fd0a4f1）。使用者確認語言分層：README 中英雙語（英文 README.md 為預設、README.zh-TW.md 為中文），About／topics／PR 與 commit 標題／pyproject description／.env.example／CI 用英文；docs/ 維持中文；docs/internal 不翻譯；程式註解維持中文；prompts、回答與錯誤訊息、profile 必須中文。本輪：git mv README.md → README.zh-TW.md 並加語言切換；新寫英文 README.md，結構與中文版一致，並註明 docs/、prompts 與回答為中文；docs/README.md 改連中文版並附英文連結；pyproject description 改英文。順帶修正：中文 README「為什麼做這個」表最後一列仍寫「樣本太小、尚不足以宣稱勝出」，已與 evaluation.md 不一致，兩版改為「243 題保留題：混合比 BM25 高 5.3 個百分點；向量相對 BM25 的區間含 0」。驗證：腳本比對兩版 README 二級標題數（11／11）與正文數字（排除程式碼區塊與連結後完全相同）、相對連結皆存在；數字對照 evaluation.md。已開 PR #24，CI 通過（run 44266232799）；GitHub API 渲染結果含切換連結、mermaid 與 GIF，尚未目視檢查；未合併。下一步：等使用者合併 PR #24，再提出 About／topics／公開指令，待使用者同意才執行。

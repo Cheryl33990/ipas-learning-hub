@@ -7,7 +7,7 @@ updated: 2026-11-18
 # 目前狀態
 
 - **階段**：可自用與展示的本機原型；管線不綁定領域，附 iPAS 範例（[examples/ipas](../examples/ipas/README.md)）。
-- **repo 可見性**：Private（2026-11-18 查核）；公開前須先完成下方「公開前待辦」。
+- **repo 可見性**：Public（2026-11-18 由作者公開；公開前準備見下方）。
 - **授權**：程式與作者自寫內容採 [MIT](../LICENSE)（2026-11-18）；教材、模型、維基內容各有不同權利條件，見 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md)。
 - **已經能做的**：iPAS 五科教材與一般文字型 PDF 的官方下載核對（`fetch`）與版本化索引、領域 profile、BM25／向量／混合檢索、PostgreSQL＋pgvector、本機 vLLM 生成、逐句引用與核對、AnythingLLM 聊天介面、PDF 原頁連結、多知識庫路由。
 - **驗證方式**：`uv run pytest` 與 `uv run python -m ipas_hub.demo`；GitHub Actions CI 另跑 pgvector 整合測試、容器測試與啟動檢查。主張與測試的對照見 [EVIDENCE](EVIDENCE.md)。
@@ -23,11 +23,9 @@ updated: 2026-11-18
 - 聊天是單輪：只取最後一則使用者訊息；SSE 在完整生成後才傳送。
 - 字詞核對只是提示，不是事實查核。
 
-## 公開前待辦（需作者決定）
+## 公開前準備（2026-11-18 已完成）
 
-1. 決定是否公開 repo（改為 Public 須作者明確同意）。
-
-已完成（2026-11-18）：成熟度檢核（含 git 歷史：未發現密鑰、教材原文、`data/` 或本機路徑；commit 作者 email 經作者決定接受）；探索期模組移出套件、`rag.answer` 拆分、加入 ruff；新增 `.env.example`；README 中英雙語（英文為預設，docs/ 維持中文）；GitHub About 與 12 個 topics 改為通用 RAG 定位；採 MIT；逐選項解析經作者判斷可保留（理由見 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md#文件教材與搜尋內容)）；協作範本移出本 repo。
+成熟度檢核（含 git 歷史：未發現密鑰、教材原文、`data/` 或本機路徑；commit 作者 email 經作者決定接受）；探索期模組移出套件、`rag.answer` 拆分、加入 ruff；新增 `.env.example`；README 中英雙語（英文為預設，docs/ 維持中文）；GitHub About 與 12 個 topics 改為通用 RAG 定位；採 MIT；逐選項解析經作者判斷可保留（理由見 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md#文件教材與搜尋內容)）；協作範本移出本 repo；作者於同日將 repo 改為 Public。
 
 ## 下一步
 
