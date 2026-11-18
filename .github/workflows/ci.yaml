@@ -38,6 +38,8 @@ jobs:
       - run: uv sync --locked --python 3.12 --extra pg
       - name: Lint（ruff check）
         run: uv run --no-sync ruff check src tests
+      - name: 格式檢查（ruff format --check）
+        run: uv run --no-sync ruff format --check src tests
       - run: uv run --no-sync pytest -p no:cacheprovider
       - name: 離線示範（每個情境須達到預期結果）
         run: uv run --no-sync python -m ipas_hub.demo

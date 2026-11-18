@@ -147,7 +147,7 @@ docs/internal/      開發歷程、歷史驗證與 AI 協作紀錄（非閱讀�
 ## 驗證與資料安全
 
 - `uv run pytest` 執行全部測試；需要資料庫的測試在沒有 `PG_TEST_DSN` 時會略過。
-- GitHub Actions 在每個 PR 執行：`ruff check`、pgvector 整合測試、離線示範、確認 `data/` 未被追蹤、容器內測試、建立執行映像與啟動檢查。
+- GitHub Actions 在每個 PR 執行：`ruff check` 與 `ruff format --check`、pgvector 整合測試、離線示範、確認 `data/` 未被追蹤、容器內測試、建立執行映像與啟動檢查。
 - 測試只使用合成資料與替身模型，證明的是流程行為，不是回答品質。
 - 哪些資料不得進版控、執行時資料會流向哪裡，見 [SECURITY.md](SECURITY.md)。
 
