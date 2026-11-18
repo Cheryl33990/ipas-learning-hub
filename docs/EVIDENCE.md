@@ -43,6 +43,7 @@ README 的每項主張，以及證明它的程式與測試。測試名稱都在 
 | 模型少寫片段序號時，只對應到唯一教材片段才由程式補全並記錄；同頁多段或外部來源不補 | `rag.py:complete_chunk_ids`；`test_citation_missing_chunk_index_is_completed_when_unique_and_recorded`、`test_ambiguous_citation_without_chunk_index_is_still_rejected`、`test_external_ids_are_not_completed` |
 | 來源類型與標記由程式依片段資料決定，不採信模型自稱的來源 | `test_sources_are_labelled_by_program_not_by_model`、`test_ids_the_model_writes_inside_text_are_removed` |
 | 句子中的數字、英文術語不在被引用片段中時標 ⚠；只是提示，不拒答 | `test_missing_english_term_is_flagged_but_not_rejected`、`test_low_chinese_overlap_is_flagged_and_uncited_segments_are_not_checked`、demo `mis-cited-sentence` |
+| 開啟核對時，模型逐句判斷引用片段是否直接支持該句，不支持或部分支持標 ⚠，只標示不改寫回答；呼叫失敗或漏句標為未核對，不當作通過；未引用的句子不送核對；`ask`／`serve` 預設開啟，評估流程不使用 | `rag.py:verify_segments`；`test_unsupported_and_partial_verdicts_are_recorded_and_shown_but_answer_is_unchanged`、`test_failed_or_incomplete_verification_is_shown_as_unverified_not_as_passing`、`test_verifier_sees_only_cited_sentences_with_their_own_evidence`、`test_ask_turns_verification_on_from_args`；合成負例結果見 [評估](evaluation.md#模型逐句核對引用2026-11-18) |
 | 題目沒有 (A)(B) 選項時，模型多寫的「答案：X」由程式移除並記錄在 `removed_choice`；選擇題保留答案 | `rag.py:drop_unasked_choice`；`test_choice_written_for_a_question_without_options_is_removed_and_recorded`、`test_choice_inside_a_sentence_is_stripped_but_the_sentence_is_kept`、`test_multiple_choice_question_keeps_its_answer` |
 | 輸出明寫「字詞核對，非語意驗證」，不把結構檢查包裝成正確性保證 | `test_valid_response_is_labelled_as_structural_not_semantic_verification` |
 | 題目與證據在 prompt 中標為資料而非指令（降低提示注入風險） | `test_prompt_marks_question_and_evidence_as_data` |

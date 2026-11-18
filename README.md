@@ -23,7 +23,7 @@ These problems keep coming up when you use an LLM to study course material:
 | Common problem | What this project does |
 |---|---|
 | The model cites a source that does not exist | A citation ID must belong to a chunk actually retrieved for this question; the model gets one repair attempt, and if it still fails the answer is refused rather than shown as grounded |
-| A citation is attached, but it does not match the sentence | Numbers, English terms and Chinese words in each sentence are compared against the cited chunk; mismatches are flagged with ⚠ (explicitly a lexical check, not semantic verification) |
+| A citation is attached, but it does not match the sentence | A second local-model pass checks, sentence by sentence, whether the cited chunk actually states the sentence and flags ⚠ when it does not (on synthetic mismatched citations it caught 67%, vs. 54% for the lexical check); a lexical check of numbers and terms runs as well. Both are labelled as checks, not fact-checking |
 | The model answers anyway when nothing relevant is found | If retrieval finds nothing, the model is not called; the answer reports insufficient evidence |
 | After a revision or erratum, nobody knows which version an answer used | The PDF's SHA-256, errata and embedding revision are recorded; index IDs are content hashes, and a tampered index is refused at load time |
 | Every new domain means rewriting prompts and code | Shared evidence rules are fixed; the assistant role and domain rules live in a profile file |
