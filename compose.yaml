@@ -62,6 +62,8 @@ services:
         EMBEDDINGS: "true"
     image: ipas-hub:serve
     profiles: [serve]
+    # Docker 重啟後自動恢復端點；設定錯誤時會反覆重啟，用 docker compose logs serve 查原因
+    restart: unless-stopped
     # 啟用 serve profile 時一併啟動 db 與 vllm
     depends_on:
       db:
@@ -76,13 +78,16 @@ services:
     volumes:
       - ./data/raw:/app/data/raw:ro
       - ./data/runs:/app/data/runs
+      # 路由與自訂 profile 放 config/，改了只要重啟 serve，不必重建映像
+      - ./config:/app/config:ro
       - ${HF_CACHE_DIR:-hf-cache}:/models/huggingface:ro
     ports:
       - "127.0.0.1:${RAG_PORT:-8100}:8100"
     command:
       - serve
       - --store=pg
-      - --routes=${RAG_ROUTES:-config/rag-routes.json}
+      # 預設只有 iPAS（rag）；多知識庫在 .env 設 RAG_ROUTES，例如 config/rag-routes.json
+      - --routes=${RAG_ROUTES:-examples/ipas/routes.json}
       - --host=0.0.0.0
       - --port=8100
       # 引用連結給瀏覽器開，所以是主機上的位址

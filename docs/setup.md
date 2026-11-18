@@ -114,7 +114,7 @@ docker compose logs --tail 40 vllm serve
 Invoke-RestMethod http://127.0.0.1:8100/v1/models
 ```
 
-應列出 `rag` 與 `labor-law`。端點使用 [config/rag-routes.json](../config/rag-routes.json) 的路由，只公開在本機 127.0.0.1。
+應列出 `rag`。端點預設使用 [examples/ipas/routes.json](../examples/ipas/routes.json)（只有 iPAS），只公開在本機 127.0.0.1；已另外建立其他知識庫（見[自訂資料](custom-data.md)）時，在 `.env` 設 `RAG_ROUTES`，例如 `config/rag-routes.json`。路由列出的知識庫都必須已建索引並載入，否則端點會在啟動時停止。
 
 ### 方法 B：在主機執行端點
 
