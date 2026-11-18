@@ -84,3 +84,54 @@ def test_read_pages_keeps_pdf_page_order_even_when_unlabelled_pages_are_skipped(
     patched, _ = apply_patches(pages, [{"id": "x", "old": "舊詞", "new": "新詞"}])
     assert [p.pdf_page for p in patched] == [3, 4]  # 套用勘誤不能弄丟 PDF 頁序
     assert {c.pdf_page for c in chunk_pages(patched, 4, 3) if c.label == "1-2"} == {4}
+
+
+def test_parse_questions_accepts_fullwidth_answer_letters_and_reversed_header():
+    raw = (
+        "題目 答案 \nA 1.  題幹一 \n(A)甲；\n(B)乙；\n(C)丙；\n(D)丁 \n"
+        "Ｂ 2.  題幹二 \n(A)子；\n(B)丑 \n題目 答案 \nＤ 3.  題幹三 \n(A)寅 \n"
+    )
+    qs = parse_questions(raw)
+    assert [(q.number, q.answer) for q in qs] == [(1, "A"), (2, "B"), (3, "D")]
+    assert qs[0].text == "題幹一(A)甲；(B)乙；(C)丙；(D)丁"
+    assert "題目" not in qs[1].text and "答案" not in qs[1].text
+
+
+def test_group_context_after_header_moves_to_each_question_in_the_group():
+    raw = (
+        "A 1.  題幹一 \n(A)甲；\n(B)乙；\n(C)丙；\n(D)丁的選項\n跨行 \n"
+        "答案 題目 \n  請依據下方資訊回答第 2~3 題。 \n資料表欄位有 X 與 Y。 \n \n"
+        "B 2.  依上表，何者正確？ \n(A)子 \n"
+        "C 3.  承上，何者錯誤？ \n(A)丑 \n"
+        "D 4.  獨立題 \n(A)寅 \n"
+    )
+    qs = {q.number: q.text for q in parse_questions(raw)}
+    assert qs[1] == "題幹一(A)甲；(B)乙；(C)丙；(D)丁的選項跨行"
+    assert qs[2] == "資料表欄位有X與Y。依上表，何者正確？(A)子"
+    assert qs[3] == "資料表欄位有X與Y。承上，何者錯誤？(A)丑"
+    assert qs[4] == "獨立題(A)寅"
+
+
+def test_group_context_before_header_moves_to_each_question_in_the_group():
+    raw = (
+        "A 1.  題幹一 \n(D)丁 \n"
+        "  某團隊正在開發檢測系統。 \n● 資料不平衡。 \n \n請根據上述情境，回答第 2~3 題。 \n"
+        "B 2.  題幹二 \n(A)子 \n"
+        "C 3.  題幹三 \n(A)丑 \n"
+    )
+    qs = {q.number: q.text for q in parse_questions(raw)}
+    assert qs[1] == "題幹一(D)丁"
+    assert qs[2] == "某團隊正在開發檢測系統。●資料不平衡。題幹二(A)子"
+    assert qs[3] == "某團隊正在開發檢測系統。●資料不平衡。題幹三(A)丑"
+
+
+def test_header_split_across_lines_and_later_section_titles_are_removed():
+    raw = (
+        "一、選擇題 \nA 1.  題幹一 \n(D)丁 \n二、程式題 \n"
+        "B 2.  題幹二 \n(D)戊 \n  下圖為一段程式片段。請回答\n第 3~3 題。 \n \n"
+        "C 3.  題幹三 \n(A)己 \n"
+    )
+    qs = {q.number: q.text for q in parse_questions(raw)}
+    assert qs[1] == "題幹一(D)丁"
+    assert qs[2] == "題幹二(D)戊"
+    assert qs[3] == "下圖為一段程式片段。題幹三(A)己"
