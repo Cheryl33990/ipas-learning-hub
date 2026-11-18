@@ -1,7 +1,7 @@
 [project]
 name = "ipas-hub"
 version = "0.0.1"
-description = "本機 RAG 知識助理：混合檢索、逐句引用檢查、可回查 PDF 原頁與版本"
+description = "Local RAG with hybrid retrieval, per-sentence citation checks and links back to versioned PDF pages"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]

@@ -1,41 +1,45 @@
-# iPAS Learning Hub — 每句回答都能回到 PDF 原頁的本機 RAG
+# iPAS Learning Hub — local RAG where every sentence traces back to a PDF page
 
-一套在本機執行的 RAG 管線：從 PDF 檢索證據，由本機 LLM 逐句回答，每句都標出引用，點開就能看到 PDF 原頁。管線本身不綁定領域；repo 附帶的範例是 **iPAS AI 應用規劃師**的備考，換成自己的文件只需要改設定，不需要改程式。
+English | [繁體中文](README.zh-TW.md)
 
-重點不是「接上一個向量資料庫」，而是**模型捏造引用時要攔得住、資料改版時要追得到、找不到依據時要敢說不知道**。
+A RAG pipeline that runs on your own machine: it retrieves evidence from PDFs, a local LLM answers sentence by sentence, every sentence carries a citation, and each citation opens the original PDF page. The pipeline is domain-agnostic; the bundled example is exam preparation for Taiwan's **iPAS AI Application Planner** certification. Switching to your own documents means changing configuration, not code.
 
-> [docs/EVIDENCE.md](docs/EVIDENCE.md) 列出每項主張，以及證明它的測試。
+The point is not "plug in a vector database". It is: **catch the model when it fabricates citations, know which document version an answer came from, and say "I don't know" when there is no evidence.**
 
-## 實際畫面
+> [docs/EVIDENCE.md](docs/EVIDENCE.md) lists each claim and the test that proves it.
+>
+> **Language note:** this README is in English. The detailed documents under [docs/](docs/README.md) (setup, architecture, evaluation, evidence) are in Traditional Chinese, as are the prompts, answers and program messages, because the source material is Chinese. Code identifiers, `.env.example` and CI are in English.
 
-![在 AnythingLLM 提問，回答逐句標示教材引用，點引用開啟 PDF 對應頁](docs/assets/demo.gif)
+## What it looks like
 
-本機 vLLM（Qwen3-VL-8B）＋五科 iPAS 索引＋iPAS profile，在 AnythingLLM 提問「請問差分隱私跟同態加密的差異」：回答逐句標示 [教材N]，點引用直接開到官方學習指引的 PDF 第 172 頁。等待生成的片段已快轉 4 倍，實際生成約需 16 秒。畫面中的教材頁面只用來示範引用跳頁，教材本身不在 repo 內。
+![Asking a question in AnythingLLM; every sentence of the answer cites the course material, and clicking a citation opens the matching PDF page](docs/assets/demo.gif)
 
-## 為什麼做這個
+Local vLLM (Qwen3-VL-8B) + an index of the five iPAS study guides + the iPAS profile, asked in AnythingLLM "What is the difference between differential privacy and homomorphic encryption?" (in Chinese). Each sentence is tagged [教材N] ("course material N"), and clicking a citation opens page 172 of the official study guide PDF. The wait for generation is sped up 4×; actual generation took about 16 seconds. The guide pages appear only to demonstrate citation linking; the guides themselves are not in this repo.
 
-拿 LLM 查教材時，以下問題會反覆出現：
+## Why
 
-| 常見問題 | 這個專案的做法 |
+These problems keep coming up when you use an LLM to study course material:
+
+| Common problem | What this project does |
 |---|---|
-| 模型引用了不存在的來源 | 引用 ID 必須屬於本次實際檢索到的片段；退回修正一次，仍錯就拒絕顯示為有依據的回答 |
-| 有附引用，內容卻對不上 | 逐句比對數字、英文術語與中文字詞，對不上就標 ⚠（明寫是字詞核對，不是語意驗證） |
-| 找不到資料也硬答 | 檢索沒有命中時不呼叫模型，直接回報依據不足 |
-| 教材改版或勘誤後，不知道答案依據哪一版 | 記錄 PDF 的 SHA-256、勘誤、embedding revision；索引 ID 是內容雜湊，被改過就拒絕載入 |
-| 換一個領域就要改 prompt 和程式 | 共用的證據規則固定，助理角色與領域規則放在 profile 設定檔 |
-| 「用了向量資料庫應該比較準」 | 保留 BM25 基線，以 RRF 融合向量結果，並公開目前樣本太小、尚不足以宣稱勝出 |
+| The model cites a source that does not exist | A citation ID must belong to a chunk actually retrieved for this question; the model gets one repair attempt, and if it still fails the answer is refused rather than shown as grounded |
+| A citation is attached, but it does not match the sentence | Numbers, English terms and Chinese words in each sentence are compared against the cited chunk; mismatches are flagged with ⚠ (explicitly a lexical check, not semantic verification) |
+| The model answers anyway when nothing relevant is found | If retrieval finds nothing, the model is not called; the answer reports insufficient evidence |
+| After a revision or erratum, nobody knows which version an answer used | The PDF's SHA-256, errata and embedding revision are recorded; index IDs are content hashes, and a tampered index is refused at load time |
+| Every new domain means rewriting prompts and code | Shared evidence rules are fixed; the assistant role and domain rules live in a profile file |
+| "A vector database must be more accurate" | BM25 stays as the baseline and vector results are fused with RRF. On 243 held-out questions, hybrid scored 5.3 percentage points higher than BM25; vector alone vs. BM25 has a confidence interval that includes 0, so it cannot be called better |
 
-## 一分鐘看懂
+## One-minute tour
 
-只需要 Python 3.11+ 與 [uv](https://docs.astral.sh/uv/)，不需要 GPU、教材、資料庫或網路：
+All you need is Python 3.11+ and [uv](https://docs.astral.sh/uv/) — no GPU, course material, database or network:
 
 ```sh
 uv sync --locked
-uv run python -m ipas_hub.demo      # 以 iPAS 範例重播六種情境
-uv run pytest                       # 全部測試
+uv run python -m ipas_hub.demo      # replay six scenarios with the iPAS example
+uv run pytest                       # run all tests
 ```
 
-示範使用作者自寫的 iPAS 主題筆記（不是官方教材）、iPAS 的 profile，以及「照腳本回覆的替身模型」；其餘都是正式程式：索引完整性檢查、BM25 檢索、引用檢查與修正、字詞核對、輸出格式。以下是選擇題情境的實際輸出：
+The demo uses iPAS topic notes written by the author (not the official material), the iPAS profile, and a stand-in model that replies from a script. Everything else is the real code: index integrity check, BM25 retrieval, citation check and repair, lexical check, and output formatting. Below is the actual output of the multiple-choice scenario (the output is in Chinese; the question asks which option is a typical supervised-learning task: (A) clustering, (B) dimensionality reduction, (C) classification, (D) association rule mining):
 
 ```text
 ━━ grounded-answer ━━ 選擇題逐項說明並引用檢索到的頁面，最後給出答案
@@ -57,100 +61,100 @@ uv run pytest                       # 全部測試
 - [教材1] 教材 iPAS 主題自寫筆記（示範用） 1-1
 ```
 
-| 情境 | 發生什麼事 | 結果 |
+| Scenario | What happens | Result |
 |---|---|---|
-| `grounded-answer` | 選擇題逐項引用實際檢索到的頁面 | 有依據，最後給出「答案：C」 |
-| `repaired-citation` | 第一次引用不存在的片段 | 退回修正一次後通過，並記錄修正次數 |
-| `fabricated-citation` | 修正後仍捏造引用 | 拒絕顯示為有依據的回答 |
-| `mis-cited-sentence` | 引用存在，但句中術語不在片段裡 | 保留回答，句子標 ⚠ |
-| `out-of-scope` | 筆記裡沒有相關內容 | 不呼叫模型，回報依據不足 |
-| `tampered-index` | 索引片段被改過 | 雜湊不符，拒絕載入 |
+| `grounded-answer` | Each option of a multiple-choice question cites a page that was actually retrieved | Grounded, ending with "答案：C" (Answer: C) |
+| `repaired-citation` | The first reply cites a chunk that does not exist | Passes after one repair; the repair count is recorded |
+| `fabricated-citation` | The reply still fabricates a citation after repair | Refused; not shown as a grounded answer |
+| `mis-cited-sentence` | The citation exists, but a term in the sentence is not in the chunk | Answer kept, sentence flagged with ⚠ |
+| `out-of-scope` | The notes contain nothing relevant | Model not called; insufficient evidence reported |
+| `tampered-index` | An index chunk has been modified | Hash mismatch; index refused |
 
-## 架構
+## Architecture
 
 ```mermaid
 flowchart LR
-    PDF[PDF + 來源設定] --> Index[解析 / 切塊 / 版本化索引]
-    Index --> Search[BM25 + 向量 + RRF]
-    UI[CLI / AnythingLLM] --> Route[知識庫路由]
+    PDF[PDF + source config] --> Index[Parse / chunk / versioned index]
+    Index --> Search[BM25 + vector + RRF]
+    UI[CLI / AnythingLLM] --> Route[Knowledge-base routing]
     Route --> Search
-    Profile[領域 profile] --> LLM
-    Search --> LLM[本機 vLLM]
-    Web[可選維基百科] --> LLM
-    LLM --> Answer[引用檢查 + 回答 + PDF 連結]
+    Profile[Domain profile] --> LLM
+    Search --> LLM[Local vLLM]
+    Web[Optional Wikipedia] --> LLM
+    LLM --> Answer[Citation check + answer + PDF links]
 ```
 
-檔案索引可以單獨使用，也可以載入 PostgreSQL＋pgvector：資料庫負責向量距離查詢，BM25 與融合在 Python 執行。AnythingLLM 只當聊天介面，不需要上傳文件。模組位置、資料流與設計取捨見 [架構文件](docs/architecture.md)。
+The file index can be used on its own or loaded into PostgreSQL + pgvector: the database handles vector distance queries, while BM25 and fusion run in Python. AnythingLLM is only the chat UI; no documents are uploaded to it. Module locations, data flow and design trade-offs are in the [architecture doc](docs/architecture.md) (Chinese).
 
-**我自己寫的部分**：文件解析與勘誤、版本化索引、檢索融合、引用檢查、領域 profile、OpenAI 相容端點與知識庫路由。聊天 UI（AnythingLLM）、模型服務（vLLM）、嵌入模型（BGE-M3）與生成模型（Qwen3）都是第三方成果。
+**What I wrote myself:** document parsing and errata, the versioned index, retrieval fusion, citation checking, domain profiles, the OpenAI-compatible endpoint and knowledge-base routing. The chat UI (AnythingLLM), model server (vLLM), embedding model (BGE-M3) and generation model (Qwen3) are third-party work.
 
-## 範例與自己的資料
+## The example and your own data
 
-| 想做什麼 | 需要 | 文件 |
+| Goal | Requires | Doc (Chinese) |
 |---|---|---|
-| 看 iPAS 範例由哪些檔案組成、怎麼跑 | — | [examples/ipas](examples/ipas/README.md) |
-| 架設五科 iPAS＋混合檢索＋聊天 UI | NVIDIA GPU、Docker | [Windows 完整安裝](docs/setup.md)；環境變數見 [.env.example](.env.example) |
-| 換成自己的 PDF 與領域設定 | 檢索只需 CPU | [換成自己的資料](docs/custom-data.md) |
+| See which files make up the iPAS example and how to run it | — | [examples/ipas](examples/ipas/README.md) |
+| Set up all five iPAS subjects + hybrid retrieval + chat UI | NVIDIA GPU, Docker | [Full Windows setup](docs/setup.md); environment variables in [.env.example](.env.example) |
+| Use your own PDFs and domain settings | Retrieval needs only a CPU | [Using your own data](docs/custom-data.md) |
 
-換資料要改的只有三樣：**來源設定**（路徑、版本、SHA-256、可選的下載網址）、**profile**（助理角色、文件名稱、領域規則），以及可選的**路由**（聊天介面的 model 名稱對應哪個庫）。
+Switching data means changing only three things: the **source config** (paths, versions, SHA-256, optional download URLs), the **profile** (assistant role, document names, domain rules), and optionally the **routing** (which knowledge base each chat-UI model name maps to).
 
-作者的實際配置：Ryzen 7 9800X3D、32 GiB RAM、RTX 5070 Ti 16 GB、Windows 11＋Docker Desktop；嵌入模型 BAAI/bge-m3 在 CPU 執行，生成模型 Qwen3-VL-8B-Instruct-FP8 在 vLLM／GPU 執行。這**不是**最低需求，詳見 [執行環境](docs/environment.md)。
+The author's setup: Ryzen 7 9800X3D, 32 GiB RAM, RTX 5070 Ti 16 GB, Windows 11 + Docker Desktop; the BAAI/bge-m3 embedding model runs on CPU and Qwen3-VL-8B-Instruct-FP8 runs on the GPU through vLLM. This is **not** a minimum requirement; see [runtime environment](docs/environment.md).
 
-## 教材、模型與外部內容
+## Course material, models and external content
 
-| 素材 | repo 內有什麼 | 如何取得 |
+| Material | What is in the repo | How to get it |
 |---|---|---|
-| iPAS 學習指引 | 只有官方網址與 SHA-256 | `cli fetch` 從官方下載並核對雜湊；PDF、切塊原文與索引都不進版控 |
-| 範例筆記 | 作者自寫的全文 | 隨 repo 提供，與程式同採 MIT |
-| 嵌入與生成模型 | 只有模型名稱與固定 revision | 使用者自行從 Hugging Face 下載，repo 不附權重 |
-| 維基百科補充 | 無 | 執行時查詢；引用標示 CC BY-SA 4.0、條目版本連結，並註明經模型改寫 |
+| iPAS study guides | Only the official URLs and SHA-256 hashes | `cli fetch` downloads them from the official site and verifies the hash; PDFs, chunk text and indexes are never committed |
+| Example notes | Full text, written by the author | Shipped with the repo under MIT, like the code |
+| Embedding and generation models | Only model names and pinned revisions | Download them yourself from Hugging Face; no weights are included |
+| Wikipedia supplements | Nothing | Queried at run time; citations show CC BY-SA 4.0, a link to the article revision, and a note that the model paraphrased it |
 
-各項授權與查核來源見 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)。
+Licenses and sources for each item are in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md).
 
-## 評估與限制
+## Evaluation and limitations
 
-用 243 題開發期間沒用過的 iPAS 官方試題（5 份試卷、涵蓋五科），以官方答案自動比對整題問答：
+Using 243 official iPAS exam questions that were never used during development (5 exam papers covering all five subjects), full question answering was scored automatically against the official answer key:
 
-| 檢索方法 | 答對率 | 依據不足（拒答） | 檢索 p50 | 整題生成 p50 |
+| Retrieval | Accuracy | Insufficient evidence (refused) | Retrieval p50 | End-to-end generation p50 |
 |---|---|---|---|---|
 | BM25 | 81.9% | 37 | 21 ms | 6.8 s |
-| 向量 | 84.0% | 24 | 245 ms | 7.1 s |
-| 混合（預設） | **87.2%** | 22 | 242 ms | 7.1 s |
+| Vector | 84.0% | 24 | 245 ms | 7.1 s |
+| Hybrid (default) | **87.2%** | 22 | 242 ms | 7.1 s |
 
-混合比 BM25 高 5.3 個百分點，以題為單位的成對 bootstrap 95% 信賴區間為 +1.7 ~ +9.0；向量相對 BM25 的區間含 0。這是比對選項；另從混合答對題隨機抽 20 題人工判讀，理由正確 20 題，引用完全支持 18 題、部分支持 2 題（引用了主題相近但沒有直接說明該句的頁面）。樣本小且由作者本人判讀，也只用單一模型、單次執行。題目、判準、失敗分析與重跑方式見 [評估](docs/evaluation.md#保留題評估2026-11-18)。
+Hybrid is 5.3 percentage points above BM25, with a paired per-question bootstrap 95% confidence interval of +1.7 to +9.0; the interval for vector vs. BM25 includes 0. This compares chosen options only. Separately, 20 questions were randomly sampled from those hybrid answered correctly and reviewed by hand: the reasoning was correct in 20, and the citations fully supported the answer in 18 and partially in 2 (they cited a page on a related topic that did not directly state the sentence). The sample is small, it was reviewed by the author, and it uses a single model and a single run. Questions, criteria, failure analysis and how to rerun are in the [evaluation doc](docs/evaluation.md#保留題評估2026-11-18) (Chinese).
 
-目前限制：只支援可擷取文字的 PDF（沒有 OCR 或圖表理解）；非 iPAS 領域的回答品質要用自己的題目驗證；聊天是單輪，SSE 在完整生成後才送出；知識庫分離不等於多人權限隔離。目前狀態與下一步見 [STATUS](docs/STATUS.md)。
+Current limitations: only PDFs with extractable text (no OCR or chart understanding); answer quality outside the iPAS domain must be verified with your own questions; chat is single-turn, and SSE sends only after generation finishes; separate knowledge bases are not multi-user access control. Current status and next steps are in [STATUS](docs/STATUS.md) (Chinese).
 
-## 設計原則
+## Design principles
 
-- **可追溯優先於方便**：回答必須能回到哪份文件、哪一版、哪一頁。
-- **不知道就說不知道**：沒有依據時拒答，不拿模型的常識補空白。
-- **檢查要由程式執行**：引用合法性由程式驗證，不靠 prompt 裡的一句「請務必引用」。
-- **領域是設定，不是程式**：證據規則所有領域共用，領域差異只放在 profile。
-- **先有基線再談改進**：BM25 是對照組；混合檢索要用資料證明值得多花的延遲。
-- **誠實標示檢查的範圍**：字詞核對就寫字詞核對，不包裝成事實查核。
-- **不再散布別人的內容**：教材只記網址與雜湊，模型不附權重，外部內容標示授權。
+- **Traceability over convenience:** every answer must lead back to which document, which version, which page.
+- **Say "I don't know" when you don't:** with no evidence, refuse rather than fill the gap with the model's general knowledge.
+- **Checks are enforced by code:** citation validity is verified by the program, not by a "please cite your sources" line in the prompt.
+- **A domain is configuration, not code:** evidence rules are shared across domains; domain differences live only in the profile.
+- **Baseline first, then improvements:** BM25 is the control; hybrid retrieval has to prove with data that its extra latency is worth it.
+- **Be honest about what a check covers:** a lexical check is called a lexical check, not fact-checking.
+- **Don't redistribute other people's content:** course material is recorded only as URLs and hashes, model weights are not bundled, and external content is labeled with its license.
 
-## 專案結構
+## Repository layout
 
 ```text
-src/ipas_hub/       通用管線：檢索、RAG、profile、fetch、CLI、聊天服務與離線示範
-examples/ipas/      iPAS 範例：來源設定、profile、自寫示範筆記
-config/             聊天端點的知識庫路由
-tests/              合成資料單元測試、HTTP 路由測試、可選 pgvector 整合測試
-docs/               架構、環境、安裝、換資料、評估、證據對照與目前狀態
-docs/internal/      開發歷程、歷史驗證與 AI 協作紀錄（非閱讀必要）
+src/ipas_hub/       Generic pipeline: retrieval, RAG, profiles, fetch, CLI, chat server and offline demo
+examples/ipas/      iPAS example: source config, profile, author-written demo notes, eval sets
+config/             Knowledge-base routing for the chat endpoint
+tests/              Unit tests on synthetic data, HTTP routing tests, optional pgvector integration tests
+docs/               Architecture, environment, setup, custom data, evaluation, evidence map and status (Chinese)
+docs/internal/      Development history, past validation and AI-collaboration records (not required reading, Chinese)
 ```
 
-## 驗證與資料安全
+## Verification and data safety
 
-- `uv run pytest` 執行全部測試；需要資料庫的測試在沒有 `PG_TEST_DSN` 時會略過。
-- GitHub Actions 在每個 PR 執行：`ruff check`、pgvector 整合測試、離線示範、確認 `data/` 未被追蹤、容器內測試、建立執行映像與啟動檢查。
-- 測試只使用合成資料與替身模型，證明的是流程行為，不是回答品質。
-- 哪些資料不得進版控、執行時資料會流向哪裡，見 [SECURITY.md](SECURITY.md)。
+- `uv run pytest` runs all tests; tests that need a database are skipped when `PG_TEST_DSN` is not set.
+- GitHub Actions runs on every PR: `ruff check`, pgvector integration tests, the offline demo, a check that `data/` is not tracked, in-container tests, and building and smoke-starting the runtime image.
+- Tests use only synthetic data and stand-in models: they prove pipeline behavior, not answer quality.
+- What must never be committed, and where runtime data goes, is described in [SECURITY.md](SECURITY.md) (Chinese).
 
-## 授權
+## License
 
-本 repo 的程式與作者自寫內容（包含範例筆記與文件）採 [MIT](LICENSE)。MIT 不涵蓋第三方內容：教材、模型、維基內容各依其權利條件，見上方「教材、模型與外部內容」與 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)。
+The code and the author's own content in this repo (including the example notes and documentation) are under [MIT](LICENSE). MIT does not cover third-party content: course material, models and Wikipedia content each follow their own terms; see "Course material, models and external content" above and [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md).
 
-這是獨立學習專案，不代表 iPAS 主辦單位或任何第三方工具的官方立場。
+This is an independent learning project and does not represent the official position of the iPAS organizers or any third-party tool.
