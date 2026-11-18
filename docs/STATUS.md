@@ -25,9 +25,9 @@ updated: 2026-11-18
 
 ## 公開前待辦（需作者決定）
 
-1. 決定是否公開 repo，並補上 GitHub 描述與 topics。
+1. 決定是否公開 repo（改為 Public 須作者明確同意）。
 
-已完成（2026-11-18）：成熟度檢核（含 git 歷史：未發現密鑰、教材原文、`data/` 或本機路徑；commit 作者 email 經作者決定接受）；探索期模組移出套件、`rag.answer` 拆分、加入 ruff；新增 `.env.example`；README 中英雙語（英文為預設，docs/ 維持中文）；採 MIT；逐選項解析經作者判斷可保留（理由見 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md#文件教材與搜尋內容)）；協作範本移出本 repo。
+已完成（2026-11-18）：成熟度檢核（含 git 歷史：未發現密鑰、教材原文、`data/` 或本機路徑；commit 作者 email 經作者決定接受）；探索期模組移出套件、`rag.answer` 拆分、加入 ruff；新增 `.env.example`；README 中英雙語（英文為預設，docs/ 維持中文）；GitHub About 與 12 個 topics 改為通用 RAG 定位；採 MIT；逐選項解析經作者判斷可保留（理由見 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md#文件教材與搜尋內容)）；協作範本移出本 repo。
 
 ## 下一步
 
