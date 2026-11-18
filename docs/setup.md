@@ -64,7 +64,7 @@ $env:PGPASSWORD = (Select-String '^PG_PASSWORD=(.*)' .env).Matches[0].Groups[1].
 uv run python -m ipas_hub.cli index --config examples/ipas/knowledge-base.no-errata.json --embedding-model BAAI/bge-m3 --to-pg
 ```
 
-等資料庫顯示 healthy，再執行建索引；CPU 建向量可能需要數分鐘。成功輸出會包含 `index_id` 與資料庫載入結果，請保留。資料存於 Docker volume；檔案索引在 `data/index/kb/`。不要刪 volume 來解決連線問題。
+等資料庫顯示 healthy，再執行建索引；CPU 建向量需要數分鐘（作者電腦約 6 分鐘）。成功輸出會包含 `index_id` 與資料庫載入結果，請保留。資料存於 Docker volume；檔案索引在 `data/index/kb/`。不要刪 volume 來解決連線問題。
 
 ## 5. 先確認混合搜尋可用
 
@@ -179,4 +179,4 @@ docker compose --profile llm --profile ui --profile db --profile serve stop
 | serve 容器啟動失敗、找不到嵌入模型 | `.env` 的 `HF_CACHE_DIR` 是否指向含 `hub/models--BAAI--bge-m3` 的資料夾；`docker compose logs serve` 看錯誤 |
 | 8100 被占用 | 方法 A 與 B 是否同時在跑；只保留一種 |
 
-完整新手驗證尚待實際找一位新使用者，依本手冊逐步操作，記錄卡點與最終版本。已存在快取的作者電腦通過，不代表新機安裝通過。
+2026-11-18 作者電腦重新 clone 到新資料夾，依本手冊執行第 1–5 步與第 7 步方法 A（全新資料庫；套件、嵌入模型、生成模型與 Docker 映像沿用既有快取，第 6 步未執行），全部通過；過程中發現預設路由含未建立的知識庫，已修正。完整新手驗證仍待實際找一位新使用者在乾淨電腦依本手冊操作；作者電腦通過不代表新機安裝通過。
