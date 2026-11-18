@@ -25,7 +25,7 @@ updated: 2026-11-18
 
 ## 公開前準備（2026-11-18 已完成）
 
-成熟度檢核（含 git 歷史：未發現密鑰、教材原文、`data/` 或本機路徑；commit 作者 email 經作者決定接受）；探索期模組移出套件、`rag.answer` 拆分、加入 ruff；新增 `.env.example`；README 中英雙語（英文為預設，docs/ 維持中文）；GitHub About 與 12 個 topics 改為通用 RAG 定位；採 MIT；逐選項解析經作者判斷可保留（理由見 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md#文件教材與搜尋內容)）；協作範本移出本 repo；作者於同日將 repo 改為 Public。
+成熟度檢核（含 git 歷史：未發現密鑰、教材原文、`data/` 或本機路徑；commit 作者 email 經作者決定接受）；探索期模組移出套件、`rag.answer` 拆分、加入 ruff；新增 `.env.example`；README 中英雙語（英文為預設，docs/ 維持中文）；GitHub About 與 12 個 topics 改為通用 RAG 定位；採 MIT；逐選項解析經作者判斷可保留（理由見 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md#文件教材與搜尋內容)）；協作範本移出本 repo；作者於同日將 repo 改為 Public。公開後同日開啟 secret scanning、push protection、Dependabot alerts 與 security updates，並為 main 加上 ruleset（必須經 PR 並通過 CI，禁止 force push 與刪除），見 [SECURITY](../SECURITY.md)。
 
 ## 下一步
 

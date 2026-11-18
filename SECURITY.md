@@ -13,6 +13,12 @@
 - 預設只連本機 LLM；遠端端點必須明確開啟且使用 HTTPS。
 - 開啟維基百科外搜時，搜尋詞會送到維基百科。處理內部文件時請使用本機模型並加上 `--web none`。
 
+## GitHub 防護設定（2026-11-18 開啟）
+
+- Secret scanning 與 push protection：推送內容含已知格式的金鑰時會被擋下。
+- Dependabot alerts 與 security updates：相依套件有已知漏洞時發出警示並自動開修補 PR。
+- main 的 ruleset：必須經 PR、必須通過 CI（`test-and-container`），禁止 force push 與刪除分支。
+
 ## 回報問題
 
 發現疑似外洩的金鑰或受限內容時，請私下聯絡 repo 擁有者，不要開公開 issue 貼出內容。先從工作樹移除內容，到原發行方撤銷外洩的憑證；若需改寫 Git 歷史，須先有經過審查的復原計畫。
