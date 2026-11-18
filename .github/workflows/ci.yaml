@@ -46,7 +46,7 @@ jobs:
       - name: 確認原始資料未追蹤
         run: test -z "$(git ls-files data)"
       - name: 驗證 Compose 設定
-        run: docker compose --profile llm --profile ui --profile db config --quiet
+        run: docker compose --profile llm --profile ui --profile db --profile serve config --quiet
       - name: 容器內跑合成測試
         run: docker build --build-arg CODE_VERSION=${{ github.sha }} --target test -t ipas-hub:test .
       - name: 建立不含資料的執行映像

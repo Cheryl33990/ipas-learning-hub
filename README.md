@@ -84,7 +84,7 @@ flowchart LR
     LLM --> Answer[Citation check + answer + PDF links]
 ```
 
-The file index can be used on its own or loaded into PostgreSQL + pgvector: the database handles vector distance queries, while BM25 and fusion run in Python. AnythingLLM is only the chat UI; no documents are uploaded to it. Module locations, data flow and design trade-offs are in the [architecture doc](docs/architecture.md) (Chinese).
+The file index can be used on its own or loaded into PostgreSQL + pgvector: the database handles vector distance queries, while BM25 and fusion run in Python. AnythingLLM is only the chat UI; no documents are uploaded to it. With Docker Compose, `--profile serve` starts the database, vLLM and the RAG endpoint together (see the [setup guide](docs/setup.md), Chinese). Module locations, data flow and design trade-offs are in the [architecture doc](docs/architecture.md) (Chinese).
 
 **What I wrote myself:** document parsing and errata, the versioned index, retrieval fusion, citation checking, domain profiles, the OpenAI-compatible endpoint and knowledge-base routing. The chat UI (AnythingLLM), model server (vLLM), embedding model (BGE-M3) and generation model (Qwen3) are third-party work.
 

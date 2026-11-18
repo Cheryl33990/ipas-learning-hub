@@ -12,7 +12,7 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-HOST = "127.0.0.1"  # 不提供改綁其他位址的選項
+HOST = "127.0.0.1"  # 預設只綁本機；只有容器內（見 compose.yaml 的 serve）改綁 0.0.0.0，主機端仍只公開在 127.0.0.1
 MAX_BODY = 1_000_000
 FAILURES = (ValueError, OSError, KeyError, TypeError, ImportError)
 
@@ -83,7 +83,12 @@ def sse_chunks(text: str, model: str):
 
 
 def make_server(
-    answer_fn, port: int, model: str, files: dict | None = None, models: dict | None = None
+    answer_fn,
+    port: int,
+    model: str,
+    files: dict | None = None,
+    models: dict | None = None,
+    host: str = HOST,
 ) -> ThreadingHTTPServer:
     """files 是「名稱 → 檔案路徑」的允許清單；只比對完整名稱，不把請求路徑接到檔案系統上。"""
     files = dict(files or {})
@@ -174,4 +179,4 @@ def make_server(
         def log_message(self, fmt, *args):  # 不把請求內容印到終端機
             pass
 
-    return ThreadingHTTPServer((HOST, port), Handler)
+    return ThreadingHTTPServer((host, port), Handler)

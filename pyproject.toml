@@ -11,7 +11,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-embeddings = ["sentence-transformers>=3.0"]
+# torch 明列，才能套用下方 Linux 用 CPU 版的來源設定
+embeddings = ["sentence-transformers>=3.0", "torch>=2.0"]
 pg = [
     "psycopg[binary]>=3.2",
 ]
@@ -21,6 +22,16 @@ dev = [
     "pytest>=8.0",
     "ruff==0.14.0",
 ]
+
+# 向量計算固定在 CPU（knowledge.py 以 device="cpu" 載入）；Linux（含 Docker 映像）改用 CPU 版 torch，
+# 避免安裝約數 GB 的 CUDA 套件。Windows／macOS 仍用 PyPI 的 torch。
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 
 [build-system]
 requires = ["hatchling"]

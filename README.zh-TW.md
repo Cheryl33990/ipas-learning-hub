@@ -82,7 +82,7 @@ flowchart LR
     LLM --> Answer[引用檢查 + 回答 + PDF 連結]
 ```
 
-檔案索引可以單獨使用，也可以載入 PostgreSQL＋pgvector：資料庫負責向量距離查詢，BM25 與融合在 Python 執行。AnythingLLM 只當聊天介面，不需要上傳文件。模組位置、資料流與設計取捨見 [架構文件](docs/architecture.md)。
+檔案索引可以單獨使用，也可以載入 PostgreSQL＋pgvector：資料庫負責向量距離查詢，BM25 與融合在 Python 執行。AnythingLLM 只當聊天介面，不需要上傳文件。用 Docker Compose 時，`--profile serve` 會一起啟動資料庫、vLLM 與 RAG 端點（見[操作手冊](docs/setup.md)）。模組位置、資料流與設計取捨見 [架構文件](docs/architecture.md)。
 
 **我自己寫的部分**：文件解析與勘誤、版本化索引、檢索融合、引用檢查、領域 profile、OpenAI 相容端點與知識庫路由。聊天 UI（AnythingLLM）、模型服務（vLLM）、嵌入模型（BGE-M3）與生成模型（Qwen3）都是第三方成果。
 
