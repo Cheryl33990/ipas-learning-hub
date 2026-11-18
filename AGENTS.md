@@ -9,7 +9,7 @@ updated: 2026-11-17
 本檔是跨 AI 工具的唯一工作規則入口。不要建立另一份工具專屬規則副本。若工具不會自動讀取，使用者可在第一則指令要求讀本檔。
 
 ## 1．先讀什麼
-1. [使用指南](docs/internal/workflow/guide.md)。
+1. [使用指南](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/guide.md)。流程指南與空白範本保存在作者的範本 repo `problem-def-template`（私人，commit `4c73a73`），不放在本 repo；範本中的 `docs/project/` 對應本 repo 的 `docs/internal/project/`，metadata 依本專案用 HTML 註解。
 2. [brief](docs/internal/project/brief.md)：原始描述、範圍、AC 及確認紀錄。
 3. [progress](docs/internal/project/progress.md)：目前任務、實際檔案路徑、未完成與下一步。
 4. 本輪相關且實際存在的設計、ADR、測試與證據；不要要求尚未建立的文件先齊全。
@@ -27,10 +27,10 @@ updated: 2026-11-17
 ## 3．文件按需要建立
 - 公開閱讀文件放 docs/，面試閱讀入口為 README；協作流程及歷史證據集中 docs/internal/。Markdown 管理欄位用 HTML 註解，不使用 GitHub 會呈現為表格的 YAML frontmatter（使用者 2026-11-17 確認）。
 - 開始只維護 brief 與 progress；不預建所有階段目錄。
-- [範本庫](docs/internal/workflow/templates/README.md)是參考材料，不能把空白範本當作專案的已確認決策。
+- [範本庫](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/templates/README.md)是參考材料，不能把空白範本當作專案的已確認決策。
 - 有實際需求才複製範本到 docs/internal/project 的對應位置，改名並調整所有相對連結、metadata 註解內的路徑及正文引用；連到真正的專案文件。未建立的文件標待建立或 N/A 與理由，不留假裝存在的連結。
 - 拆分文件時把 brief 對應內容改為摘要＋新文件連結，避免兩份內容各自修改。progress 記主來源與位置。
-- 程式碼及可執行測試放框架正常目錄；指南與空白範本放 docs/internal/workflow；實際結果放 docs/internal/project。
+- 程式碼及可執行測試放框架正常目錄；指南與空白範本留在範本 repo，不複製進本 repo；實際結果放 docs/internal/project。
 - docs/template-maintenance 只屬於模板本身。初始化衍生專案時可移除，不複製其中的成果宣告到新專案。
 
 ## 4．實作、驗證與審查
@@ -39,11 +39,11 @@ updated: 2026-11-17
 - 需求或證據衝突時提出修訂與影響；範圍／AC 變更確認後採用，保留原結果。
 - 已接受 ADR 正文不重寫；新決策開新 ADR，舊版只更新取代關係。
 - 生產 prompt 契約見設計範本；探索 prompt 依已授權疑問與完成條件使用，不要求先有產品 AC。
-- 依 [review 規則](docs/internal/workflow/reference/review.md) 檢查實際 diff 與證據。AI 自查不冒充獨立真人批准。
+- 依 [review 規則](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/reference/review.md) 檢查實際 diff 與證據。AI 自查不冒充獨立真人批准。
 - 每輪開始及結束依使用指南的階段表更新 progress 的目前階段、最小產出證據、未達條件、前進判斷與下一個動作；並行任務分別標示。不要用文件數量或 status 代替進度；條件達成且已授權的工作持續執行。
 - 每次工作結束更新 progress；合併、部署、驗收與結案分開記錄。
 
 ## 5．共通慣例
-文件格式見 [conventions](docs/internal/workflow/reference/conventions.md)，工作流程見 [workflow](docs/internal/workflow/reference/workflow.md)，內容要求見 [slot contracts](docs/internal/workflow/reference/slot_contracts.md)。精簡模式允許合併欄位，未使用範本不納入完成度。
+文件格式見 [conventions](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/reference/conventions.md)，工作流程見 [workflow](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/reference/workflow.md)，內容要求見 [slot contracts](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/reference/slot_contracts.md)。精簡模式允許合併欄位，未使用範本不納入完成度。
 原始機敏素材、密鑰與大型輸出不進版控；證據記安全位置及來源版本。
 工具或 skill 先確認當前環境是否可用，再依任務選用；不因範本提到名稱就假設已安裝。重要的使用限制記 progress，必要時才建立工具清單。

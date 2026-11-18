@@ -213,4 +213,4 @@ uv run pytest
 
 ## 工作方式
 
-本專案沿用 problem-def-template 的流程：先讀 [使用指南](../workflow/guide.md)，AI 工具的共同規則在 [AGENTS.md](../../../AGENTS.md)。
+本專案沿用 problem-def-template 的流程：先讀 [使用指南](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/guide.md)，AI 工具的共同規則在 [AGENTS.md](../../../AGENTS.md)。

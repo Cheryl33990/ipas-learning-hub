@@ -1,5 +1,5 @@
 {
-  "_comment": "本專案作者自寫的 iPAS 主題示範筆記，不是官方學習指引的內容或摘錄；與程式採相同授權。只供離線示範（python -m ipas_hub.demo）。",
+  "_comment": "本專案作者自寫的 iPAS 主題示範筆記，不是官方學習指引的內容或摘錄；與程式同採 MIT。只供離線示範（python -m ipas_hub.demo）。",
   "source": {
     "id": "notes",
     "name": "iPAS 主題自寫筆記（示範用）",
