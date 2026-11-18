@@ -6,6 +6,8 @@ updated: 2026-11-18
 
 # 進度與接手
 
+目前階段與前進判斷（2026-11-18，答對題理由與引用抽樣判讀）：PR #20 已由使用者合併（71ef78a）。分支 docs/reasoning-review（基於 71ef78a），未提交。從混合答對 212 題中每卷隨機抽 4 題（random.Random(0)），以正式評估相同設定重跑取得原文（20 題選項皆與正式評估相同），產出本機對照表 data/evaluation/review-sample/review.md（含試題與教材原文，不進版控；腳本 sample.py、原始輸出 raw.json 同處）。使用者（作者本人）判讀：理由對 20（i115-1-s3-48 原誤填「支」，使用者確認為「對」）；引用支 18、部 2（b115-2-s1-30 引用 NLP 概論而無顯著性圖說明；i115-1-s3-48 引用章末練習題題目）、不 0。判定（不含原文）存 examples/ipas/eval/reasoning-review-2026-11-18.json，結果寫入 evaluation.md、README、STATUS。另發現 i115-1-s3-48 題幹混入下一題組情境文字（試題解析問題）。非獨立第三方審查。使用者授權提交並開 PR。
+
 目前階段與前進判斷（2026-11-18，保留題評估完成，審查與交付）：PR #19 已由使用者合併（132ea9a），本分支基底 c82fcb1 已在 main 內。正式評估 729 筆全部完成，無中斷：BM25 199／243（81.9%）、向量 204（84.0%）、混合 212（87.2%）；混合對 BM25 改善 17、退步 4，差 +5.3 個百分點（成對 bootstrap 95% CI +1.7 ~ +9.0），向量對 BM25 CI −2.1 ~ +6.2 含 0。檢索 p50 21／245／242 ms，生成 p50 約 7 秒。錯誤 5 筆皆為修正後仍引用不存在的 id；補全觸發 5 筆（4 題）；修正 46 筆；三方法皆錯 24 題（15 題皆拒答，原因未人工判讀）；字詞警告約六成回答出現，雜訊高。結果填入 docs/evaluation.md、README、STATUS；逐筆輸出留 data/evaluation/heldout-2026-11-18/（不進版控）。驗證：172 passed／7 skipped，diff check 通過。未做：理由／引用語意判讀、拒答題逐題判讀。下一步：提交並開 PR。
 
 （以下為同日稍早紀錄）保留題評估實作：PR #19（MIT、移除範本）當時已開，未合併。使用者選定 240 題方案並授權執行。分支 feat/heldout-eval（基於 chore/public-prep c82fcb1），未提交。新增 exam_eval.py（官方答案自動比對、三方法輪換、可續跑、成對 bootstrap、報告不含題目原文、code_version 未提交時加 +dirty）與 examples/ipas/eval/heldout.json（5 卷 243 題）；試跑 3 題×3 方法發現模型少寫片段序號導致拒答，經使用者選 A，新增 rag.complete_chunk_ids（唯一對應才補全並記 completed_citations）。測試 172 passed／7 skipped。正式評估 2026-11-18 背景執行中：索引 ce5090f4…、qwen3-vl-8b-fp8、prompt b9e2e2a7…、web none、k=5，輸出 data/evaluation/heldout-2026-11-18/。下一步：完成後填入 docs/evaluation.md 與 README，提交並開 PR。

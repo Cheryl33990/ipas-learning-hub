@@ -1,0 +1,34 @@
+{
+  "name": "保留題答對抽樣：理由與引用人工判讀",
+  "reviewer": "作者本人（非獨立第三方）",
+  "date": "2026-11-18",
+  "population": "保留題評估中混合檢索答對的 212 題",
+  "sampling": "每份試卷隨機抽 4 題，random.Random(0)，共 20 題",
+  "rerun": "以正式評估相同設定重跑混合檢索取得回答原文；20 題重跑選項皆與正式評估相同",
+  "scale": {
+    "reasoning": {"對": "推理正確且足以選出答案", "部": "方向對但有錯誤或漏洞", "錯": "理由錯誤，只是選項碰巧對"},
+    "citation": {"支": "被引用的片段確實支持該句", "部": "只支持部分句子", "不": "片段與句子無關或矛盾"}
+  },
+  "judgments": [
+    {"case": "b115-2-s1-03", "reasoning": "對", "citation": "支"},
+    {"case": "b115-2-s1-17", "reasoning": "對", "citation": "支"},
+    {"case": "b115-2-s1-26", "reasoning": "對", "citation": "支"},
+    {"case": "b115-2-s1-30", "reasoning": "對", "citation": "部", "note": "引用片段中沒有看到顯著性圖的說明"},
+    {"case": "b115-2-s2-27", "reasoning": "對", "citation": "支"},
+    {"case": "b115-2-s2-33", "reasoning": "對", "citation": "支"},
+    {"case": "b115-2-s2-41", "reasoning": "對", "citation": "支"},
+    {"case": "b115-2-s2-42", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s1-14", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s1-26", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s1-34", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s1-42", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s2-09", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s2-11", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s2-22", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s2-37", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s3-18", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s3-38", "reasoning": "對", "citation": "支"},
+    {"case": "i115-1-s3-48", "reasoning": "對", "citation": "部", "note": "被引用的教材 2 是練習題題目，不是解釋；理由欄原誤填「支」，作者 2026-11-18 確認為「對」"},
+    {"case": "i115-1-s3-49", "reasoning": "對", "citation": "支"}
+  ]
+}
