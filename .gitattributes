@@ -1,0 +1,8 @@
+# 版控與工作目錄一律用 LF，不受各機器 core.autocrlf 設定影響（Windows 上不再轉成 CRLF）
+* text=auto eol=lf
+
+# 二進位檔不做換行轉換
+*.gif binary
+*.png binary
+*.jpg binary
+*.pdf binary
