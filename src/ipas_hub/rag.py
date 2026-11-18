@@ -1,7 +1,8 @@
 """RAG 流程：教材檢索＋外部搜尋 → LLM 帶引用回答。
 
 引用只能指向本次實際提供的片段；每個引用由程式依片段資料標成教材或外部，不採信模型自稱的來源。
-檢查確認引用存在、格式，並以字詞比對標出可能掛錯的引用；不是語意驗證，不代表內容正確。
+檢查確認引用存在、格式，並以字詞比對標出可能掛錯的引用；可選擇再請模型逐句核對引用是否直接支持該句
+（verify），結果只標示在畫面上，不改寫回答。兩者都不代表內容正確。
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from .profile import DEFAULT_PROFILE, answer_prompt
 
 PROMPTS = Path(__file__).with_name("prompts")
 QUERY_PROMPT = PROMPTS / "web_queries.txt"
+VERIFY_PROMPT = PROMPTS / "verify_citations.txt"
 MAX_WEB_QUERIES = 3
 # 維基百科文字通常以 CC BY-SA 4.0 授權；回答是模型改寫，需標示來源、授權與「經改寫」
 WIKIPEDIA_LICENSE = "CC BY-SA 4.0"
@@ -239,6 +241,47 @@ def check_segment(text: str, cited_texts: list[str], question: str = "") -> dict
     }
 
 
+# ---- 模型逐句核對：引用片段是否直接寫出該句（只標示，不改寫回答）----
+
+VERDICTS = ("supported", "partial", "unsupported")
+
+
+def verify_segments(segments: list[dict], by_id: dict, generate) -> dict:
+    """把每句帶引用的句子與它自己的引用片段送給模型判定，結果寫入 segment["check"]["support"]。
+
+    無法取得判定（呼叫失敗、格式不對、漏句）的句子標為 unverified，並回傳錯誤原因；不當作通過。
+    """
+    cited = [(n, s) for n, s in enumerate(segments, 1) if s["citations"]]
+    if not cited:
+        return {"status": "skipped"}
+    ids = list(dict.fromkeys(c for _, s in cited for c in s["citations"]))  # 每個片段只送一次，節省上下文
+    payload = {
+        "segments": [{"n": n, "text": s["text"], "citations": s["citations"]} for n, s in cited],
+        "evidence": [{"id": c, "text": by_id[c]["text"]} for c in ids],
+    }
+    verdicts, error = {}, None
+    try:  # 任何失敗都不中止回答；改為逐句標示未核對並記錄原因
+        output = generate(VERIFY_PROMPT.read_text(encoding="utf-8"), json.dumps(payload, ensure_ascii=False))["output"]
+        results = output.get("results")
+        if not isinstance(results, list):
+            raise ValueError("核對回覆缺少 results 清單")
+        for item in results:
+            if isinstance(item, dict) and item.get("verdict") in VERDICTS:
+                verdicts[item.get("n")] = {"verdict": item["verdict"], "note": str(item.get("note") or "")}
+        missing = [n for n, _ in cited if n not in verdicts]
+        if missing:
+            error = "核對回覆缺少或無法判讀第 " + "、".join(map(str, missing)) + " 句"
+    except Exception as exc:  # noqa: BLE001 — 失敗原因寫進結果並顯示，不吞掉
+        error = f"核對呼叫失敗：{exc}"
+    counts = {"unsupported": 0, "partial": 0, "unverified": 0}
+    for n, s in cited:
+        support = verdicts.get(n, {"verdict": "unverified", "note": ""})
+        s["check"]["support"] = support
+        if support["verdict"] in counts:
+            counts[support["verdict"]] += 1
+    return {"status": "error", "error": error, **counts} if error else {"status": "done", **counts}
+
+
 def _strip_ids(text: str, by_id: dict) -> str:
     """模型若自行在句中寫 [id] 或（id），移除；標記一律由程式產生。括號內不全是 id 的保留。"""
 
@@ -340,8 +383,13 @@ def _basis(sources: list[dict]) -> str:
     )
 
 
-def answer(question: str, textbook: list[dict], external: list[dict], generate, prompt: str | None = None) -> dict:
-    """prompt 是 profile 組好的系統提示；未指定時用通用設定（見 profile.py）。"""
+def answer(
+    question: str, textbook: list[dict], external: list[dict], generate, prompt: str | None = None, verify: bool = False
+) -> dict:
+    """prompt 是 profile 組好的系統提示；未指定時用通用設定（見 profile.py）。
+
+    verify 為真時多呼叫一次模型，逐句核對引用是否直接支持（見 verify_segments）；預設關閉，評估流程不受影響。
+    """
     evidence = build_evidence(textbook, external)
     if not evidence:
         text = "教材與外部搜尋都沒有取得依據，無法解答。"
@@ -354,6 +402,7 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate, 
             "basis": "none",
             "flagged_segments": 0,
             "validation": "no_evidence",
+            "verification": {"status": "off"},
             "prompt_sha256": None,
         }
     template = prompt if prompt is not None else answer_prompt(DEFAULT_PROFILE)
@@ -377,6 +426,7 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate, 
         }
 
     segments, markers = _mark_segments(output["segments"], by_id, question)
+    verification = verify_segments(segments, by_id, generate) if verify else {"status": "off"}
     sources = _build_sources(markers, by_id, located, licensed)
     lines = [s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else "") for s in segments]
     return {
@@ -398,7 +448,24 @@ def answer(question: str, textbook: list[dict], external: list[dict], generate, 
         "completed_citations": completed,
         "low_overlap_threshold": LOW_OVERLAP,
         "validation": "citation_ids_and_lexical_check_not_semantic_verification",
+        "verification": verification,
     }
+
+
+SUPPORT_WARNINGS = {
+    "unsupported": "引用片段沒有直接寫出此句",
+    "partial": "引用片段只支持此句的一部分",
+    "unverified": "此句未完成核對",
+}
+
+VERIFY_LABELS = (("unsupported", "未直接支持"), ("partial", "部分支持"), ("unverified", "未核對"))
+
+
+def _verification_line(verification: dict, checked: int) -> str:
+    if verification["status"] not in ("done", "error"):
+        return ""
+    parts = [f"{verification[k]} 句{label}" for k, label in VERIFY_LABELS if verification.get(k)]
+    return f"模型核對 {checked} 句：" + ("、".join(parts) if parts else "皆直接支持") + "（模型判定，仍可能有誤）。"
 
 
 def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
@@ -419,8 +486,16 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
     body = []
     for s in result["segments"]:
         body.append(s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else ""))
+        indent = "" if markdown else "  "
+        support = (s["check"] or {}).get("support")
+        if support and support["verdict"] in SUPPORT_WARNINGS:
+            note = f"（{support['note']}）" if support["note"] else ""
+            body.append(indent + "⚠ 模型核對：" + SUPPORT_WARNINGS[support["verdict"]] + note)
         if s["check"] and s["check"]["flagged"]:
-            body.append(("" if markdown else "  ") + "⚠ 引用可能不支持此句：" + "；".join(s["check"]["reasons"]))
+            body.append(indent + "⚠ 引用可能不支持此句：" + "；".join(s["check"]["reasons"]))
+    verification = result.get("verification") or {"status": "off"}
+    if verification["status"] == "error":
+        body.append(f"⚠ 模型核對未完成：{verification['error']}；標為未核對的句子沒有經過語意核對。")
     if result.get("choice_expected") and not result.get("answer_choice"):
         body.append("⚠ 模型未明寫答案選項，請依上方逐項說明自行判斷。")
     status = f"狀態：{'有依據' if result['status'] == 'supported' else '依據不足'}（{basis}）"
@@ -446,7 +521,10 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
         "",
         f"核對：{cited} 句有引用，其中 {result['flagged_segments']} 句可能不支持"
         "（字詞比對，非語意驗證；未引用的句子不檢查）。",
+        *([line] if (line := _verification_line(verification, cited)) else []),
         *([""] if markdown else []),
-        "提醒：程式只檢查引用存在與字詞重疊，不保證解答正確。",
+        "提醒：程式只檢查引用存在與字詞重疊"
+        + ("，並請模型逐句核對引用" if verification["status"] in ("done", "error") else "")
+        + "，不保證解答正確。",
     ]
     return "\n".join(lines)

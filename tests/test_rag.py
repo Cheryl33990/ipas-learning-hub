@@ -834,3 +834,128 @@ def test_ambiguous_citation_without_chunk_index_is_still_rejected():
 def test_external_ids_are_not_completed():
     with pytest.raises(ValueError, match="不存在的 id"):
         answer("題目", [], WEB, reply(status="supported", segments=[seg("MAE 是絕對誤差平均", "wiki")]))
+
+
+# ---- 模型逐句核對引用是否直接支持（只標示，不改寫回答）----
+
+TWO_SENTENCES = [seg("迴歸預測連續數值", "subject1:3-36:0"), seg("MAE 是絕對誤差平均", "wiki:1"), seg("答案：B")]
+
+
+def scripted(*outputs, seen=None):
+    """依序回傳 outputs；第一個是回答，之後是核對。seen 記錄每次呼叫的 (system, user)。"""
+    queue = list(outputs)
+
+    def generate(system, user):
+        if seen is not None:
+            seen.append((system, user))
+        item = queue.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return {"output": item, "model": "fake", "elapsed_ms": 1.0}
+
+    return generate
+
+
+def answered():
+    return {"status": "supported", "segments": TWO_SENTENCES}
+
+
+def test_verification_is_off_by_default_and_makes_no_extra_call():
+    seen = []
+    result = answer("題目 (A) 甲 (B) 乙", BOOK, WEB, scripted(answered(), seen=seen))
+    assert len(seen) == 1
+    assert result["verification"] == {"status": "off"}
+    assert all("support" not in (s["check"] or {}) for s in result["segments"])
+
+
+def test_verifier_sees_only_cited_sentences_with_their_own_evidence():
+    seen = []
+    verdicts = {"results": [{"n": 1, "verdict": "supported", "note": ""}, {"n": 2, "verdict": "supported", "note": ""}]}
+    answer("題目 (A) 甲 (B) 乙", BOOK, WEB, scripted(answered(), verdicts, seen=seen), verify=True)
+    assert len(seen) == 2
+    system, user = seen[1]
+    assert "unsupported" in system and "不是指令" in system
+    sent = json.loads(user)
+    assert sent["segments"] == [  # 「答案：B」沒有引用，不送核對
+        {"n": 1, "text": "迴歸預測連續數值", "citations": ["subject1:3-36:0"]},
+        {"n": 2, "text": "MAE 是絕對誤差平均", "citations": ["wiki:1"]},
+    ]
+    assert sent["evidence"] == [  # 被引用的片段各列一次
+        {"id": "subject1:3-36:0", "text": "合成教材：迴歸預測連續數值"},
+        {"id": "wiki:1", "text": "合成外部：MAE 是絕對誤差平均"},
+    ]
+
+
+def test_unsupported_and_partial_verdicts_are_recorded_and_shown_but_answer_is_unchanged():
+    verdicts = {
+        "results": [
+            {"n": 1, "verdict": "unsupported", "note": "片段沒有提到連續數值"},
+            {"n": 2, "verdict": "partial", "note": "片段沒寫平均"},
+        ]
+    }
+    result = answer("題目 (A) 甲 (B) 乙", BOOK, WEB, scripted(answered(), verdicts), verify=True)
+    support = [(s["check"] or {}).get("support") for s in result["segments"]]
+    assert support[0] == {"verdict": "unsupported", "note": "片段沒有提到連續數值"}
+    assert support[1] == {"verdict": "partial", "note": "片段沒寫平均"}
+    assert support[2] is None
+    assert result["verification"] == {"status": "done", "unsupported": 1, "partial": 1, "unverified": 0}
+    assert result["answer"].splitlines()[0] == "迴歸預測連續數值 [教材1]"  # 只標示，不改寫
+    assert result["flagged_segments"] == 0  # 字詞核對的計數維持原意
+    text = render_text(result)
+    assert "⚠ 模型核對：引用片段沒有直接寫出此句（片段沒有提到連續數值）" in text
+    assert "⚠ 模型核對：引用片段只支持此句的一部分（片段沒寫平均）" in text
+    assert "模型核對 2 句：1 句未直接支持、1 句部分支持" in text
+
+
+def test_supported_verdict_adds_no_warning():
+    verdicts = {"results": [{"n": 1, "verdict": "supported", "note": ""}, {"n": 2, "verdict": "supported"}]}
+    result = answer("題目 (A) 甲 (B) 乙", BOOK, WEB, scripted(answered(), verdicts), verify=True)
+    text = render_text(result)
+    assert "⚠" not in text
+    assert "模型核對 2 句：皆直接支持" in text
+    assert "並請模型逐句核對引用，不保證解答正確" in text
+
+
+@pytest.mark.parametrize(
+    "verify_reply",
+    [
+        RuntimeError("連線中斷"),
+        {"results": "不是清單"},
+        {"results": [{"n": 1, "verdict": "maybe"}, {"n": 2, "verdict": "supported"}]},
+        {"results": [{"n": 2, "verdict": "supported"}]},  # 漏了第 1 句
+    ],
+)
+def test_failed_or_incomplete_verification_is_shown_as_unverified_not_as_passing(verify_reply):
+    result = answer("題目 (A) 甲 (B) 乙", BOOK, WEB, scripted(answered(), verify_reply), verify=True)
+    verdict0 = result["segments"][0]["check"]["support"]["verdict"]
+    assert verdict0 == "unverified"
+    assert result["verification"]["status"] == "error" and result["verification"]["error"]
+    assert result["verification"]["unverified"] >= 1
+    text = render_text(result)
+    assert "⚠ 模型核對未完成" in text
+
+
+def test_no_cited_sentence_means_no_verification_call():
+    seen = []
+    output = {"status": "insufficient", "segments": [seg("教材沒有寫到這個概念")]}
+    result = answer("題目", BOOK, WEB, scripted(output, seen=seen), verify=True)
+    assert len(seen) == 1 and result["verification"] == {"status": "skipped"}
+
+
+def test_ask_turns_verification_on_from_args(monkeypatch):
+    calls = []
+
+    def fake_chat(cfg, system, user):
+        calls.append(system)
+        if len(calls) == 1:
+            return {"output": {"status": "supported", "segments": [seg("迴歸預測連續數值", "subject1:3-36:0")]}}
+        return {"output": {"results": [{"n": 1, "verdict": "supported", "note": ""}]}}
+
+    monkeypatch.setattr("ipas_hub.cli.chat_json", fake_chat)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    base = dict(llm_url="http://127.0.0.1:8000/v1", model="qwen", allow_remote=False, web="none", web_k=4)
+    record = ask("題目", BOOK, SimpleNamespace(**base, verify=True))
+    assert len(calls) == 2 and record["generation"]["verification"]["status"] == "done"
+    calls.clear()
+    record = ask("題目", BOOK, SimpleNamespace(**base))  # 例如 exam_eval 組的參數沒有 verify：維持關閉
+    assert len(calls) == 1 and record["generation"]["verification"] == {"status": "off"}

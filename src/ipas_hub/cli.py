@@ -68,7 +68,9 @@ def ask(question: str, hits: list[dict], args) -> dict:
         external = gather_external(record["web"]["queries"], make_search(args.web), 2, args.web_k, errors)
         record["web"]["error"] = "；".join(errors) or None
     record["external_hits"] = external
-    record["generation"] = answer(question, hits, external, generate, getattr(args, "answer_prompt", None))
+    record["generation"] = answer(
+        question, hits, external, generate, getattr(args, "answer_prompt", None), verify=getattr(args, "verify", False)
+    )
     return record
 
 
@@ -295,6 +297,12 @@ def main(argv=None) -> int:
             )
             cmd.add_argument("--web", choices=("wikipedia", "none"), default="wikipedia")
             cmd.add_argument("--web-k", type=int, default=4, help="外部片段上限")
+            cmd.add_argument(
+                "--no-verify",
+                dest="verify",
+                action="store_false",
+                help="不做模型逐句引用核對（預設會做，每題多一次模型呼叫）",
+            )
             cmd.add_argument(
                 "--profile",
                 type=Path,
