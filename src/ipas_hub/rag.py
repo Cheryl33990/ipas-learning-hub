@@ -521,7 +521,8 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
         "",
         f"核對：{cited} 句有引用，其中 {result['flagged_segments']} 句可能不支持"
         "（字詞比對，非語意驗證；未引用的句子不檢查）。",
-        *([line] if (line := _verification_line(verification, cited)) else []),
+        # Markdown 版另起一段：聊天介面會把單一換行併成同一段
+        *(([""] if markdown else []) + [line] if (line := _verification_line(verification, cited)) else []),
         *([""] if markdown else []),
         "提醒：程式只檢查引用存在與字詞重疊"
         + ("，並請模型逐句核對引用" if verification["status"] in ("done", "error") else "")
