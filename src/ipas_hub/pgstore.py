@@ -4,6 +4,7 @@
 index_id 與向量雜湊，被改過就拒絕。通用欄位放成欄，文件專屬資訊（章節頁碼、PDF 頁、勘誤報告等）放在 jsonb，
 換成其他主題或公司文件時不必改表。關鍵字排序（BM25）仍在程式內計算；向量近鄰由資料庫計算。
 """
+
 from __future__ import annotations
 
 import json
@@ -55,30 +56,56 @@ def rows_from_index(payload: dict, vectors) -> dict:
     KnowledgeBase(payload, vectors)  # 雜湊、向量維度與向量雜湊都不符就拋錯
     meta = payload["embedding"] or {}
     manifest = {k: v for k, v in payload.items() if k not in {"index_id", "chunks", "sources"}}
-    index = {"index_id": payload["index_id"], "embedding_model": meta.get("name"),
-             "embedding_revision": meta.get("revision"), "dimensions": meta.get("dimensions"), "manifest": manifest}
-    sources = [{"ord": n, "source_id": s["id"], "name": s["name"], "version": s["version"], "sha256": s["sha256"],
-                "metadata": {k: v for k, v in s.items() if k not in SOURCE_COLUMNS}}
-               for n, s in enumerate(payload["sources"])]
-    chunks = [{"ord": i, "chunk_id": c["id"], "source_id": c["source"], "text": c["text"],
-               "metadata": {k: v for k, v in c.items() if k not in CHUNK_COLUMNS},
-               "embedding": None if vectors is None else [float(x) for x in vectors[i]]}
-              for i, c in enumerate(payload["chunks"])]
+    index = {
+        "index_id": payload["index_id"],
+        "embedding_model": meta.get("name"),
+        "embedding_revision": meta.get("revision"),
+        "dimensions": meta.get("dimensions"),
+        "manifest": manifest,
+    }
+    sources = [
+        {
+            "ord": n,
+            "source_id": s["id"],
+            "name": s["name"],
+            "version": s["version"],
+            "sha256": s["sha256"],
+            "metadata": {k: v for k, v in s.items() if k not in SOURCE_COLUMNS},
+        }
+        for n, s in enumerate(payload["sources"])
+    ]
+    chunks = [
+        {
+            "ord": i,
+            "chunk_id": c["id"],
+            "source_id": c["source"],
+            "text": c["text"],
+            "metadata": {k: v for k, v in c.items() if k not in CHUNK_COLUMNS},
+            "embedding": None if vectors is None else [float(x) for x in vectors[i]],
+        }
+        for i, c in enumerate(payload["chunks"])
+    ]
     return {"index": index, "sources": sources, "chunks": chunks}
 
 
 def index_from_rows(index: dict, sources: list[dict], chunks: list[dict]):
     """由資料列重建索引內容與向量；呼叫端再交給 KnowledgeBase 驗證 index_id。"""
     manifest = index["manifest"] if isinstance(index["manifest"], dict) else json.loads(index["manifest"])
-    payload = {"index_id": index["index_id"], **manifest,
-               "sources": [{"id": s["source_id"], "name": s["name"], "version": s["version"], "sha256": s["sha256"],
-                            **s["metadata"]} for s in sorted(sources, key=lambda s: s["ord"])],
-               "chunks": []}
+    payload = {
+        "index_id": index["index_id"],
+        **manifest,
+        "sources": [
+            {"id": s["source_id"], "name": s["name"], "version": s["version"], "sha256": s["sha256"], **s["metadata"]}
+            for s in sorted(sources, key=lambda s: s["ord"])
+        ],
+        "chunks": [],
+    }
     ordered = sorted(chunks, key=lambda c: c["ord"])
     if [c["ord"] for c in ordered] != list(range(len(ordered))):
         raise ValueError("資料庫中的片段順序不連續")
-    payload["chunks"] = [{"id": c["chunk_id"], "source": c["source_id"], "text": c["text"], **c["metadata"]}
-                         for c in ordered]
+    payload["chunks"] = [
+        {"id": c["chunk_id"], "source": c["source_id"], "text": c["text"], **c["metadata"]} for c in ordered
+    ]
     embedded = [c["embedding"] is not None for c in ordered]
     if any(embedded) and not all(embedded):
         raise ValueError("資料庫中只有部分片段有向量")
@@ -103,6 +130,7 @@ def connect(dsn: str | None = None):
 
 def _db_errors():
     import psycopg
+
     return psycopg.Error
 
 
@@ -119,27 +147,58 @@ def load_index(conn, payload: dict, vectors) -> bool:
             if conn.execute("SELECT 1 FROM kb_index WHERE index_id = %s", (payload["index_id"],)).fetchone():
                 return False
             i = rows["index"]
-            conn.execute("INSERT INTO kb_index (index_id, embedding_model, embedding_revision, dimensions, manifest)"
-                         " VALUES (%s, %s, %s, %s, %s::jsonb)",
-                         (i["index_id"], i["embedding_model"], i["embedding_revision"], i["dimensions"],
-                          json.dumps(i["manifest"], ensure_ascii=False)))
+            conn.execute(
+                "INSERT INTO kb_index (index_id, embedding_model, embedding_revision, dimensions, manifest)"
+                " VALUES (%s, %s, %s, %s, %s::jsonb)",
+                (
+                    i["index_id"],
+                    i["embedding_model"],
+                    i["embedding_revision"],
+                    i["dimensions"],
+                    json.dumps(i["manifest"], ensure_ascii=False),
+                ),
+            )
             with conn.cursor() as cur:
-                cur.executemany("INSERT INTO kb_source (index_id, ord, source_id, name, version, sha256, metadata)"
-                                " VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb)",
-                                [(i["index_id"], s["ord"], s["source_id"], s["name"], s["version"], s["sha256"],
-                                  json.dumps(s["metadata"], ensure_ascii=False)) for s in rows["sources"]])
-                cur.executemany("INSERT INTO kb_chunk (index_id, ord, chunk_id, source_id, text, metadata, embedding)"
-                                " VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::real[]::vector)",
-                                [(i["index_id"], c["ord"], c["chunk_id"], c["source_id"], c["text"],
-                                  json.dumps(c["metadata"], ensure_ascii=False), c["embedding"])
-                                 for c in rows["chunks"]])
+                cur.executemany(
+                    "INSERT INTO kb_source (index_id, ord, source_id, name, version, sha256, metadata)"
+                    " VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb)",
+                    [
+                        (
+                            i["index_id"],
+                            s["ord"],
+                            s["source_id"],
+                            s["name"],
+                            s["version"],
+                            s["sha256"],
+                            json.dumps(s["metadata"], ensure_ascii=False),
+                        )
+                        for s in rows["sources"]
+                    ],
+                )
+                cur.executemany(
+                    "INSERT INTO kb_chunk (index_id, ord, chunk_id, source_id, text, metadata, embedding)"
+                    " VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::real[]::vector)",
+                    [
+                        (
+                            i["index_id"],
+                            c["ord"],
+                            c["chunk_id"],
+                            c["source_id"],
+                            c["text"],
+                            json.dumps(c["metadata"], ensure_ascii=False),
+                            c["embedding"],
+                        )
+                        for c in rows["chunks"]
+                    ],
+                )
         return True
     except _db_errors() as exc:
         raise ValueError(f"載入資料庫失敗：{exc}") from exc
 
 
-def select_index(conn, index_id: str | None = None, kb: str | None = None,
-                 with_vectors: bool = False, prefer_vectors: bool = False) -> str:
+def select_index(
+    conn, index_id: str | None = None, kb: str | None = None, with_vectors: bool = False, prefer_vectors: bool = False
+) -> str:
     """先限定庫，再選版本；多庫未指定範圍時不採用全域最新。"""
     try:
         return _select_index(conn, index_id, kb, with_vectors, prefer_vectors)
@@ -159,8 +218,10 @@ def _select_index(conn, index_id, kb, with_vectors, prefer_vectors):
         if kb is not None and knowledge_base_id(row[0]) != kb:
             raise ValueError("指定索引不屬於選定知識庫")
         return index_id
-    names = [r[0] for r in conn.execute(
-        "SELECT DISTINCT COALESCE(manifest->>'knowledge_base', 'ipas') FROM kb_index").fetchall()]
+    names = [
+        r[0]
+        for r in conn.execute("SELECT DISTINCT COALESCE(manifest->>'knowledge_base', 'ipas') FROM kb_index").fetchall()
+    ]
     if kb is None:
         if len(names) > 1:
             raise ValueError("有多個知識庫，請指定 --kb 或 --index，拒絕自動跨庫選擇")
@@ -169,7 +230,8 @@ def _select_index(conn, index_id, kb, with_vectors, prefer_vectors):
         "SELECT index_id FROM kb_index WHERE COALESCE(manifest->>'knowledge_base', 'ipas') = %s"
         " AND (%s OR dimensions IS NOT NULL)"
         " ORDER BY (%s AND dimensions IS NOT NULL) DESC, loaded_at DESC, index_id LIMIT 1",
-        (kb, not with_vectors, prefer_vectors)).fetchone()
+        (kb, not with_vectors, prefer_vectors),
+    ).fetchone()
     if not row:
         raise ValueError(f"知識庫 {kb} 找不到適用索引，請先建立並載入")
     return row[0]
@@ -185,23 +247,31 @@ def read_index(conn, index_id: str | None = None, with_vectors: bool = False, kb
         index = conn.execute("SELECT index_id, manifest FROM kb_index WHERE index_id = %s", (index_id,)).fetchone()
         if not index:
             raise ValueError(f"資料庫中找不到索引 {index_id}")
-        sources = conn.execute("SELECT ord, source_id, name, version, sha256, metadata FROM kb_source"
-                               " WHERE index_id = %s ORDER BY ord", (index_id,)).fetchall()
-        chunks = conn.execute("SELECT ord, chunk_id, source_id, text, metadata, embedding::real[] FROM kb_chunk"
-                              " WHERE index_id = %s ORDER BY ord", (index_id,)).fetchall()
+        sources = conn.execute(
+            "SELECT ord, source_id, name, version, sha256, metadata FROM kb_source WHERE index_id = %s ORDER BY ord",
+            (index_id,),
+        ).fetchall()
+        chunks = conn.execute(
+            "SELECT ord, chunk_id, source_id, text, metadata, embedding::real[] FROM kb_chunk"
+            " WHERE index_id = %s ORDER BY ord",
+            (index_id,),
+        ).fetchall()
     except _db_errors() as exc:
         raise ValueError(f"讀取資料庫失敗：{exc}") from exc
-    return index_from_rows({"index_id": index[0], "manifest": index[1]},
-                           [dict(zip(("ord", "source_id", "name", "version", "sha256", "metadata"), r)) for r in sources],
-                           [dict(zip(("ord", "chunk_id", "source_id", "text", "metadata", "embedding"), r))
-                            for r in chunks])
+    return index_from_rows(
+        {"index_id": index[0], "manifest": index[1]},
+        [dict(zip(("ord", "source_id", "name", "version", "sha256", "metadata"), r)) for r in sources],
+        [dict(zip(("ord", "chunk_id", "source_id", "text", "metadata", "embedding"), r)) for r in chunks],
+    )
 
 
 def has_vectors(conn, index_id: str | None = None) -> bool:
     """指定的索引（或未指定時，資料庫中任一索引）是否含向量。"""
     try:
         if index_id:
-            row = conn.execute("SELECT dimensions IS NOT NULL FROM kb_index WHERE index_id = %s", (index_id,)).fetchone()
+            row = conn.execute(
+                "SELECT dimensions IS NOT NULL FROM kb_index WHERE index_id = %s", (index_id,)
+            ).fetchone()
             return bool(row and row[0])
         if not conn.execute("SELECT to_regclass('kb_index')").fetchone()[0]:
             return False
@@ -212,14 +282,18 @@ def has_vectors(conn, index_id: str | None = None) -> bool:
 
 def nearest(conn, index_id: str):
     """回傳「查詢向量 → 最近片段的序號」函式；向量已正規化，以餘弦距離排序，距離相同時依序號。"""
+
     def search(query_vector, n: int) -> list[int]:
         try:
-            rows = conn.execute("SELECT ord FROM kb_chunk WHERE index_id = %s AND embedding IS NOT NULL"
-                                " ORDER BY embedding <=> %s::real[]::vector, ord LIMIT %s",
-                                (index_id, [float(x) for x in query_vector], n)).fetchall()
+            rows = conn.execute(
+                "SELECT ord FROM kb_chunk WHERE index_id = %s AND embedding IS NOT NULL"
+                " ORDER BY embedding <=> %s::real[]::vector, ord LIMIT %s",
+                (index_id, [float(x) for x in query_vector], n),
+            ).fetchall()
         except _db_errors() as exc:
             raise ValueError(f"資料庫向量檢索失敗：{exc}") from exc
         return [r[0] for r in rows]
+
     return search
 
 

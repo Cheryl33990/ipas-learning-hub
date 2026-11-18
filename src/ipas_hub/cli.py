@@ -1,4 +1,5 @@
 """RAG 技術原型 CLI；真實資料與執行紀錄只寫入 data/。"""
+
 from __future__ import annotations
 
 import argparse
@@ -32,16 +33,28 @@ def evaluate(kb: KnowledgeBase, cases: list[dict], method: str, k: int) -> dict:
         hits = kb.search(case["query"], k=k, method=method)
         found = {(h["source"], h["page"]) for h in hits}
         expected = {(e["source"], e["page"]) for e in case["expected"]}
-        rows.append({"id": case["id"], "hit": bool(found & expected),
-                     "retrieved": [{"source": h["source"], "page": h["page"]} for h in hits],
-                     "elapsed_ms": round((time.perf_counter() - started) * 1000, 2)})
-    return {"index_id": kb.index_id, "method": method, "k": k, "cases": rows,
-            "hits": sum(r["hit"] for r in rows), "total": len(rows),
-            "limitation": "只量檢索基準，不代表理由正確或 RAG 內容驗收通過"}
+        rows.append(
+            {
+                "id": case["id"],
+                "hit": bool(found & expected),
+                "retrieved": [{"source": h["source"], "page": h["page"]} for h in hits],
+                "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
+            }
+        )
+    return {
+        "index_id": kb.index_id,
+        "method": method,
+        "k": k,
+        "cases": rows,
+        "hits": sum(r["hit"] for r in rows),
+        "total": len(rows),
+        "limitation": "只量檢索基準，不代表理由正確或 RAG 內容驗收通過",
+    }
 
 
 def ask(question: str, hits: list[dict], args) -> dict:
     cfg = LLMConfig.from_env(args.llm_url, args.model, args.allow_remote)
+
     def generate(system, user):
         return chat_json(cfg, system, user)
 
@@ -79,6 +92,7 @@ def source_files(root: Path, sources: list[dict]) -> dict:
 
 def textbook_link(base: str, files: dict, file_prefix: str = ""):
     """回傳「來源 → 網址」的函式：教材連到本機提供的檔案該頁，外部沿用自帶網址。"""
+
     def link(source: dict) -> str | None:
         if source.get("source_type") != "textbook":
             return source.get("url")
@@ -86,15 +100,20 @@ def textbook_link(base: str, files: dict, file_prefix: str = ""):
         if not name or not source.get("pdf_page"):
             return None
         return f"{base.rstrip('/')}/files/{file_prefix}{name}#page={source['pdf_page']}"
+
     return link
 
 
 def answer_text(kb: KnowledgeBase, question: str, args, root: Path, link_for=None) -> str:
     """serve 用：與 ask 指令走同一流程，回傳給人看的文字（依據清單為 Markdown 連結）；外部搜尋失敗時在文末說明。"""
     started = time.perf_counter()
-    result = {"index_id": kb.index_id, "method": args.method, "question": question,
-              "knowledge_base": kb.knowledge_base,
-              "hits": kb.search(question, args.k, args.method)}
+    result = {
+        "index_id": kb.index_id,
+        "method": args.method,
+        "question": question,
+        "knowledge_base": kb.knowledge_base,
+        "hits": kb.search(question, args.k, args.method),
+    }
     result.update(ask(question, result["hits"], args))
     result["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
     save_run(root, result)
@@ -111,8 +130,12 @@ def default_method(store: str) -> str:
 
 def _fall_back_to_bm25(args) -> None:
     args.method = "bm25"
-    print("提醒：此索引沒有向量，改用 BM25 關鍵字檢索。要用混合檢索，請以 --embedding-model 重建索引"
-          "（--store pg 時再載入資料庫）。", file=sys.stderr, flush=True)
+    print(
+        "提醒：此索引沒有向量，改用 BM25 關鍵字檢索。要用混合檢索，請以 --embedding-model 重建索引"
+        "（--store pg 時再載入資料庫）。",
+        file=sys.stderr,
+        flush=True,
+    )
 
 
 def open_kb(root: Path, args, encoder=None) -> KnowledgeBase:
@@ -123,13 +146,13 @@ def open_kb(root: Path, args, encoder=None) -> KnowledgeBase:
     defaulted = getattr(args, "method_defaulted", False)
     if args.store == "pg":
         from . import pgstore
+
         conn = pgstore.connect()
         index_id = str(args.index) if args.index else None
         selected_kb = getattr(args, "kb", None)
         # --kb 選範圍後再處理退回 BM25；混合預設仍優先選該庫含向量版本。
         if selected_kb is not None or index_id is None:
-            index_id = pgstore.select_index(conn, index_id, selected_kb,
-                                           prefer_vectors=args.method != "bm25")
+            index_id = pgstore.select_index(conn, index_id, selected_kb, prefer_vectors=args.method != "bm25")
         if args.method != "bm25" and defaulted and not pgstore.has_vectors(conn, index_id):
             _fall_back_to_bm25(args)
         if encoder is not None:
@@ -140,7 +163,9 @@ def open_kb(root: Path, args, encoder=None) -> KnowledgeBase:
     path = data_path(root, str(args.index))
     if args.method != "bm25" and not json.loads(path.read_text(encoding="utf-8")).get("embedding"):
         if not defaulted:
-            raise ValueError("此索引沒有向量，無法使用向量或混合檢索；請改用 --method bm25，或以 --embedding-model 重建索引")
+            raise ValueError(
+                "此索引沒有向量，無法使用向量或混合檢索；請改用 --method bm25，或以 --embedding-model 重建索引"
+            )
         _fall_back_to_bm25(args)
     kb = KnowledgeBase.load(path, args.method != "bm25")
     if getattr(args, "kb", None) is not None and kb.knowledge_base != args.kb:
@@ -150,15 +175,20 @@ def open_kb(root: Path, args, encoder=None) -> KnowledgeBase:
 
 def load_to_pg(index_path: Path) -> dict:
     from . import pgstore
+
     payload, vectors = pgstore.read_index_files(index_path)
     loaded = pgstore.load_index(pgstore.connect(), payload, vectors)
-    return {"index_id": payload["index_id"], "pg": "loaded" if loaded else "already_loaded",
-            "vectors": vectors is not None}
+    return {
+        "index_id": payload["index_id"],
+        "pg": "loaded" if loaded else "already_loaded",
+        "vectors": vectors is not None,
+    }
 
 
 def routed_server(root: Path, args):
     """共用聊天入口依明列模型選庫；設定不含可由問題決定的動態路徑。"""
     from .server import HOST, make_server
+
     def unique_keys(pairs):
         result = {}
         for key, value in pairs:
@@ -166,13 +196,17 @@ def routed_server(root: Path, args):
                 raise ValueError(f"路由設定含重複名稱：{key}")
             result[key] = value
         return result
+
     config = json.loads((root / args.routes).read_text(encoding="utf-8"), object_pairs_hook=unique_keys)
     if not isinstance(config, dict) or not config:
         raise ValueError("模型路由設定須為非空物件")
     for name, spec in config.items():
         knowledge_base_id({"knowledge_base": name})
-        if (not isinstance(spec, dict) or not {"knowledge_base", "web"} <= set(spec) <= {"knowledge_base", "web", "profile"}
-                or not isinstance(spec.get("profile", ""), str)):
+        if (
+            not isinstance(spec, dict)
+            or not {"knowledge_base", "web"} <= set(spec) <= {"knowledge_base", "web", "profile"}
+            or not isinstance(spec.get("profile", ""), str)
+        ):
             raise ValueError("每個路由須指定 knowledge_base 與 web，可選 profile（路徑字串）")
         knowledge_base_id(spec)
         if spec["web"] not in {"none", "wikipedia"}:
@@ -187,11 +221,15 @@ def routed_server(root: Path, args):
     for name, spec in config.items():
         selected = copy.copy(args)
         selected.kb, selected.web = spec["knowledge_base"], spec["web"]
-        selected.answer_prompt = answer_prompt(load_profile(root, Path(spec["profile"]) if spec.get("profile") else None))
+        selected.answer_prompt = answer_prompt(
+            load_profile(root, Path(spec["profile"]) if spec.get("profile") else None)
+        )
         kb = open_kb(root, selected, encoder)
         if kb.encoder is not None:
             meta = kb.payload["embedding"]
-            if encoder_meta is not None and any(meta[key] != encoder_meta[key] for key in ("name", "revision", "dimensions")):
+            if encoder_meta is not None and any(
+                meta[key] != encoder_meta[key] for key in ("name", "revision", "dimensions")
+            ):
                 raise ValueError("共用路由的嵌入模型版本或維度不一致，請使用獨立端點")
             encoder, encoder_meta = kb.encoder, meta
         local_files = source_files(root, kb.payload["sources"])
@@ -199,8 +237,11 @@ def routed_server(root: Path, args):
         files.update({prefix + key: path for key, path in local_files.items()})
         link = textbook_link(base, local_files, prefix)
         callbacks[name] = lambda q, kb=kb, selected=selected, link=link: answer_text(kb, q, selected, root, link)
-        print(f"模型 {name} → 知識庫 {kb.knowledge_base}；索引 {kb.index_id}；web {selected.web}；"
-              f"profile {spec.get('profile', '通用')}", flush=True)
+        print(
+            f"模型 {name} → 知識庫 {kb.knowledge_base}；索引 {kb.index_id}；web {selected.web}；"
+            f"profile {spec.get('profile', '通用')}",
+            flush=True,
+        )
     return make_server(None, args.port, next(iter(callbacks)), files, models=callbacks)
 
 
@@ -219,13 +260,19 @@ def main(argv=None) -> int:
     load.add_argument("--index", required=True, type=Path)
     for name in ("search", "ask", "evaluate", "serve"):
         cmd = sub.add_parser(name)
-        cmd.add_argument("--store", choices=("file", "pg"), default="file",
-                         help="file：讀 index.json；pg：讀 PostgreSQL（連線讀 PG_DSN）")
+        cmd.add_argument(
+            "--store",
+            choices=("file", "pg"),
+            default="file",
+            help="file：讀 index.json；pg：讀 PostgreSQL（連線讀 PG_DSN）",
+        )
         cmd.add_argument("--kb", help="知識庫名稱；pg 限定該庫，file 時核對指定索引")
-        cmd.add_argument("--index", type=Path,
-                         help="file 時為 index.json 路徑（必填）；pg 時為 index_id，省略則用最近載入的")
-        cmd.add_argument("--method", choices=("bm25", "vector", "hybrid"),
-                         help="預設 hybrid；索引沒有向量時自動改用 bm25 並提醒")
+        cmd.add_argument(
+            "--index", type=Path, help="file 時為 index.json 路徑（必填）；pg 時為 index_id，省略則用最近載入的"
+        )
+        cmd.add_argument(
+            "--method", choices=("bm25", "vector", "hybrid"), help="預設 hybrid；索引沒有向量時自動改用 bm25 並提醒"
+        )
         cmd.add_argument("--k", type=int, default=5)
         if name == "evaluate":
             cmd.add_argument("--cases", type=Path, required=True)
@@ -233,7 +280,9 @@ def main(argv=None) -> int:
             cmd.add_argument("--routes", type=Path, help="模型名稱到知識庫／外搜政策的 JSON 設定（pg）")
             cmd.add_argument("--port", type=int, default=8100, help="只綁 127.0.0.1")
             cmd.add_argument("--served-name", default="rag", help="聊天介面看到的模型名稱")
-            cmd.add_argument("--link-base", help="引用連結的網址開頭（給瀏覽器開，不是給容器）；預設 http://127.0.0.1:<port>")
+            cmd.add_argument(
+                "--link-base", help="引用連結的網址開頭（給瀏覽器開，不是給容器）；預設 http://127.0.0.1:<port>"
+            )
         else:
             query = cmd.add_mutually_exclusive_group(required=True)
             query.add_argument("--query")
@@ -241,12 +290,16 @@ def main(argv=None) -> int:
         if name in ("ask", "serve"):
             cmd.add_argument("--model", help="OpenAI 相容服務上的模型名稱；預設讀 LLM_MODEL")
             cmd.add_argument("--llm-url", help="OpenAI 相容端點；預設讀 LLM_BASE_URL，否則本機 vLLM")
-            cmd.add_argument("--allow-remote", action="store_true",
-                             help="允許本機以外的 LLM 端點（可能收費）；金鑰只讀 LLM_API_KEY")
+            cmd.add_argument(
+                "--allow-remote", action="store_true", help="允許本機以外的 LLM 端點（可能收費）；金鑰只讀 LLM_API_KEY"
+            )
             cmd.add_argument("--web", choices=("wikipedia", "none"), default="wikipedia")
             cmd.add_argument("--web-k", type=int, default=4, help="外部片段上限")
-            cmd.add_argument("--profile", type=Path,
-                             help="領域設定 JSON（角色與領域規則），例如 examples/ipas/profile.json；省略則用通用設定")
+            cmd.add_argument(
+                "--profile",
+                type=Path,
+                help="領域設定 JSON（角色與領域規則），例如 examples/ipas/profile.json；省略則用通用設定",
+            )
             if name == "ask":
                 cmd.add_argument("--format", choices=("json", "text"), default="json")
     args = parser.parse_args(argv)
@@ -264,6 +317,7 @@ def main(argv=None) -> int:
                 result.update(load_to_pg(path))
         elif args.command == "fetch":
             from .fetch import fetch_sources
+
             print(json.dumps({"sources": fetch_sources(root, root / args.config)}, ensure_ascii=False, indent=2))
             return 0
         elif args.command == "pg-load":
@@ -282,13 +336,17 @@ def main(argv=None) -> int:
             kb = open_kb(root, args)
             if args.command == "serve":
                 from .server import HOST, make_server
+
                 check_config(LLMConfig.from_env(args.llm_url, args.model, args.allow_remote))  # 設定錯誤在啟動時就報
                 files = source_files(root, kb.payload["sources"])
                 link_for = textbook_link(args.link_base or f"http://{HOST}:{args.port}", files)
-                server = make_server(lambda q: answer_text(kb, q, args, root, link_for), args.port,
-                                     args.served_name, files)
-                print(f"OpenAI 相容端點：http://{HOST}:{server.server_address[1]}/v1（模型名稱 {args.served_name}）；Ctrl+C 結束",
-                      flush=True)
+                server = make_server(
+                    lambda q: answer_text(kb, q, args, root, link_for), args.port, args.served_name, files
+                )
+                print(
+                    f"OpenAI 相容端點：http://{HOST}:{server.server_address[1]}/v1（模型名稱 {args.served_name}）；Ctrl+C 結束",
+                    flush=True,
+                )
                 print(f"知識庫：{kb.knowledge_base}；索引：{kb.index_id}", flush=True)
                 try:
                     server.serve_forever()
@@ -302,11 +360,19 @@ def main(argv=None) -> int:
                 result = evaluate(kb, cases, args.method, args.k)
                 result["knowledge_base"] = kb.knowledge_base
             else:
-                question = args.query if args.query is not None else data_path(root, str(args.query_file)).read_text(encoding="utf-8")
+                question = (
+                    args.query
+                    if args.query is not None
+                    else data_path(root, str(args.query_file)).read_text(encoding="utf-8")
+                )
                 hits = kb.search(question, args.k, args.method)
-                result = {"index_id": kb.index_id, "method": args.method, "question": question,
-                          "knowledge_base": kb.knowledge_base,
-                          "hits": hits}
+                result = {
+                    "index_id": kb.index_id,
+                    "method": args.method,
+                    "question": question,
+                    "knowledge_base": kb.knowledge_base,
+                    "hits": hits,
+                }
                 if args.command == "ask":
                     result.update(ask(question, hits, args))
         result["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)

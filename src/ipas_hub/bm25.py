@@ -1,4 +1,5 @@
 """BM25（Okapi）排序，輸入是已斷好詞的文件。"""
+
 from __future__ import annotations
 
 import math

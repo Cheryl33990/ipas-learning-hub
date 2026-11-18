@@ -149,7 +149,7 @@ docs/internal/      Development history, past validation and AI-collaboration re
 ## Verification and data safety
 
 - `uv run pytest` runs all tests; tests that need a database are skipped when `PG_TEST_DSN` is not set.
-- GitHub Actions runs on every PR: `ruff check`, pgvector integration tests, the offline demo, a check that `data/` is not tracked, in-container tests, and building and smoke-starting the runtime image.
+- GitHub Actions runs on every PR: `ruff check` and `ruff format --check`, pgvector integration tests, the offline demo, a check that `data/` is not tracked, in-container tests, and building and smoke-starting the runtime image.
 - Tests use only synthetic data and stand-in models: they prove pipeline behavior, not answer quality.
 - What must never be committed, and where runtime data goes, is described in [SECURITY.md](SECURITY.md) (Chinese).
 

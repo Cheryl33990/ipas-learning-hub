@@ -1,4 +1,5 @@
 """一分鐘示範：iPAS 自寫筆記＋腳本化模型，走正式的檢索、引用檢查與輸出流程。"""
+
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,8 @@ def run(name):
 
 def test_each_scenario_reaches_its_documented_outcome():
     assert {name: run(name)["outcome"] for name in demo.SCENARIOS} == {
-        name: s["expected"] for name, s in demo.SCENARIOS.items()}
+        name: s["expected"] for name, s in demo.SCENARIOS.items()
+    }
 
 
 def test_grounded_multiple_choice_cites_retrieved_page_and_states_the_choice():
@@ -27,9 +29,11 @@ def test_grounded_multiple_choice_cites_retrieved_page_and_states_the_choice():
 def test_demo_uses_the_ipas_profile():
     seen = []
     original = demo.answer
+
     def spy(question, hits, external, generate, prompt=None):
         seen.append(prompt)
         return original(question, hits, external, generate, prompt)
+
     demo.answer = spy
     try:
         run("grounded-answer")

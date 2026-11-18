@@ -78,6 +78,7 @@ def test_read_pages_keeps_pdf_page_order_even_when_unlabelled_pages_are_skipped(
         def __init__(self, path):
             raw = ["封面沒有頁碼", "序", "第一頁內文\n1-1\n", "第二頁舊詞\n1-2\n"]
             self.pages = [type("P", (), {"extract_text": lambda self, t=t: t})() for t in raw]
+
     monkeypatch.setattr(pypdf, "PdfReader", FakeReader)
     pages = read_pages("fake.pdf")
     assert [(p.label, p.pdf_page) for p in pages] == [("1-1", 3), ("1-2", 4)]

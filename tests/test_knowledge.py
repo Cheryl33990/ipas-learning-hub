@@ -10,11 +10,15 @@ from ipas_hub.rag import answer
 
 
 def payload(embedding=None):
-    data = {"schema_version": 1, "embedding": embedding,
-            "sources": [{"id": "s1", "name": "科目一", "version": "v1"},
-                        {"id": "s2", "name": "科目二", "version": "v2"}],
-            "chunks": [{"id": "s1:3-1:0", "source": "s1", "page": "3-1", "text": "合成例子：分類模型辨識圖像"},
-                       {"id": "s2:3-1:0", "source": "s2", "page": "3-1", "text": "合成例子：差分隱私加入雜訊保護資料"}]}
+    data = {
+        "schema_version": 1,
+        "embedding": embedding,
+        "sources": [{"id": "s1", "name": "科目一", "version": "v1"}, {"id": "s2", "name": "科目二", "version": "v2"}],
+        "chunks": [
+            {"id": "s1:3-1:0", "source": "s1", "page": "3-1", "text": "合成例子：分類模型辨識圖像"},
+            {"id": "s2:3-1:0", "source": "s2", "page": "3-1", "text": "合成例子：差分隱私加入雜訊保護資料"},
+        ],
+    }
     return {"index_id": digest(canonical(data)), **data}
 
 
@@ -47,6 +51,7 @@ def test_hybrid_retrieval_routes_to_matching_vector_and_lexical_source():
     class Encoder:
         def encode(self, texts, **kwargs):
             return [[0.0, 1.0]]
+
     vectors = np.eye(2, dtype=np.float32)
     meta = {"dimensions": 2, "sha256": digest(vectors.tobytes())}
     kb = KnowledgeBase(payload(meta), vectors, Encoder())
@@ -58,14 +63,19 @@ def test_local_encoder_ignores_files_the_project_does_not_download(monkeypatch, 
     import sys
     import types
     from ipas_hub import knowledge
+
     seen = {}
 
     def fake_snapshot_download(model, **kwargs):
         seen.update(kwargs)
         return str(tmp_path / "rev123")
+
     monkeypatch.setitem(sys.modules, "huggingface_hub", types.SimpleNamespace(snapshot_download=fake_snapshot_download))
-    monkeypatch.setitem(sys.modules, "sentence_transformers",
-                        types.SimpleNamespace(SentenceTransformer=lambda path, **kw: ("encoder", path)))
+    monkeypatch.setitem(
+        sys.modules,
+        "sentence_transformers",
+        types.SimpleNamespace(SentenceTransformer=lambda path, **kw: ("encoder", path)),
+    )
     encoder, revision = knowledge.local_encoder("org/model", "abc")
     assert revision == "rev123" and seen["local_files_only"] is True and seen["revision"] == "abc"
     assert {"onnx/*", "imgs/*", "*.jpg"} <= set(seen["ignore_patterns"])
@@ -85,9 +95,21 @@ def test_build_records_patches_and_fails_if_patch_does_not_apply(tmp_path, monke
     patch = tmp_path / "data/patch.json"
     patch.write_text(json.dumps([{"id": "fix", "old": "舊詞", "new": "新詞"}]), encoding="utf-8")
     (tmp_path / "uv.lock").write_text("synthetic lock")
-    config = {"schema_version": 1, "chunk_size": 40, "chunk_stride": 30,
-              "sources": [{"id": "s1", "name": "合成", "version": "v1", "pdf": "data/fake.pdf",
-                           "sha256": digest(pdf.read_bytes()), "patches": "data/patch.json"}]}
+    config = {
+        "schema_version": 1,
+        "chunk_size": 40,
+        "chunk_stride": 30,
+        "sources": [
+            {
+                "id": "s1",
+                "name": "合成",
+                "version": "v1",
+                "pdf": "data/fake.pdf",
+                "sha256": digest(pdf.read_bytes()),
+                "patches": "data/patch.json",
+            }
+        ],
+    }
     file = tmp_path / "config.json"
     file.write_text(json.dumps(config), encoding="utf-8")
     monkeypatch.setattr("ipas_hub.knowledge.read_pages", lambda *_, **__: [Page("3-1", "合成舊詞", 9)])
@@ -108,14 +130,21 @@ def test_source_without_errata_file_is_indexed_and_marked_not_applied(tmp_path, 
     pdf = tmp_path / "data/fake.pdf"
     pdf.write_bytes(b"synthetic_pdf")
     (tmp_path / "uv.lock").write_text("synthetic lock")
-    config = {"schema_version": 1, "chunk_size": 40, "chunk_stride": 30,
-              "sources": [{"id": "s1", "name": "合成", "version": "v1", "pdf": "data/fake.pdf",
-                           "sha256": digest(pdf.read_bytes())}]}
+    config = {
+        "schema_version": 1,
+        "chunk_size": 40,
+        "chunk_stride": 30,
+        "sources": [
+            {"id": "s1", "name": "合成", "version": "v1", "pdf": "data/fake.pdf", "sha256": digest(pdf.read_bytes())}
+        ],
+    }
     file = tmp_path / "config.json"
     file.write_text(json.dumps(config), encoding="utf-8")
     seen = []
-    monkeypatch.setattr("ipas_hub.knowledge.read_pages",
-                        lambda path, running_head=None: seen.append(running_head) or [Page("3-1", "合成舊詞", 3)])
+    monkeypatch.setattr(
+        "ipas_hub.knowledge.read_pages",
+        lambda path, running_head=None: seen.append(running_head) or [Page("3-1", "合成舊詞", 3)],
+    )
     data = json.loads(build_index(tmp_path, file, tmp_path / "data/index").read_text(encoding="utf-8"))
     source = data["sources"][0]
     assert source["errata"] == "not_applied" and source["patch_sha256"] is None and source["patch_report"] == []
@@ -130,14 +159,18 @@ def test_source_without_errata_file_is_indexed_and_marked_not_applied(tmp_path, 
 def test_no_evidence_does_not_call_model():
     def unexpected(_):
         pytest.fail("不應呼叫模型")
+
     assert answer("合成問題", [], [], unexpected)["status"] == "insufficient"
 
 
-@pytest.mark.parametrize("output", [
-    {"status": "supported", "answer": "合成回答", "citations": ["fake"]},
-    {"status": "supported", "answer": "合成回答", "citations": []},
-    {"status": "supported", "answer": "", "citations": ["s2:3-1:0"]},
-])
+@pytest.mark.parametrize(
+    "output",
+    [
+        {"status": "supported", "answer": "合成回答", "citations": ["fake"]},
+        {"status": "supported", "answer": "合成回答", "citations": []},
+        {"status": "supported", "answer": "", "citations": ["s2:3-1:0"]},
+    ],
+)
 def test_invalid_model_citations_and_empty_answers_are_rejected(output):
     hits = KnowledgeBase(payload()).search("差分隱私")
     with pytest.raises(ValueError):
@@ -146,8 +179,15 @@ def test_invalid_model_citations_and_empty_answers_are_rejected(output):
 
 def test_valid_response_is_labelled_as_structural_not_semantic_verification():
     hits = KnowledgeBase(payload()).search("差分隱私")
-    result = answer("合成問題", hits, [], lambda *_: {"model": "fake-test-only", "output": {
-        "status": "supported", "segments": [{"text": "合成回答", "citations": ["s2:3-1:0"]}]}})
+    result = answer(
+        "合成問題",
+        hits,
+        [],
+        lambda *_: {
+            "model": "fake-test-only",
+            "output": {"status": "supported", "segments": [{"text": "合成回答", "citations": ["s2:3-1:0"]}]},
+        },
+    )
     assert result["prompt_sha256"]
     assert result["validation"] == "citation_ids_and_lexical_check_not_semantic_verification"
 
@@ -184,6 +224,20 @@ def test_explicit_vector_method_on_index_without_vectors_still_fails(tmp_path, c
     folder = tmp_path / "data/index"
     folder.mkdir(parents=True)
     (folder / "index.json").write_bytes(canonical(payload()))
-    assert main(["--root", str(tmp_path), "search", "--index", "data/index/index.json", "--query", "差分隱私",
-                 "--method", "hybrid"]) == 1
+    assert (
+        main(
+            [
+                "--root",
+                str(tmp_path),
+                "search",
+                "--index",
+                "data/index/index.json",
+                "--query",
+                "差分隱私",
+                "--method",
+                "hybrid",
+            ]
+        )
+        == 1
+    )
     assert "向量" in capsys.readouterr().err

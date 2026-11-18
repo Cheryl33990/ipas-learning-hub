@@ -1,4 +1,5 @@
 """學習指引：逐頁擷取文字、辨識頁尾頁碼、套用勘誤、切塊。"""
+
 from __future__ import annotations
 
 import re
@@ -14,7 +15,7 @@ _RUNNING_HEAD = re.compile(r"^\s*(第.章\s*人工智慧基礎概論|附件)\s*$
 @dataclass(frozen=True)
 class Page:
     label: str  # 頁尾印的頁碼，例如 3-25
-    text: str   # 正規化後的內文
+    text: str  # 正規化後的內文
     pdf_page: int | None = None  # 在 PDF 檔內的頁序（從 1 起算），用來開到該頁
 
 

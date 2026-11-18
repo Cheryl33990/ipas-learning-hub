@@ -1,4 +1,5 @@
 """文字正規化與斷詞。中文不斷詞，用字元二元組；英數用整個單字。"""
+
 from __future__ import annotations
 
 import re

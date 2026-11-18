@@ -8,6 +8,7 @@
 
 用法（在 repo 根目錄）：uv run python -m ipas_hub.demo [情境名稱 ...]   （不指定則全部；--list 列出情境）
 """
+
 from __future__ import annotations
 
 import argparse
@@ -34,13 +35,31 @@ def payload(root: Path) -> dict:
     """與 build_index 相同結構的索引內容；index_id 由內容雜湊算出，竄改任何片段都會被拒。"""
     sample = json.loads((root / SAMPLE).read_text(encoding="utf-8"))
     source = sample["source"]
-    body = {"schema_version": SCHEMA_VERSION, "knowledge_base": "ipas-sample",
-            "sources": [{**source, "pdf": str(SAMPLE), "sha256": "sample", "patch_sha256": None,
-                         "patch_report": [], "errata": "not_applied", "pages": len(sample["pages"])}],
-            "chunks": [{"id": cid(p["page"]), "source": source["id"], "page": p["page"], "text": p["text"]}
-                       for p in sample["pages"]],
-            "chunk_size": 400, "chunk_stride": 300, "embedding": None,
-            "code_version": "demo", "code_sha256": {}, "lock_sha256": "demo"}
+    body = {
+        "schema_version": SCHEMA_VERSION,
+        "knowledge_base": "ipas-sample",
+        "sources": [
+            {
+                **source,
+                "pdf": str(SAMPLE),
+                "sha256": "sample",
+                "patch_sha256": None,
+                "patch_report": [],
+                "errata": "not_applied",
+                "pages": len(sample["pages"]),
+            }
+        ],
+        "chunks": [
+            {"id": cid(p["page"]), "source": source["id"], "page": p["page"], "text": p["text"]}
+            for p in sample["pages"]
+        ],
+        "chunk_size": 400,
+        "chunk_stride": 300,
+        "embedding": None,
+        "code_version": "demo",
+        "code_sha256": {},
+        "lock_sha256": "demo",
+    }
     return {"index_id": digest(canonical(body)), **body}
 
 
@@ -52,18 +71,24 @@ SCENARIOS = {
     "grounded-answer": {
         "summary": "選擇題逐項說明並引用檢索到的頁面，最後給出答案",
         "question": "下列何者屬於監督式學習的常見任務？(A) 分群 (B) 降維 (C) 分類 (D) 關聯規則探勘",
-        "replies": [said(("(A) 分群是非監督式學習的常見任務。", [cid("1-1")]),
-                         ("(B) 降維也是非監督式學習的常見任務。", [cid("1-1")]),
-                         ("(C) 分類使用附有標籤的資料，屬於監督式學習。", [cid("1-1")]),
-                         ("(D) 關聯規則探勘不需要標籤，片段未提及，此為推論。", []),
-                         ("答案：C", []))],
+        "replies": [
+            said(
+                ("(A) 分群是非監督式學習的常見任務。", [cid("1-1")]),
+                ("(B) 降維也是非監督式學習的常見任務。", [cid("1-1")]),
+                ("(C) 分類使用附有標籤的資料，屬於監督式學習。", [cid("1-1")]),
+                ("(D) 關聯規則探勘不需要標籤，片段未提及，此為推論。", []),
+                ("答案：C", []),
+            )
+        ],
         "expected": "supported",
     },
     "repaired-citation": {
         "summary": "第一次引用不存在的片段，程式退回修正一次後通過",
         "question": "MAE 與 MSE 哪一個對離群值比較敏感？",
-        "replies": [said(("MSE 對離群值較敏感。", ["notes:9-9:0"])),
-                    said(("MSE 先將差距平方再平均，因此對離群值較敏感。", [cid("2-1")]))],
+        "replies": [
+            said(("MSE 對離群值較敏感。", ["notes:9-9:0"])),
+            said(("MSE 先將差距平方再平均，因此對離群值較敏感。", [cid("2-1")])),
+        ],
         "expected": "supported-after-repair",
     },
     "fabricated-citation": {
@@ -108,15 +133,25 @@ def run(name: str, root: Path | None = None) -> dict:
     try:
         kb = KnowledgeBase(index)
     except ValueError as exc:
-        return {"hits": [], "model_calls": 0, "generation": None,
-                "text": failure_text(exc), "outcome": "index-rejected"}
+        return {
+            "hits": [],
+            "model_calls": 0,
+            "generation": None,
+            "text": failure_text(exc),
+            "outcome": "index-rejected",
+        }
     hits = kb.search(scenario["question"], k=K)
     prompt = answer_prompt(load_profile(root, PROFILE))
     try:
         generation = answer(scenario["question"], hits, [], generate, prompt)
     except ValueError as exc:
-        return {"hits": hits, "model_calls": len(calls), "generation": None,
-                "text": failure_text(exc), "outcome": "refused"}
+        return {
+            "hits": hits,
+            "model_calls": len(calls),
+            "generation": None,
+            "text": failure_text(exc),
+            "outcome": "refused",
+        }
     if generation["status"] != "supported":
         outcome = "insufficient"
     elif generation["flagged_segments"]:
@@ -125,8 +160,13 @@ def run(name: str, root: Path | None = None) -> dict:
         outcome = "supported-after-repair"
     else:
         outcome = "supported"
-    return {"hits": hits, "model_calls": len(calls), "generation": generation,
-            "text": render_text(generation), "outcome": outcome}
+    return {
+        "hits": hits,
+        "model_calls": len(calls),
+        "generation": generation,
+        "text": render_text(generation),
+        "outcome": outcome,
+    }
 
 
 def render(name: str, root: Path | None = None) -> str:
@@ -137,14 +177,19 @@ def render(name: str, root: Path | None = None) -> str:
     else:
         retrieval = "" if hits else "無命中"
     verdict = "符合預期" if result["outcome"] == scenario["expected"] else f"預期 {scenario['expected']}"
-    return "\n".join([
-        f"━━ {name} ━━ {scenario['summary']}",
-        f"問題：{scenario['question']}",
-        f"檢索（BM25，前 {K}）：{retrieval}", *hits,
-        f"模型呼叫：{result['model_calls']} 次（腳本化替身）",
-        "", result["text"], "",
-        f"結果：{result['outcome']}（{verdict}）",
-    ])
+    return "\n".join(
+        [
+            f"━━ {name} ━━ {scenario['summary']}",
+            f"問題：{scenario['question']}",
+            f"檢索（BM25，前 {K}）：{retrieval}",
+            *hits,
+            f"模型呼叫：{result['model_calls']} 次（腳本化替身）",
+            "",
+            result["text"],
+            "",
+            f"結果：{result['outcome']}（{verdict}）",
+        ]
+    )
 
 
 def render_all(names=None, root: Path | None = None) -> str:

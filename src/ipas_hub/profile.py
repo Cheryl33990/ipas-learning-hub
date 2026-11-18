@@ -3,6 +3,7 @@
 prompts/answer.txt 是所有領域共用的規則（只用 evidence、逐句引用、不得捏造 id）；
 profile 只填入「你是誰、文件叫什麼、還有哪些領域規則」。換資料時改 profile，不改程式。
 """
+
 from __future__ import annotations
 
 import json

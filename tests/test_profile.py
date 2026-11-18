@@ -1,4 +1,5 @@
 """領域設定（profile）：管線通用，角色與領域規則由設定檔注入。"""
+
 import hashlib
 import json
 from pathlib import Path
@@ -28,12 +29,15 @@ def test_missing_profile_path_means_default():
     assert load_profile(ROOT, None) == DEFAULT_PROFILE
 
 
-@pytest.mark.parametrize("change", [
-    {"unknown": "x"},
-    {"intro": ""},
-    {"extra_rules": "不是清單"},
-    {"extra_rules": [""]},
-])
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"unknown": "x"},
+        {"intro": ""},
+        {"extra_rules": "不是清單"},
+        {"extra_rules": [""]},
+    ],
+)
 def test_profile_with_bad_fields_is_rejected(tmp_path, change):
     (tmp_path / "p.json").write_text(json.dumps({**DEFAULT_PROFILE, **change}), encoding="utf-8")
     with pytest.raises(ValueError):
@@ -55,9 +59,11 @@ def test_profile_path_cannot_escape_root(tmp_path):
 
 def test_answer_sends_the_given_prompt_and_records_its_hash():
     seen = {}
+
     def generate(system, user):
         seen["system"] = system
         return {"output": {"status": "insufficient", "segments": [{"text": "不足", "citations": []}]}}
+
     prompt = answer_prompt({**DEFAULT_PROFILE, "intro": "你是測試助理，依 evidence 回答 question。"})
     result = answer("問題", [{"id": "a:1:0", "source": "a", "page": "1", "text": "內容"}], [], generate, prompt)
     assert seen["system"] == prompt

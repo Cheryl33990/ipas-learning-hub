@@ -4,6 +4,7 @@
 外部結果是補充資料，不是教材；引用時須標明來源。
 搜尋詞可附英文版本，主要來源沒有相關結果時改查備援來源（英文維基百科）。
 """
+
 from __future__ import annotations
 
 import json
@@ -21,8 +22,14 @@ USER_AGENT = "ipas-learning-hub/0.1 (https://github.com/Cheryl33990/ipas-learnin
 class WebSearch(Protocol):
     name: str
 
-    def search(self, query: str, k: int, context: str | None = None,
-               fallback_query: str | None = None, fallback_context: str | None = None) -> list[dict]: ...
+    def search(
+        self,
+        query: str,
+        k: int,
+        context: str | None = None,
+        fallback_query: str | None = None,
+        fallback_context: str | None = None,
+    ) -> list[dict]: ...
 
 
 class NoSearch:
@@ -42,7 +49,7 @@ def _token_matches(token: str, haystack: str) -> bool:
     中文詞至少一半的字元二元組出現（暫定，容許「監督式學習」對「監督學習」）。"""
     if not CJK.search(token):
         return re.search(rf"(?<![A-Za-z0-9]){re.escape(token)}(?![A-Za-z0-9])", haystack, re.IGNORECASE) is not None
-    grams = {run[i:i + 2] for run in CJK.findall(token) for i in range(len(run) - 1)} or {token}
+    grams = {run[i : i + 2] for run in CJK.findall(token) for i in range(len(run) - 1)} or {token}
     return sum(g in haystack for g in grams) / len(grams) >= 0.5
 
 
@@ -68,8 +75,17 @@ class WikipediaSearch:
     有領域詞時，導言或所取段落也須出現領域詞，排除同名但不同領域的頁面（如 Chromium OS Lime）。
     """
 
-    def __init__(self, host: str = "zh.wikipedia.org", provider: str = "wikipedia", id_prefix: str = "wiki",
-                 language: str = "zh-TW", chars: int = 600, timeout: float = 15, opener=urlopen, sleep=time.sleep):
+    def __init__(
+        self,
+        host: str = "zh.wikipedia.org",
+        provider: str = "wikipedia",
+        id_prefix: str = "wiki",
+        language: str = "zh-TW",
+        chars: int = 600,
+        timeout: float = 15,
+        opener=urlopen,
+        sleep=time.sleep,
+    ):
         self.host, self.name, self.id_prefix, self.language = host, provider, id_prefix, language
         self.chars, self.timeout, self.opener, self.sleep = chars, timeout, opener, sleep
         self._last = None
@@ -80,8 +96,10 @@ class WikipediaSearch:
             if wait > 0:
                 self.sleep(wait)
         self._last = time.monotonic()
-        req = Request(f"https://{self.host}/w/api.php?{urlencode(params)}",
-                      headers={"User-Agent": USER_AGENT, "Accept-Language": self.language})
+        req = Request(
+            f"https://{self.host}/w/api.php?{urlencode(params)}",
+            headers={"User-Agent": USER_AGENT, "Accept-Language": self.language},
+        )
         for attempt in (1, 2):
             try:
                 with self.opener(req, timeout=self.timeout) as response:
@@ -104,10 +122,22 @@ class WikipediaSearch:
         if not query.strip() or not (1 <= k <= 10):
             raise ValueError("搜尋詞不可空白，k 須介於 1 至 10")
         full_query = f"{query} {context}".strip() if context else query
-        data = self._get({"action": "query", "generator": "search", "gsrsearch": full_query, "gsrlimit": k,
-                          "prop": "extracts|info|pageprops", "ppprop": "disambiguation",
-                          "inprop": "url|varianttitles", "exintro": 1, "explaintext": 1, "exchars": self.chars,
-                          "format": "json", "formatversion": 2})
+        data = self._get(
+            {
+                "action": "query",
+                "generator": "search",
+                "gsrsearch": full_query,
+                "gsrlimit": k,
+                "prop": "extracts|info|pageprops",
+                "ppprop": "disambiguation",
+                "inprop": "url|varianttitles",
+                "exintro": 1,
+                "explaintext": 1,
+                "exchars": self.chars,
+                "format": "json",
+                "formatversion": 2,
+            }
+        )
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
         pages = sorted(data.get("query", {}).get("pages", []), key=lambda p: p.get("index", 0))
         hits, fetches = [], 0
@@ -120,8 +150,16 @@ class WikipediaSearch:
                 if fetches >= MAX_FOCUS_FETCHES:
                     continue
                 fetches += 1
-                full = self._get({"action": "query", "prop": "extracts", "pageids": page["pageid"],
-                                  "explaintext": 1, "format": "json", "formatversion": 2})
+                full = self._get(
+                    {
+                        "action": "query",
+                        "prop": "extracts",
+                        "pageids": page["pageid"],
+                        "explaintext": 1,
+                        "format": "json",
+                        "formatversion": 2,
+                    }
+                )
                 full_pages = full.get("query", {}).get("pages", [])
                 text = _focus(query, (full_pages[0].get("extract") or "") if full_pages else "", self.chars)
                 if not text or not relevant(query, title, text):
@@ -129,11 +167,24 @@ class WikipediaSearch:
             if not text or (context and not relevant(context, title, f"{intro}\n{text}")):
                 continue
             revision = page.get("lastrevid")
-            url = (f"https://{self.host}/w/index.php?curid={page['pageid']}&oldid={revision}"
-                   if revision else page.get("fullurl"))
-            hits.append({"id": f"{self.id_prefix}:{page['pageid']}", "source_type": "external",
-                         "provider": self.name, "title": title, "url": url, "revision": revision,
-                         "text": text, "retrieved_at": now, "query": full_query})
+            url = (
+                f"https://{self.host}/w/index.php?curid={page['pageid']}&oldid={revision}"
+                if revision
+                else page.get("fullurl")
+            )
+            hits.append(
+                {
+                    "id": f"{self.id_prefix}:{page['pageid']}",
+                    "source_type": "external",
+                    "provider": self.name,
+                    "title": title,
+                    "url": url,
+                    "revision": revision,
+                    "text": text,
+                    "retrieved_at": now,
+                    "query": full_query,
+                }
+            )
         return hits
 
 
@@ -143,15 +194,23 @@ class WikipediaWithFallback:
     英文維基加領域詞查不到時，再只用概念詞查一次（領域詞可能不在正確頁面中）。
     中文維基不重試無領域詞的查詢，因為同名無關條目多半出在那裡。
     """
+
     name = "wikipedia"
 
     def __init__(self, primary=None, fallback=None):
         self.primary = primary or WikipediaSearch()
-        self.fallback = fallback or WikipediaSearch(host="en.wikipedia.org", provider="wikipedia-en",
-                                                    id_prefix="wiki-en", language="en")
+        self.fallback = fallback or WikipediaSearch(
+            host="en.wikipedia.org", provider="wikipedia-en", id_prefix="wiki-en", language="en"
+        )
 
-    def search(self, query: str, k: int, context: str | None = None,
-               fallback_query: str | None = None, fallback_context: str | None = None) -> list[dict]:
+    def search(
+        self,
+        query: str,
+        k: int,
+        context: str | None = None,
+        fallback_query: str | None = None,
+        fallback_context: str | None = None,
+    ) -> list[dict]:
         try:
             hits = self.primary.search(query, k, context)
         except ValueError:

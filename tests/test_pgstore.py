@@ -3,6 +3,7 @@
 前半不需要資料庫：資料列與索引內容互轉、竄改拒絕、向量檢索介面。
 後半需要資料庫：設定 PG_TEST_DSN 才執行（CI 以 service container 提供），每個測試用獨立 schema。
 """
+
 import os
 import uuid
 
@@ -16,20 +17,47 @@ VEC = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
 
 
 def payload(vectors=None, extra_chunk=False):
-    chunks = [{"id": "s1:3-1:0", "source": "s1", "page": "3-1", "pdf_page": 9, "text": "合成：分類模型辨識圖像"},
-              {"id": "s1:3-2:0", "source": "s1", "page": "3-2", "pdf_page": 10, "text": "合成：迴歸預測連續數值"},
-              {"id": "s2:3-1:0", "source": "s2", "page": "3-1", "pdf_page": 7, "text": "合成：差分隱私加入雜訊"}]
+    chunks = [
+        {"id": "s1:3-1:0", "source": "s1", "page": "3-1", "pdf_page": 9, "text": "合成：分類模型辨識圖像"},
+        {"id": "s1:3-2:0", "source": "s1", "page": "3-2", "pdf_page": 10, "text": "合成：迴歸預測連續數值"},
+        {"id": "s2:3-1:0", "source": "s2", "page": "3-1", "pdf_page": 7, "text": "合成：差分隱私加入雜訊"},
+    ]
     if extra_chunk:
         chunks.append({"id": "s2:3-2:0", "source": "s2", "page": "3-2", "text": "合成：舊索引沒有 PDF 頁"})
-    data = {"schema_version": 1, "chunk_size": 40, "chunk_stride": 30, "code_version": "test",
-            "code_sha256": {"a.py": "h"}, "lock_sha256": "l",
-            "embedding": None if vectors is None else {"name": "fake", "revision": "r1", "dimensions": vectors.shape[1],
-                                                       "sha256": digest(vectors.tobytes())},
-            "sources": [{"id": "s1", "name": "科目一", "version": "v1", "sha256": "a", "pdf": "data/a.pdf", "pages": 2,
-                         "patch_sha256": "p", "patch_report": [{"id": "fix", "applied_on": ["3-1"]}]},
-                        {"id": "s2", "name": "科目二", "version": "v2", "sha256": "b", "pdf": "data/b.pdf", "pages": 2,
-                         "patch_sha256": "q", "patch_report": []}],
-            "chunks": chunks}
+    data = {
+        "schema_version": 1,
+        "chunk_size": 40,
+        "chunk_stride": 30,
+        "code_version": "test",
+        "code_sha256": {"a.py": "h"},
+        "lock_sha256": "l",
+        "embedding": None
+        if vectors is None
+        else {"name": "fake", "revision": "r1", "dimensions": vectors.shape[1], "sha256": digest(vectors.tobytes())},
+        "sources": [
+            {
+                "id": "s1",
+                "name": "科目一",
+                "version": "v1",
+                "sha256": "a",
+                "pdf": "data/a.pdf",
+                "pages": 2,
+                "patch_sha256": "p",
+                "patch_report": [{"id": "fix", "applied_on": ["3-1"]}],
+            },
+            {
+                "id": "s2",
+                "name": "科目二",
+                "version": "v2",
+                "sha256": "b",
+                "pdf": "data/b.pdf",
+                "pages": 2,
+                "patch_sha256": "q",
+                "patch_report": [],
+            },
+        ],
+        "chunks": chunks,
+    }
     return {"index_id": digest(canonical(data)), **data}
 
 
@@ -42,6 +70,7 @@ class Encoder:
 
 
 # ---- 不需要資料庫 ----
+
 
 def test_rows_keep_generic_columns_and_put_document_details_in_metadata():
     rows = pgstore.rows_from_index(payload(VEC), VEC)
@@ -95,6 +124,7 @@ def test_vector_and_hybrid_search_use_the_vector_backend_when_given():
     def nearest(query_vector, n):
         calls.append((list(query_vector), n))
         return [2, 0, 1]
+
     kb = KnowledgeBase(payload(VEC), VEC, Encoder([0.0, 0.0, 1.0]), vector_search=nearest)
     assert kb.search("任意", method="vector")[0]["id"] == "s2:3-1:0"
     assert kb.search("差分隱私", method="hybrid")[0]["id"] == "s2:3-1:0"
@@ -162,8 +192,9 @@ def test_db_vector_ranking_matches_the_file_index(conn):
     file_kb = KnowledgeBase(data, vectors, Encoder(query))
     db_kb = pgstore.open_knowledge_base(conn, data["index_id"], vector=True, encoder=Encoder(query))
     for method in ("vector", "hybrid", "bm25"):
-        assert ([h["id"] for h in db_kb.search("差分隱私", 4, method)]
-                == [h["id"] for h in file_kb.search("差分隱私", 4, method)])
+        assert [h["id"] for h in db_kb.search("差分隱私", 4, method)] == [
+            h["id"] for h in file_kb.search("差分隱私", 4, method)
+        ]
     assert db_kb.vectors is None  # 驗證完就不留在記憶體，查詢交給資料庫
 
 
@@ -224,6 +255,7 @@ def test_prefer_vectors_does_not_pick_newer_vectorless_version(conn):
 @needs_db
 def test_pg_cli_routes_explicit_knowledge_base_and_rejects_ambiguity(conn, tmp_path, monkeypatch, capsys):
     import json
+
     first = payload()
     second = payload()
     second.pop("index_id")

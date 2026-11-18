@@ -9,6 +9,7 @@
   uv run python -m ipas_hub.exam_eval ... --limit 3        # 試跑前 3 題
   uv run python -m ipas_hub.exam_eval ... --report-only    # 只依既有結果產生報告
 """
+
 from __future__ import annotations
 
 import argparse
@@ -47,8 +48,16 @@ def load_cases(root: Path, manifest_path: Path) -> list[dict]:
         for q in read_questions(pdf):
             if q.number in excluded:
                 continue
-            cases.append({"id": f"{spec['id']}-{q.number:02d}", "paper": spec["id"], "number": q.number,
-                          "official": q.answer, "question": q.text, "expected_source": spec["expected_source"]})
+            cases.append(
+                {
+                    "id": f"{spec['id']}-{q.number:02d}",
+                    "paper": spec["id"],
+                    "number": q.number,
+                    "official": q.answer,
+                    "question": q.text,
+                    "expected_source": spec["expected_source"],
+                }
+            )
     return cases
 
 
@@ -63,10 +72,16 @@ def run_one(case: dict, kb, method: str, ask) -> dict:
     started = time.perf_counter()
     hits = kb.search(case["question"], k=K, method=method)
     retrieval_ms = round((time.perf_counter() - started) * 1000, 2)
-    row = {"case": case["id"], "paper": case["paper"], "number": case["number"], "method": method,
-           "official": case["official"], "retrieval_ms": retrieval_ms,
-           "top5": [{"source": h["source"], "page": h["page"], "pdf_page": h.get("pdf_page")} for h in hits],
-           "same_subject_top5": any(h["source"] == case["expected_source"] for h in hits)}
+    row = {
+        "case": case["id"],
+        "paper": case["paper"],
+        "number": case["number"],
+        "method": method,
+        "official": case["official"],
+        "retrieval_ms": retrieval_ms,
+        "top5": [{"source": h["source"], "page": h["page"], "pdf_page": h.get("pdf_page")} for h in hits],
+        "same_subject_top5": any(h["source"] == case["expected_source"] for h in hits),
+    }
     try:
         generation = ask(case["question"], hits)
     except FAILURES as exc:
@@ -78,10 +93,17 @@ def run_one(case: dict, kb, method: str, ask) -> dict:
         outcome = "no_choice"
     else:
         outcome = "correct" if choice == case["official"] else "wrong"
-    return {**row, "outcome": outcome, "choice": choice, "llm_ms": generation.get("llm_elapsed_ms"),
-            "cited": len(generation.get("citations", [])), "flagged": generation.get("flagged_segments"),
-            "repairs": generation.get("repair_attempts"), "removed_choice": generation.get("removed_choice"),
-            "completed_ids": len(generation.get("completed_citations", []))}
+    return {
+        **row,
+        "outcome": outcome,
+        "choice": choice,
+        "llm_ms": generation.get("llm_elapsed_ms"),
+        "cited": len(generation.get("citations", [])),
+        "flagged": generation.get("flagged_segments"),
+        "repairs": generation.get("repair_attempts"),
+        "removed_choice": generation.get("removed_choice"),
+        "completed_ids": len(generation.get("completed_citations", [])),
+    }
 
 
 def run_batch(cases: list[dict], kb, methods, ask, out: Path, progress=None) -> list[dict]:
@@ -126,14 +148,17 @@ def summarize(rows: list[dict], baseline: str = "bm25", resamples: int = 2000) -
         papers = {}
         for r in rs.values():
             papers.setdefault(r["paper"], []).append(r["outcome"] == "correct")
-        methods[m] = {"n": n, **counts, "accuracy": round(counts["correct"] / n, 4),
-                      "same_subject_top5": round(sum(r["same_subject_top5"] for r in rs.values()) / n, 4),
-                      "retrieval_ms_p50": _percentile([r["retrieval_ms"] for r in rs.values()], 0.5),
-                      "retrieval_ms_p95": _percentile([r["retrieval_ms"] for r in rs.values()], 0.95),
-                      "llm_ms_p50": _percentile([r["llm_ms"] for r in rs.values()], 0.5),
-                      "llm_ms_p95": _percentile([r["llm_ms"] for r in rs.values()], 0.95),
-                      "by_paper": {p: {"n": len(v), "accuracy": round(sum(v) / len(v), 4)}
-                                   for p, v in sorted(papers.items())}}
+        methods[m] = {
+            "n": n,
+            **counts,
+            "accuracy": round(counts["correct"] / n, 4),
+            "same_subject_top5": round(sum(r["same_subject_top5"] for r in rs.values()) / n, 4),
+            "retrieval_ms_p50": _percentile([r["retrieval_ms"] for r in rs.values()], 0.5),
+            "retrieval_ms_p95": _percentile([r["retrieval_ms"] for r in rs.values()], 0.95),
+            "llm_ms_p50": _percentile([r["llm_ms"] for r in rs.values()], 0.5),
+            "llm_ms_p95": _percentile([r["llm_ms"] for r in rs.values()], 0.95),
+            "by_paper": {p: {"n": len(v), "accuracy": round(sum(v) / len(v), 4)} for p, v in sorted(papers.items())},
+        }
     paired = {}
     if baseline in by_method:
         base = [by_method[baseline][c]["outcome"] == "correct" for c in cases]
@@ -143,12 +168,17 @@ def summarize(rows: list[dict], baseline: str = "bm25", resamples: int = 2000) -
                 continue
             other = [by_method[m][c]["outcome"] == "correct" for c in cases]
             diffs = [o - b for o, b in zip(other, base)]
-            boot = sorted(sum(diffs[rng.randrange(len(diffs))] for _ in diffs) / len(diffs)
-                          for _ in range(resamples))
-            paired[m] = {"improved": diffs.count(1), "regressed": diffs.count(-1), "same": diffs.count(0),
-                         "accuracy_diff": round(sum(diffs) / len(diffs), 4),
-                         "accuracy_diff_ci95": [round(boot[int(0.025 * resamples)], 4),
-                                                round(boot[int(0.975 * resamples) - 1], 4)]}
+            boot = sorted(sum(diffs[rng.randrange(len(diffs))] for _ in diffs) / len(diffs) for _ in range(resamples))
+            paired[m] = {
+                "improved": diffs.count(1),
+                "regressed": diffs.count(-1),
+                "same": diffs.count(0),
+                "accuracy_diff": round(sum(diffs) / len(diffs), 4),
+                "accuracy_diff_ci95": [
+                    round(boot[int(0.025 * resamples)], 4),
+                    round(boot[int(0.975 * resamples) - 1], 4),
+                ],
+            }
     return {"cases": len(cases), "baseline": baseline, "methods": methods, "paired": paired}
 
 
@@ -161,30 +191,51 @@ def _s(v):
 
 
 def render_report(summary: dict, meta: dict) -> str:
-    lines = ["| 方法 | 答對 | 答錯 | 依據不足 | 未給選項 | 錯誤 | 答對率 | 前五含同科教材 | 檢索 p50／p95 (ms) | 生成 p50／p95 (s) |",
-             "|---|---|---|---|---|---|---|---|---|---|"]
+    lines = [
+        "| 方法 | 答對 | 答錯 | 依據不足 | 未給選項 | 錯誤 | 答對率 | 前五含同科教材 | 檢索 p50／p95 (ms) | 生成 p50／p95 (s) |",
+        "|---|---|---|---|---|---|---|---|---|---|",
+    ]
     for m, s in summary["methods"].items():
-        lines.append(f"| {m} | {s['correct']} | {s['wrong']} | {s['insufficient']} | {s['no_choice']} | {s['error']} "
-                     f"| {s['accuracy']:.1%} | {s['same_subject_top5']:.1%} "
-                     f"| {_ms(s['retrieval_ms_p50'])}／{_ms(s['retrieval_ms_p95'])} "
-                     f"| {_s(s['llm_ms_p50'])}／{_s(s['llm_ms_p95'])} |")
+        lines.append(
+            f"| {m} | {s['correct']} | {s['wrong']} | {s['insufficient']} | {s['no_choice']} | {s['error']} "
+            f"| {s['accuracy']:.1%} | {s['same_subject_top5']:.1%} "
+            f"| {_ms(s['retrieval_ms_p50'])}／{_ms(s['retrieval_ms_p95'])} "
+            f"| {_s(s['llm_ms_p50'])}／{_s(s['llm_ms_p95'])} |"
+        )
     if summary["paired"]:
-        lines += ["", f"與 {summary['baseline']} 逐題比較（以題為單位的成對 bootstrap，2,000 次，seed 0）：", "",
-                  "| 方法 | 改善 | 退步 | 相同 | 答對率差 | 95% 信賴區間 |", "|---|---|---|---|---|---|"]
+        lines += [
+            "",
+            f"與 {summary['baseline']} 逐題比較（以題為單位的成對 bootstrap，2,000 次，seed 0）：",
+            "",
+            "| 方法 | 改善 | 退步 | 相同 | 答對率差 | 95% 信賴區間 |",
+            "|---|---|---|---|---|---|",
+        ]
         for m, p in summary["paired"].items():
             low, high = p["accuracy_diff_ci95"]
-            lines.append(f"| {m} | {p['improved']} | {p['regressed']} | {p['same']} "
-                         f"| {p['accuracy_diff']:+.1%} | {low:+.1%} ~ {high:+.1%} |")
+            lines.append(
+                f"| {m} | {p['improved']} | {p['regressed']} | {p['same']} "
+                f"| {p['accuracy_diff']:+.1%} | {low:+.1%} ~ {high:+.1%} |"
+            )
     papers = sorted({p for s in summary["methods"].values() for p in s["by_paper"]})
     methods = list(summary["methods"])
-    lines += ["", "各卷答對率：", "", "| 試卷 | 題數 | " + " | ".join(methods) + " |",
-              "|---|---|" + "---|" * len(methods)]
+    lines += [
+        "",
+        "各卷答對率：",
+        "",
+        "| 試卷 | 題數 | " + " | ".join(methods) + " |",
+        "|---|---|" + "---|" * len(methods),
+    ]
     for p in papers:
         n = summary["methods"][methods[0]]["by_paper"][p]["n"]
-        lines.append(f"| {p} | {n} | " + " | ".join(
-            f"{summary['methods'][m]['by_paper'][p]['accuracy']:.1%}" for m in methods) + " |")
-    head = [f"- 題數：{summary['cases']}；每題每方法跑一次，temperature 0，外搜關閉，k={K}",
-            *[f"- {k}：{v}" for k, v in meta.items()]]
+        lines.append(
+            f"| {p} | {n} | "
+            + " | ".join(f"{summary['methods'][m]['by_paper'][p]['accuracy']:.1%}" for m in methods)
+            + " |"
+        )
+    head = [
+        f"- 題數：{summary['cases']}；每題每方法跑一次，temperature 0，外搜關閉，k={K}",
+        *[f"- {k}：{v}" for k, v in meta.items()],
+    ]
     return "\n".join(head + [""] + lines) + "\n"
 
 
@@ -194,8 +245,9 @@ def _git_head(root: Path) -> str:
         r = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True)
         if r.returncode != 0:
             return "unavailable"
-        dirty = subprocess.run(["git", "status", "--porcelain", "--", "src"],
-                               cwd=root, capture_output=True, text=True).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--", "src"], cwd=root, capture_output=True, text=True
+        ).stdout.strip()
         return r.stdout.strip() + ("+dirty" if dirty else "")
     except FileNotFoundError:
         return "unavailable"
@@ -225,18 +277,26 @@ def main(argv=None) -> int:
         from .cli import ask as cli_ask, open_kb
         from .llm import LLMConfig, check_config
         from .profile import answer_prompt, load_profile
+
         cases = load_cases(root, root / args.manifest)
-        cases = cases[:args.limit] if args.limit else cases
+        cases = cases[: args.limit] if args.limit else cases
         prompt = answer_prompt(load_profile(root, args.profile))
         cfg = LLMConfig.from_env(args.llm_url, args.model, False)
         check_config(cfg)
         kb = open_kb(root, Namespace(store="pg", index=None, kb=args.kb, method="hybrid"))
-        ask_args = Namespace(llm_url=args.llm_url, model=args.model, allow_remote=False, web="none", web_k=4,
-                             answer_prompt=prompt)
-        meta = {"index_id": kb.index_id, "llm": cfg.describe(), "profile": str(args.profile),
-                "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "manifest": str(args.manifest), "code_version": _git_head(root), "cases": len(cases),
-                "methods": methods}
+        ask_args = Namespace(
+            llm_url=args.llm_url, model=args.model, allow_remote=False, web="none", web_k=4, answer_prompt=prompt
+        )
+        meta = {
+            "index_id": kb.index_id,
+            "llm": cfg.describe(),
+            "profile": str(args.profile),
+            "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+            "manifest": str(args.manifest),
+            "code_version": _git_head(root),
+            "cases": len(cases),
+            "methods": methods,
+        }
         out_dir.mkdir(parents=True, exist_ok=True)
         if meta_path.is_file():
             previous = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -247,16 +307,21 @@ def main(argv=None) -> int:
             meta["started_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
             meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
         total = len(cases) * len(methods)
+
         def progress(row, count=[len(_done(rows_path))]):
             count[0] += 1
             print(f"[{count[0]}/{total}] {row['case']} {row['method']} → {row['outcome']}", flush=True)
+
         run_batch(cases, kb, methods, lambda q, hits: cli_ask(q, hits, ask_args)["generation"], rows_path, progress)
     rows = list(_done(rows_path).values())
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     summary = summarize(rows)
     (out_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    report = render_report(summary, {k: meta[k] for k in ("index_id", "prompt_sha256", "code_version", "manifest")
-                                     if k in meta} | {"llm": meta["llm"].get("model")})
+    report = render_report(
+        summary,
+        {k: meta[k] for k in ("index_id", "prompt_sha256", "code_version", "manifest") if k in meta}
+        | {"llm": meta["llm"].get("model")},
+    )
     (out_dir / "report.md").write_text(report, encoding="utf-8")
     print(report)
     return 0

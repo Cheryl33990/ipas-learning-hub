@@ -32,7 +32,7 @@ packages = ["src/ipas_hub"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-# 只啟用預設的 lint 規則（pyflakes 與 pycodestyle 錯誤類）；尚未採用 ruff format
+# 只啟用預設的 lint 規則（pyflakes 與 pycodestyle 錯誤類）；格式由 ruff format 管理（CI 以 --check 檢查）
 [tool.ruff]
 target-version = "py311"
 line-length = 120
