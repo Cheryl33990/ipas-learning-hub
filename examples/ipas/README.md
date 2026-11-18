@@ -34,7 +34,7 @@ uv run python -m ipas_hub.cli search --index <上一步輸出的 index> --kb ipa
 ## 權利邊界
 
 - **教材**：iPAS 學習指引可從[官方學習資源](https://ipd.nat.gov.tw/ipas/certification/AIAP/learning-resources)取得，但 PDF 內有版權聲明。本 repo 不再散布 PDF、切塊原文或含原文的索引，只記錄官方網址與雜湊，由使用者自行下載。官方若更新檔案，`fetch` 會因雜湊不符而停止，請確認新版本後再更新設定。
-- **自寫筆記**：`sample/notes.json` 是本專案作者自己寫的內容，與程式採相同授權。
+- **自寫筆記**：`sample/notes.json` 是本專案作者自己寫的內容，與程式同採 [MIT](../../LICENSE)。
 - **外部搜尋**：開啟維基百科補充時，引用會標示 CC BY-SA 4.0 與條目版本連結，並註明句子經模型改寫。
 - 更完整的工具、模型與資料授權盤點見 [THIRD_PARTY_NOTICES](../../THIRD_PARTY_NOTICES.md)。
 
