@@ -1,12 +1,10 @@
-# iPAS Learning Hub — local RAG where every sentence traces back to a PDF page
+# iPAS Learning Hub — local RAG with traceable PDF citations
 
 English | [繁體中文](README.zh-TW.md)
 
-A RAG pipeline that runs on your own machine: it retrieves evidence from PDFs, a local LLM answers sentence by sentence, every sentence carries a citation, and each citation opens the original PDF page. The pipeline is domain-agnostic; the bundled example is exam preparation for Taiwan's **iPAS AI Application Planner** certification. Switching to your own documents means changing configuration, not code.
+A local RAG pipeline that retrieves evidence from PDFs, checks citation IDs against the retrieved evidence, and links PDF citations to the source page. The bundled example uses Taiwan's **iPAS AI Application Planner** certification materials. You can use your own text-based PDFs by changing the source configuration and domain profile.
 
-The point is not "plug in a vector database". It is: **catch the model when it fabricates citations, know which document version an answer came from, and say "I don't know" when there is no evidence.**
-
-> [docs/EVIDENCE.md](docs/EVIDENCE.md) lists each claim and the test that proves it.
+> [docs/EVIDENCE.md](docs/EVIDENCE.md) maps project claims to code and tests.
 >
 > **Language note:** this README is in English. The detailed documents under [docs/](docs/README.md) (setup, architecture, evaluation, evidence) are in Traditional Chinese, as are the prompts, answers and program messages, because the source material is Chinese. Code identifiers, `.env.example` and CI are in English.
 
@@ -24,19 +22,18 @@ These problems keep coming up when you use an LLM to study course material:
 |---|---|
 | The model cites a source that does not exist | A citation ID must belong to a chunk actually retrieved for this question; the model gets one repair attempt, and if it still fails the answer is refused rather than shown as grounded |
 | A citation is attached, but it does not match the sentence | A second local-model pass checks, sentence by sentence, whether the cited chunk actually states the sentence and flags ⚠ when it does not (on synthetic mismatched citations it caught 67%, vs. 54% for the lexical check); a lexical check of numbers and terms runs as well. Both are labelled as checks, not fact-checking |
-| The model answers anyway when nothing relevant is found | If retrieval finds nothing, the model is not called; the answer reports insufficient evidence |
+| The model answers despite having little evidence | An empty evidence set returns an insufficient-evidence response without calling the model. Dense retrieval can still return weak candidates, and supported answers can retain uncited sentences with a warning. See [the refusal trial](docs/evaluation.md#凍結測試集的回答層試跑2026-11-19). |
 | After a revision or erratum, nobody knows which version an answer used | The PDF's SHA-256, errata and embedding revision are recorded; index IDs are content hashes, and a tampered index is refused at load time |
 | Every new domain means rewriting prompts and code | Shared evidence rules are fixed; the assistant role and domain rules live in a profile file |
 | "A vector database must be more accurate" | BM25 stays as the baseline and vector results are fused with RRF. On 243 held-out questions, hybrid scored 5.3 percentage points higher than BM25; vector alone vs. BM25 has a confidence interval that includes 0, so it cannot be called better |
 
-## One-minute tour
+## Quick start
 
-All you need is Python 3.11+ and [uv](https://docs.astral.sh/uv/) — no GPU, course material, database or network:
+Install the locked dependencies using Python 3.11+ and [uv](https://docs.astral.sh/uv/). Installation may download dependencies. Once installed, the demo runs offline on CPU with bundled notes and a scripted model.
 
 ```sh
 uv sync --locked
-uv run python -m ipas_hub.demo      # replay six scenarios with the iPAS example
-uv run pytest                       # run all tests
+uv run --no-sync python -m ipas_hub.demo
 ```
 
 The demo uses iPAS topic notes written by the author (not the official material), the iPAS profile, and a stand-in model that replies from a script. Everything else is the real code: index integrity check, BM25 retrieval, citation check and repair, lexical check, and output formatting. Below is the actual output of the multiple-choice scenario (the output is in Chinese; the question asks which option is a typical supervised-learning task: (A) clustering, (B) dimensionality reduction, (C) classification, (D) association rule mining):
@@ -55,6 +52,7 @@ The demo uses iPAS topic notes written by the author (not the official material)
 (B) 降維也是非監督式學習的常見任務。 [教材1]
 (C) 分類使用附有標籤的資料，屬於監督式學習。 [教材1]
 (D) 關聯規則探勘不需要標籤，片段未提及，此為推論。
+  ⚠ 此句沒有引用，未經核對
 答案：C
 
 依據：
@@ -63,12 +61,14 @@ The demo uses iPAS topic notes written by the author (not the official material)
 
 | Scenario | What happens | Result |
 |---|---|---|
-| `grounded-answer` | Each option of a multiple-choice question cites a page that was actually retrieved | Grounded, ending with "答案：C" (Answer: C) |
+| `grounded-answer` | A multiple-choice answer cites a retrieved page and flags an uncited inference | Grounded, ending with "答案：C" (Answer: C) |
 | `repaired-citation` | The first reply cites a chunk that does not exist | Passes after one repair; the repair count is recorded |
 | `fabricated-citation` | The reply still fabricates a citation after repair | Refused; not shown as a grounded answer |
 | `mis-cited-sentence` | The citation exists, but a term in the sentence is not in the chunk | Answer kept, sentence flagged with ⚠ |
 | `out-of-scope` | The notes contain nothing relevant | Model not called; insufficient evidence reported |
 | `tampered-index` | An index chunk has been modified | Hash mismatch; index refused |
+
+The demo prints six scenarios, including a repaired citation, a refusal, and a rejected index. To try BM25 on your own PDF, follow [Using your own data](docs/custom-data.md). To run hybrid retrieval and a local LLM with the iPAS materials, follow [Full Windows setup](docs/setup.md).
 
 ## Architecture
 
@@ -88,9 +88,7 @@ The file index can be used on its own or loaded into PostgreSQL + pgvector: the 
 
 **Project-specific engineering (developed with AI assistance):** document parsing and errata, the versioned index, retrieval fusion, citation checking, domain profiles, the OpenAI-compatible endpoint and knowledge-base routing. The chat UI (AnythingLLM), model server (vLLM), embedding model (BGE-M3) and generation model (Qwen3) are third-party work.
 
-**For technical interviews:** the [RAG design and AI collaboration guide](docs/interview.md) (Chinese) explains character-based chunking (400 characters, stride 300), embedding selection and its evidence gaps, Python BM25 + pgvector + RRF (no Elasticsearch), quality evaluation, hallucination controls, and concrete Claude Code / Codex development and verification examples. It distinguishes implemented behavior from untested choices and partial TDD evidence.
-
-The separate [chunking and embedding experiment](docs/retrieval-experiments.md) provides a reproducible offline comparison of four window settings and two models. Its eight development queries have provisional relevance labels; these exploratory results do not establish a production winner. A 2026-11-19 review found the first-round reference pages omitted equivalent evidence in the intermediate textbooks, so that ranking was withdrawn and the runs were re-scored on evidence-span coverage under fixed context budgets (AI-drafted labels, pending author review).
+The [technical documentation index](docs/README.md) links to implementation details, chunking and embedding experiments, answer evaluation, and AI collaboration cases.
 
 ## The example and your own data
 
@@ -117,7 +115,7 @@ Licenses and sources for each item are in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTI
 
 ## Evaluation and limitations
 
-Using 243 official iPAS exam questions that were never used during development (5 exam papers covering all five subjects), full question answering was scored automatically against the official answer key:
+The evaluation scored answers against the official key for 243 iPAS questions from five papers. Three questions were also used in a pipeline trial that led to a citation ID repair change.
 
 | Retrieval | Accuracy | Insufficient evidence (refused) | Retrieval p50 | End-to-end generation p50 |
 |---|---|---|---|---|
@@ -127,12 +125,12 @@ Using 243 official iPAS exam questions that were never used during development (
 
 Hybrid is 5.3 percentage points above BM25, with a paired per-question bootstrap 95% confidence interval of +1.7 to +9.0; the interval for vector vs. BM25 includes 0. A question-parsing bug was found afterwards (5 questions had been merged into the previous one, and question-group context was attached to the wrong question); after fixing it and rerunning the 23 affected questions, the total is 248 questions: hybrid 87.9%, vector 83.5%, BM25 82.3%, with hybrid 5.6 points above BM25 (+2.4 to +9.7). This compares chosen options only. Separately, 20 questions were randomly sampled from those hybrid answered correctly and reviewed by hand: the reasoning was correct in 20, and the citations fully supported the answer in 18 and partially in 2 (they cited a page on a related topic that did not directly state the sentence). The sample is small, it was reviewed by the author, and it uses a single model and a single run. Questions, criteria, failure analysis and how to rerun are in the [evaluation doc](docs/evaluation.md#保留題評估2026-11-18) (Chinese).
 
-Current limitations: only PDFs with extractable text (no OCR or chart understanding); answer quality outside the iPAS domain must be verified with your own questions; chat is single-turn, and SSE sends only after generation finishes; separate knowledge bases are not multi-user access control. Current status and next steps are in [STATUS](docs/STATUS.md) (Chinese).
+This is a working local prototype for PDFs with extractable text. Chat handles one turn at a time and sends SSE after generation finishes. Knowledge-base routing selects the documents to search. Multi-user access controls, answer quality on new documents, and complete installation on a clean machine are outside current verification. See the [evaluation and limitations](docs/evaluation.md) (Chinese).
 
 ## Design principles
 
-- **Traceability over convenience:** every answer must lead back to which document, which version, which page.
-- **Say "I don't know" when you don't:** with no evidence, refuse rather than fill the gap with the model's general knowledge.
+- **Traceability:** record the document version and PDF page for each PDF citation.
+- **Empty evidence:** report insufficient evidence before generation when the evidence set is empty.
 - **Checks are enforced by code:** citation validity is verified by the program, not by a "please cite your sources" line in the prompt.
 - **A domain is configuration, not code:** evidence rules are shared across domains; domain differences live only in the profile.
 - **Baseline first, then improvements:** BM25 is the control; hybrid retrieval has to prove with data that its extra latency is worth it.

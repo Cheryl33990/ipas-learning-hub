@@ -43,9 +43,7 @@ uv run python -m ipas_hub.cli search --store pg --kb labor-law --method hybrid -
 uv run python -m ipas_hub.cli search --store pg --kb ipas --method hybrid --query '什麼是詞性標註？'
 ```
 
-`--kb` 選文件群組；`--index` 可固定某次資料版本；兩個一起指定會核對是否同庫。歷史沒有 knowledge_base 欄位的 iPAS 索引視為 ipas，不需修改舊索引。
-
-重要相容變更：資料庫有多個庫後，不能只靠全域「最新載入」決定查哪個庫。原本 `serve --store pg` 下次重啟請加 **`--kb ipas`**。已啟動的 8100 程序已固定舊索引，不會自動切換。多庫時省略 --kb／--index 會拒絕，不默默改搜勞基法。
+`--kb` 選文件群組，`--index` 可固定資料版本。兩者一起指定時，程式會核對是否同庫。資料庫包含多個庫時，請指定其中一項。上面兩個查詢分別應回傳勞基法及 iPAS 的片段。
 
 ## 聊天與 AnythingLLM 工作區
 
@@ -74,19 +72,17 @@ uv run python -m ipas_hub.cli serve --store pg --routes config/rag-routes.json -
 | API key | `local` |
 | Context／token limit | `6144` |
 
-工作區不需再上傳 PDF。已透過本機 AnythingLLM API 啟用既有勞基法工作區、設定 chatMode=chat 並實際提問；沒有修改原 rag 工作區或全域供應者設定。瀏覽器控制無法還原最小化視窗，未目視 UI；工作區頁面HTTP、工作區聊天API、對應data/runs與PDF連結均已驗證。
-
-已啟用的[勞基法工作區](http://localhost:3001/workspace/d4b98ca9-b52c-45ef-8b48-fad9c0991f6a)（本機個別實例的slug，其他電腦會不同）。目前共用8100服務由本輪啟動，vLLM／ui／db沿用；重開機後仍需啟動服務。
+選擇 Chat 模式，直接提問即可。PDF 由本專案的端點提供。
 
 可先問「勞工正常工作時間每日、每週的上限是多少？」確認回答顯示 `[文件n]`、文件修正版本及可點的 PDF 頁連結。回答中的 PDF 頁序不是法條條號。
 
 ## 本輪證據與限制
 
 - 受測版本：main c4bd89d 加本輪未提交程式；索引 code_sha256 保存實際程式識別。
-- 合成／資料庫測試：132 passed，含真實 pg 的獨立 schema 與 CLI 分庫測試。首次提權測試因 pytest 暫存權限失敗，改到專案 data/test-tmp 的新目錄後重跑；中途 2 個 FakeKB 缺新欄位的失敗修正後全通過。
+- 合成／資料庫測試：132 passed，含真實 pg 的獨立 schema 與 CLI 分庫測試。
 - 真實混合搜尋管線題：工時、出勤紀錄、特休、服務證明書共 4 題，前五回傳均含預期頁（7／8／10／5），且回傳只屬 labor-law。這些是依文件建立的開發驗證題，非保留測試集或品質百分比宣稱。
 - 既有五科 iPAS 索引 ce5090f4… 保留，資料庫／檔案的「詞性標註」BM25 結果一致；兩庫存在而未選範圍會拒絕。
-- 沿用本機 vLLM、web none 實跑工時 1 題，回傳 supported，引用 PDF 第 7 頁，字詞警告 0。這是結構與管線檢查，法律正確性未經人工驗收。測試 HTTP 回答含文件標記與頁連結，PDF 回傳內容與來源檔完全相同；測試伺服器已停止，不影響 8100。
+- 沿用本機 vLLM、web none 實跑工時 1 題，回傳 supported，引用 PDF 第 7 頁，字詞警告 0。法律正確性未經人工驗收。測試 HTTP 回答含文件標記與頁連結，PDF 回傳內容與來源檔完全相同。
 - 證據只在 `data/evaluation/labor-law/`：pipeline_cases.json、pipeline_report.json、answer.json、verify_pipeline.py；不與 iPAS 評估混合、不把問題或答案放入索引。
 - 目前按頁內 400 字、步長 300 切塊；跨頁條文與標題可能斷開，尚未依條／項完整切分。無文字的 PDF 拒絕建立索引；掃描 PDF／OCR、複雜圖表不在本輪支援。
 
@@ -94,5 +90,5 @@ uv run python -m ipas_hub.cli serve --store pg --routes config/rag-routes.json -
 
 - 新增共用模型路由後全套138 passed（含本機pg），涵蓋非串流／串流選庫、未知模型拒絕、同名來源的模型前綴檔案連結、每庫外搜政策及不合法設定。未跑本批hosted CI。
 - 經AnythingLLM的2題：出勤紀錄題引用第8頁並回答五年；工時題引用第7頁，但對變形工時補充概括過度，字詞警告0仍未抓出此語意問題，明列為內容缺陷而非全部正確。未改prompt或刪除失敗對話來掩蓋結果。
-- 實際data/runs確認labor-law、web none；工作區SSE、設定前備份及驗證在data/evaluation/labor-law/workspace_*。iPAS工作區chatProvider／chatModel／chatMode／prompt設定前後相同，兩種PDF連結均可讀。
+- 兩個庫的 PDF 連結均可開啟。勞基法工作區的執行紀錄顯示使用 labor-law 庫，外搜關閉。
 - 此次路由更新沿用前輪索引6f1226f8…；索引code_sha256仍代表建索引當時版本，新router執行版本由本輪工作樹與執行紀錄補記，不改寫舊索引識別。

@@ -13,7 +13,7 @@
 | [project/discovery](project/discovery) | 早期探索及標註資料 |
 | [project/explanations](project/explanations) | 既有學習解析及其 JSON 主來源 |
 | [project/ai_setup.md](project/ai_setup.md) | AI 協助架設指引 |
-| [project/readme_history.md](project/readme_history.md) | 封存的輪次式 README |
+| [舊 README（Git 歷史）](https://github.com/Cheryl33990/ipas-learning-hub/blob/208448733b9cb4fe059e2f4badf03f344c13ea0d/docs/internal/project/readme_history.md) | 早期專案介紹與操作歷史 |
 | [使用指南（範本 repo）](https://github.com/Cheryl33990/problem-def-template/blob/4c73a73/docs/workflow/guide.md) | 協作方法與規則；2026-11-18 起不放在本 repo |
 
 2026-11-17 整理時，原 `docs/project/` 移至 `docs/internal/project/`，原 `docs/workflow/` 移至 `docs/internal/workflow/`；操作／環境／評估文件提取至 docs/。程式產生器與連結同步調整，無刪除歷史驗證或把草案改標成已接受。2026-11-18 依使用者決定移除 `docs/internal/workflow/`（範本 repo 的改路徑副本，差異僅路徑與 metadata 格式），改參照範本 repo `4c73a73`；原內容保留在 git 歷史 `5f0f098`。

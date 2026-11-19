@@ -6,6 +6,12 @@ updated: 2026-11-19
 
 # 進度與接手
 
+目前階段與前進判斷（2026-11-19，RAG 參考文件整理，提交前驗證）：作者授權提交並開 PR。本機重跑 pytest 為 200 passed／7 skipped（此程序未設定 `PG_TEST_DSN`），ruff lint、29 檔格式檢查與 diff check 通過。前一筆文件檢查結果仍適用。提交到獨立分支後，以 GitHub Actions 驗證相同提交，再開 PR。實際 hosted CI 與 PR 結果以 GitHub 紀錄為準，合併與部署另行確認。
+
+目前階段與前進判斷（2026-11-19，RAG 參考文件整理，審查與交付）：以 main `2084487` 加本輪文件差異查證。雙語 README 串接離線示範、完整架設與自用 PDF。面試導覽留在技術文件區，協作案例連回實驗主來源。現況與限制收回 README／評估文件，重複的 STATUS 與舊 README 全文移出目前工作樹，舊版仍可由固定 commit 追溯。勞基法保留重現步驟與結果，移除本機工作區識別碼。檢查 41 份 Markdown 的 298 個相對連結與錨點、三份操作文件的 22 段 PowerShell 語法及雙語 README 的示範輸出。六個離線情境與 diff check 通過，GitHub 的固定歷史連結已確認。純文件變更，未重跑完整測試、乾淨新機安裝或服務。最小交付證據已齊，可送作者審閱。本輪未提交、開 PR、合併或部署。
+
+目前階段與前進判斷（2026-11-19，RAG 參考文件整理，開始）：作者確認依「離線示範、完整架設、自用 PDF」的閱讀路徑整理，面試導覽留在技術文件區。範圍為文件導覽、重複狀態與歷史入口、勞基法案例的可重做步驟。驗證以實際 diff、相對連結與錨點、PowerShell 範例語法、既有離線示範為準。待更新文件並通過上述檢查，不啟動模型或資料庫。
+
 目前階段與前進判斷（2026-11-19，重啟 serve 與提交）：作者接受建議，同意重啟 serve 並提交、開 PR（來源：本輪對話）。以 `docker compose --profile serve up -d --build --no-deps serve` 只重建 serve 映像檔，vLLM、db、ui 未動；約 18 秒後 /v1/models 回 rag 與 labor-law，restarts=0，rag 仍用索引 ce5090f4…，容器內確認已含 provenance_warnings。尚未經 AnythingLLM 畫面實際觸發新警告（需一題會產生無引用句的問題）。公開 JSON 以遞迴掃描比對教材與題目原文，未發現原文。分支改名為 feat/retrieval-evidence-eval（原 docs/progress-next，未曾推送），連同前一筆「記錄 PR 36 合併」一起提交並開 PR；不合併。
 
 目前階段與前進判斷（2026-11-19，來源宣稱警告實作）：作者同意實作最小修正（來源：本輪對話）。先在 tests/test_rag.py 加 4 個測試（無引用句警告且選項行除外、外部宣稱無外部引用、有外部引用不警告、依據不足說明不警告），執行觀察 4 失敗（KeyError warnings），再於 rag.py 新增 provenance_warnings、結果欄位 uncited_segments、render_text 顯示 ⚠ 與摘要「另有 N 句沒有引用」；舊結果缺欄位時以 .get 相容。全套 200 passed／7 skipped（PG_TEST_DSN 未設），ruff check／format 通過。以 34 筆真實回答離線重放（不呼叫模型）：6 筆有警告，t02 兩項皆標出，另 5 句為未引用的推論或重述。文件：EVIDENCE 新增一列、interview 幻覺表、evaluation 後續修正。未重啟 serve（需重啟才生效），未提交。
@@ -1059,7 +1065,7 @@ updated: 2026-11-19
 - 共用8100已啟動（本輪exec session 47229），model rag→ipas／ce5090f4…／web wikipedia，model labor-law→labor-law／6f1226f8…／web none；未修改舊索引，索引的code_sha仍是建索引時版本。本輪先前8101程序PID82668核對命令後停止，避免重複載入；vLLM／ui／db沿用保持運作。
 - 實際工作區：沿用使用者已建立的「勞基法」（id2、slug d4b98ca9-b52c-45ef-8b48-fad9c0991f6a），經本機API設chatProvider=generic-openai、chatModel=labor-law、chatMode=chat。原rag工作區(id1)的provider／model／mode／prompt前後一致，未變全域設定或上傳文件。設定前備份僅存data/evaluation/labor-law/workspace_before.json，不建立新的API key。
 - 驗證：138 passed（含本機pg；串流／非串流模型隔離、未知模型400、同名PDF隔離、路由設定驗證與外搜政策）。經AnythingLLM實際stream-chat兩題，出勤紀錄回答五年、引用PDF8頁；data/runs確認labor-law與web none。工時題引用PDF7頁但變形工時補充概括過度，未被字詞警告抓出，保留失敗內容，非法律品質驗收。檢索與回答範圍無iPAS混入。
-- UI連結 http://localhost:3001/workspace/d4b98ca9-b52c-45ef-8b48-fad9c0991f6a HTTP200；共用/v1/models列rag與labor-law；法規PDF回傳位元組完全相同、iPAS PDF也可讀。Browser host unavailable、native Chrome最小化無法還原，重試後停止CUA；因此未目視畫面，不冒稱實際點選引用。API工作區往返與PDF端點已核對。
+- 本機勞基法工作區頁面回傳 HTTP 200，共用 `/v1/models` 列出 rag 與 labor-law，法規 PDF 回傳位元組完全相同，iPAS PDF 也可讀。瀏覽器無法連線，未目視確認。已核對工作區 API 往返與 PDF 端點。
 - 證據：data/evaluation/labor-law/{enable_workspace.py,check_enabled.py,workspace_enabled.json,workspace_verified.json,workspace_chat.sse,workspace_records_chat.sse}；正式操作文件labor_law_setup.md已修正。結束為使用者可點連結試用，本機服務保持執行；未提交／PR／合併或對外發布。後續以條文完整切塊與語意支持檢查處理實測內容缺陷，不因路由啟用而宣稱答案正確。
 
 ### 2026-11-17 第七十二筆（使用者試用確認與向量設定說明）
