@@ -25,7 +25,7 @@ These problems keep coming up when you use an LLM to study course material:
 | The model answers despite having little evidence | An empty evidence set returns an insufficient-evidence response without calling the model. Dense retrieval can still return weak candidates, and supported answers can retain uncited sentences with a warning. See [the refusal trial](docs/evaluation.md#凍結測試集的回答層試跑2026-11-19). |
 | After a revision or erratum, nobody knows which version an answer used | The PDF's SHA-256, errata and embedding revision are recorded; index IDs are content hashes, and a tampered index is refused at load time |
 | Every new domain means rewriting prompts and code | Shared evidence rules are fixed; the assistant role and domain rules live in a profile file |
-| "A vector database must be more accurate" | BM25 stays as the baseline and vector results are fused with RRF. On 243 held-out questions, hybrid scored 5.3 percentage points higher than BM25; vector alone vs. BM25 has a confidence interval that includes 0, so it cannot be called better |
+| "A vector database must be more accurate" | BM25 stays as the baseline and vector results are fused with RRF. On 243 exam questions, including three pipeline trial questions, hybrid scored 5.3 percentage points higher than BM25. Excluding the three trial questions gives a 5.4-point difference. The vector-only comparison has a confidence interval that includes zero. |
 
 ## Quick start
 

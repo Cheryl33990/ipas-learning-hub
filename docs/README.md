@@ -6,6 +6,7 @@
 |---|---|
 | 在 CPU 上離線重播六種情境 | [快速開始](../README.zh-TW.md#快速開始) |
 | 架設 iPAS 混合檢索與本機聊天 | [Windows 安裝](setup.md) |
+| 請首次使用者驗證安裝、引用跳頁與自有 PDF 問答 | [新機交接驗收](handoff-check.md) |
 | 用自己的 PDF 先跑 BM25，再加向量與聊天 | [換成自己的資料](custom-data.md) |
 | iPAS 範例由哪些檔案組成 | [examples/ipas](../examples/ipas/README.md) |
 | 系統如何運作、設計取捨與程式位置 | [架構](architecture.md) |
