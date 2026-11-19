@@ -154,6 +154,8 @@ docker compose --profile ui up -d ui
 | API key | `local` |
 | Context／token limit | `6144` |
 
+使用本專案固定的 AnythingLLM 映像與 Compose 環境變數時，空白資料目錄可能直接進首頁。點側欄新增工作區，確認聊天頁顯示 `rag`，即可提問。若看不到 `rag`，再核對上表所列的模型來源與端點設定。
+
 既有 UI 儲存設定可能蓋過環境變數，請在設定頁核對。這裡填的是本專案 RAG 端點；直接連 8000 會略過本專案教材檢索。詳見 [AnythingLLM Generic OpenAI 說明](https://docs.useanything.com/setup/llm-configuration/cloud/openai-generic)。
 
 工作區不要上傳教材，直接提問。成功判準：回答有教材／外部依據，教材連結可開到對應 PDF 頁；證據不足時可能拒答。`http://127.0.0.1:8100` 是 API 說明頁，聊天介面在 3001。
