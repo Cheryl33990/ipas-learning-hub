@@ -25,4 +25,8 @@
 | CPU 安裝與自有資料 | 從 `eb01d19` 建立獨立 clone，共用已安裝的 CPython 3.14.7 與 uv，使用空白套件快取及新 `.venv`。`uv sync --locked` 成功，README 的 `uv run --no-sync python -m ipas_hub.demo` 六個情境皆符合預期。匯入合成 Northstar PDF 後，BM25 對「Aurora log retention」首筆回傳 PDF 第 2 頁，片段寫明保存 37 天。 |
 | 瀏覽器問答與跳頁 | 使用該 clone 的獨立索引、臨時 RAG 端點和全新 Chrome 設定檔。用本機測試聊天頁接既有 vLLM `qwen3-vl-8b-fp8`，問 Aurora 日誌保存期限，模型答 37 天。點引用後，Chrome PDF 檢視器實際顯示第 2／3 頁與支持文字，HTTP 回傳也與原 PDF 逐位元一致。字詞核對對正確改寫中的 `period` 仍有警告。 |
 
-這輪實測涵蓋 CPU 依賴安裝與瀏覽器端到端引用。瀏覽器使用臨時測試聊天頁，重用既有生成服務。全新模型下載、AnythingLLM 首次設定與獨立新手操作仍待驗收。
+這輪實測涵蓋 CPU 依賴安裝與瀏覽器端到端引用。瀏覽器使用臨時測試聊天頁，重用既有生成服務。
+
+合併後補驗 AnythingLLM：固定映像以空白資料目錄與獨立 Chrome 設定檔啟動，沿用手冊的 Generic OpenAI 環境變數及既有 RAG 端點。首頁直接可用。從側欄新建工作區，確認頁面使用 `rag`，提問差分隱私與同態加密的差異後收到教材及維基引用。點第一個教材連結，Chrome 顯示原 PDF 第 172／182 頁。截圖留本機，包含教材內容。臨時服務用完停止。
+
+固定 Qwen 生成模型 revision 亦以空白快取做 Hugging Face `--dry-run` 預檢，確認 13 個檔案、約 10.6 GB。預檢使用既有 vLLM 映像的 Hugging Face CLI。權重實際下載、載入及陌生使用者獨立操作仍待完整驗收。
