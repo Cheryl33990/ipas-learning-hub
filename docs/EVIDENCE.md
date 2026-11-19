@@ -30,7 +30,7 @@ README 的每項主張，以及證明它的程式與測試。測試名稱都在 
 |---|---|
 | 中文以字元二元組斷詞，英數字整詞，BM25 偏好罕見詞 | `text.py`、`bm25.py`；`test_tokenize_cjk_bigrams_and_lowercased_words`、`test_bm25_ranks_document_with_rare_query_term_first` |
 | 混合檢索以 RRF 融合 BM25 與向量排名，不直接相加兩種分數 | `knowledge.py:KnowledgeBase.search`；`test_hybrid_retrieval_routes_to_matching_vector_and_lexical_source` |
-| 分數為 0 的片段不回傳；切塊不跨頁 | `test_cross_subject_search_returns_correct_source_and_no_zero_score_hits`、`test_chunks_never_cross_pages_and_cover_whole_page` |
+| BM25 分支不回傳分數為 0 的片段；切塊不跨頁。向量分支仍回傳最近候選，沒有相似度拒答門檻 | `test_cross_subject_search_returns_correct_source_and_no_zero_score_hits`、`test_chunks_never_cross_pages_and_cover_whole_page`；`knowledge.py:KnowledgeBase.search` |
 | 檔案索引與 pgvector 的向量排名相同 | `test_db_vector_ranking_matches_the_file_index`¹ |
 | 索引沒有向量時，預設的混合檢索退回 BM25 並告知；明確指定向量則直接失敗 | `test_default_hybrid_falls_back_to_bm25_with_a_notice_when_index_has_no_vectors`、`test_explicit_vector_method_on_index_without_vectors_still_fails` |
 
@@ -44,6 +44,7 @@ README 的每項主張，以及證明它的程式與測試。測試名稱都在 
 | 來源類型與標記由程式依片段資料決定，不採信模型自稱的來源 | `test_sources_are_labelled_by_program_not_by_model`、`test_ids_the_model_writes_inside_text_are_removed` |
 | 句子中的數字、英文術語不在被引用片段中時標 ⚠；只是提示，不拒答 | `test_missing_english_term_is_flagged_but_not_rejected`、`test_low_chinese_overlap_is_flagged_and_uncited_segments_are_not_checked`、demo `mis-cited-sentence` |
 | 開啟核對時，模型逐句判斷引用片段是否直接支持該句，不支持或部分支持標 ⚠，只標示不改寫回答；呼叫失敗或漏句標為未核對，不當作通過；未引用的句子不送核對；`ask`／`serve` 預設開啟，評估流程不使用 | `rag.py:verify_segments`；`test_unsupported_and_partial_verdicts_are_recorded_and_shown_but_answer_is_unchanged`、`test_failed_or_incomplete_verification_is_shown_as_unverified_not_as_passing`、`test_verifier_sees_only_cited_sentences_with_their_own_evidence`、`test_ask_turns_verification_on_from_args`；合成負例結果見 [評估](evaluation.md#模型逐句核對引用2026-11-18) |
+| 有依據的回答中，沒有引用的句子（「答案：X」選項行除外）標 ⚠「此句沒有引用，未經核對」；句子寫「依外部資料」卻沒有外部引用（例如外搜關閉時）另標 ⚠；只警告不改寫，依據不足的說明句不警告 | `rag.py:provenance_warnings`；`test_uncited_sentence_in_supported_answer_is_warned_but_choice_line_is_not`、`test_claiming_external_basis_without_an_external_citation_is_warned`、`test_external_claim_backed_by_an_external_citation_is_not_warned`、`test_insufficient_explanations_are_not_warned_as_uncited`；真實案例見 [評估](evaluation.md#凍結測試集的回答層試跑2026-11-19) |
 | 題目沒有 (A)(B) 選項時，模型多寫的「答案：X」由程式移除並記錄在 `removed_choice`；選擇題保留答案 | `rag.py:drop_unasked_choice`；`test_choice_written_for_a_question_without_options_is_removed_and_recorded`、`test_choice_inside_a_sentence_is_stripped_but_the_sentence_is_kept`、`test_multiple_choice_question_keeps_its_answer` |
 | 輸出明寫「字詞核對，非語意驗證」，不把結構檢查包裝成正確性保證 | `test_valid_response_is_labelled_as_structural_not_semantic_verification` |
 | 題目與證據在 prompt 中標為資料而非指令（降低提示注入風險） | `test_prompt_marks_question_and_evidence_as_data` |
@@ -60,6 +61,8 @@ README 的每項主張，以及證明它的程式與測試。測試名稱都在 
 | 實際送給模型的是 profile 組好的提示，且執行紀錄保存其雜湊 | `test_answer_sends_the_given_prompt_and_records_its_hash`、`test_demo_uses_the_ipas_profile` |
 
 ## 評估
+
+切塊／embedding 的獨立探索見 [檢索實驗](retrieval-experiments.md)。`tests/test_retrieval_eval.py` 驗證頁面去重但保留排名成本、無答案分母、模型前綴、四種視窗覆蓋、實驗版本（含 Python／套件版本）與續跑隔離；2026-11-19 起另驗證同頁但未取回支持原文不算證據、跨片段覆蓋與單片段完整的區分、必須合併／等價替代的需求、partial 不計分、引文須逐字存在、固定字元預算，以及重用向量前的片段／模型／雜湊核對；其中替身模型只驗證評估器行為，不證明模型品質。
 
 | 主張 | 證據 |
 |---|---|

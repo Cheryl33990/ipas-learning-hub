@@ -84,7 +84,11 @@ flowchart LR
 
 檔案索引可以單獨使用，也可以載入 PostgreSQL＋pgvector：資料庫負責向量距離查詢，BM25 與融合在 Python 執行。AnythingLLM 只當聊天介面，不需要上傳文件。用 Docker Compose 時，`--profile serve` 會一起啟動資料庫、vLLM 與 RAG 端點（見[操作手冊](docs/setup.md)）。模組位置、資料流與設計取捨見 [架構文件](docs/architecture.md)。
 
-**我自己寫的部分**：文件解析與勘誤、版本化索引、檢索融合、引用檢查、領域 profile、OpenAI 相容端點與知識庫路由。聊天 UI（AnythingLLM）、模型服務（vLLM）、嵌入模型（BGE-M3）與生成模型（Qwen3）都是第三方成果。
+**本專案開發的部分（由 AI 協助開發）**：文件解析與勘誤、版本化索引、檢索融合、引用檢查、領域 profile、OpenAI 相容端點與知識庫路由。聊天 UI（AnythingLLM）、模型服務（vLLM）、嵌入模型（BGE-M3）與生成模型（Qwen3）都是第三方成果。
+
+**技術面試入口**：[RAG 設計與 AI 協作導覽](docs/interview.md) 說明字元切塊（400 字元、步長 300）、embedding 選型與證據缺口、Python BM25＋pgvector＋RRF（未使用 Elasticsearch）、品質評估、幻覺處理，以及 Claude Code／Codex 協作與驗證案例；區分已實作、未驗證的選擇與局部 TDD 證據。
+
+另有可重跑的 [chunking／embedding 離線實驗](docs/retrieval-experiments.md)，比較四種視窗與兩個模型。八題開發查詢的相關性標註仍屬暫定，探索結果不能直接判定正式服務應採用哪個方案。2026-11-19 審查發現第一輪參考頁漏列中級教材的等價證據，該排名已作廢，改以證據原文覆蓋與固定上下文預算重評（AI 草稿標註，待作者確認）。
 
 ## 範例與自己的資料
 

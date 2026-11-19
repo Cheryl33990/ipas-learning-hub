@@ -1,7 +1,7 @@
 <!--
 title: 第三方工具、模型與資料授權盤點
 status: in-review
-updated: 2026-11-17
+updated: 2026-11-18
 -->
 
 # 第三方工具、模型與資料授權盤點
@@ -37,6 +37,7 @@ Docker Desktop **不等於 Docker Compose 的開源授權**。它適用 Docker S
 | 模型 | 用途／版本 | 查核結果 |
 |---|---|---|
 | BAAI/bge-m3 | 文字 embedding；實際 snapshot revision 記在索引 manifest | [官方模型卡標示 MIT](https://huggingface.co/BAAI/bge-m3)；未逐一核對使用者快取 snapshot 全部檔案 |
+| intfloat/multilingual-e5-small | 僅供離線 embedding 選型實驗；revision `614241f622f53c4eeff9890bdc4f31cfecc418b3`，非正式服務模型 | 2026-11-18 查核[官方模型卡標示 MIT](https://huggingface.co/intfloat/multilingual-e5-small)；權重僅存本機 data/models，不進版控，未完成整個 snapshot 的再散布盤點 |
 | Qwen/Qwen3-VL-8B-Instruct-FP8 | 本機生成；Compose 固定 revision `9cdc6310a8cb770ce18efaf4e9935334512aee45`，僅載入文字部分 | [官方模型卡標示 Apache-2.0](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-FP8)；本輪工具未能讀取該 revision 的 LICENSE 全文，精確 snapshot 再散布查核仍未完成 |
 
 模型由使用者自行取得，repo 不附權重。若未來打包模型，需保留該 snapshot 的條款、必要聲明與來源，另外核對 tokenizer、模型程式及其他附檔；不將推論框架授權套到權重上。模型授權也不會自動授予輸入教材或輸出中第三方表達的再利用權利。

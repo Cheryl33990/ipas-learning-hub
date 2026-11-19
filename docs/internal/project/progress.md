@@ -1,10 +1,70 @@
 <!--
 title: 進度與接手
 status: draft
-updated: 2026-11-18
+updated: 2026-11-19
 -->
 
 # 進度與接手
+
+目前階段與前進判斷（2026-11-19，重啟 serve 與提交）：作者接受建議，同意重啟 serve 並提交、開 PR（來源：本輪對話）。以 `docker compose --profile serve up -d --build --no-deps serve` 只重建 serve 映像檔，vLLM、db、ui 未動；約 18 秒後 /v1/models 回 rag 與 labor-law，restarts=0，rag 仍用索引 ce5090f4…，容器內確認已含 provenance_warnings。尚未經 AnythingLLM 畫面實際觸發新警告（需一題會產生無引用句的問題）。公開 JSON 以遞迴掃描比對教材與題目原文，未發現原文。分支改名為 feat/retrieval-evidence-eval（原 docs/progress-next，未曾推送），連同前一筆「記錄 PR 36 合併」一起提交並開 PR；不合併。
+
+目前階段與前進判斷（2026-11-19，來源宣稱警告實作）：作者同意實作最小修正（來源：本輪對話）。先在 tests/test_rag.py 加 4 個測試（無引用句警告且選項行除外、外部宣稱無外部引用、有外部引用不警告、依據不足說明不警告），執行觀察 4 失敗（KeyError warnings），再於 rag.py 新增 provenance_warnings、結果欄位 uncited_segments、render_text 顯示 ⚠ 與摘要「另有 N 句沒有引用」；舊結果缺欄位時以 .get 相容。全套 200 passed／7 skipped（PG_TEST_DSN 未設），ruff check／format 通過。以 34 筆真實回答離線重放（不呼叫模型）：6 筆有警告，t02 兩項皆標出，另 5 句為未引用的推論或重述。文件：EVIDENCE 新增一列、interview 幻覺表、evaluation 後續修正。未重啟 serve（需重啟才生效），未提交。
+
+目前階段與前進判斷（2026-11-19，凍結測試集回答層試跑）：作者同意使用本機 vLLM（來源：本輪對話）。設定先寫入 `data/evaluation/testset-v1-answer-20261119/answer-plan.json` 再執行（run_answers.py）：檔案索引 ce5090f4…、混合、k=5、iPAS profile、qwen3-vl-8b-fp8、temperature 0、核對開啟；教材模式 30 題、維基模式 4 題無答案題，各一次，34／34 rc=0。煙霧測試用一題非測試題：第一次因 query 檔不在 data/ 失敗、第二次因未給模型名稱失敗，第三次通過後才正式執行；CLI 照常寫入 data/runs/。結果（summarize_answers.py → examples/ipas/eval/answer-testset-v1-2026-11-19.json）：教材模式無答案 3／4 拒答，t29 以相關頁硬答並標有依據，核對 3 句只標 1 句；維基模式 2／4 拒答，t30 依維基作答；可回答誤拒 2／26（t05、t23 改寫題，檢索前 5 無證據）；長情境選項 5／5；t02 不開外搜卻寫「依外部資料」且無引用，程式未警告。t07 引用的 subject2 3-42 不在證據草稿，凍結後不改、記為限制。文件：evaluation 新增節、interview 幻覺表更新並新增「無引用的來源宣稱」列。未改程式、服務或索引，未提交。待作者決定：是否實作最小修正（對無引用句、或不開外搜卻宣稱外部的句子加 ⚠）。
+
+目前階段與前進判斷（2026-11-19，新測試集凍結與唯一一次執行）：作者同意候選清單（retrieval-plan-evidence.json 的 20 組）後凍結：`data/evaluation/testset-v1/freeze.json`（cases 0c30eabb…、questions 0d089134…、plan b13e6694…、evaluator 35cacc0b…）。執行一次（沿用 11-18 向量），輸出 `data/evaluation/testset-v1-run-20261119/`，指紋 83f6f091…，20／20 完成；export_testset_run.py 產生公開摘要 `examples/ipas/eval/retrieval-testset-v1-2026-11-19.json`（含題型拆分與 26 題成對 bootstrap 區間）。結果：現行 400／300 BGE 混合證據完整 k=5 21／26、1,000 字元 15、2,000 字元 21，最好或並列；200／150 與 400／400 少 5 題（區間不含 0）；E5 混合 19（區間含 0，p50 約 24 vs 145 ms）；純向量與 BM25 各 18（區間含 0）；改寫題 3／6 最弱；無答案 4 題所有方案都取回候選。偏差核對：出題者讀 400／300 片段；幾何上 200／150、400／400 各 1 個需求無法完整落在單一片段，影響小於觀察差距。文件：retrieval-experiments 新增結果節、interview 更新三項結論與改善順序、STATUS、規劃狀態。正式設定未變、未提交。本批測試集已用過，之後只作開發集。下一步候選：用 4 題無答案題跑回答層拒答（需本機 vLLM，屬執行中服務，須先徵得作者同意）；或由作者撰寫下一批測試題。
+
+目前階段與前進判斷（2026-11-19，新測試集人工確認版）：作者選擇只逐項確認 17 個單一直接支持的需求，並全部同意（來源：本輪對話）；其餘判讀為作者接受 AI 草稿、未逐項判讀，已寫入 review_record.scope。build_cases.py 產生 `data/evaluation/testset-v1/cases.json`（split=test、human-reviewed，30 題含 4 題無答案；load_cases 驗證通過）。freeze_testset.py 加記候選計畫 retrieval-plan-evidence.json 與 evaluator 的雜湊。尚未凍結、尚未執行；等作者確認候選方案清單。
+
+目前階段與前進判斷（2026-11-19，新測試集證據規則確認）：作者同意三項建議（來源：本輪對話）：t16 縮小需求、7 題維持兩個需求、長情境題只標正確選項依據。79 項逐項判讀尚未進行；在作者確認前不產生 human-reviewed 的 cases.json、不凍結。
+
+目前階段與前進判斷（2026-11-19，新測試集證據草稿）：作者確認 30 題已審閱，可進入證據標註（來源：使用者本輪訊息）。Claude Code 依答案要點、source_hint 與全庫關鍵詞起草證據，未執行任何檢索方案。產出（皆在 data/evaluation/testset-v1/）：build_evidence_draft.py → evidence-draft.json（26 題可回答、33 個需求，7 題需合併兩個需求：t08、t11、t13、t14、t16、t21、t25；判讀為直接支持 51、部分支持 22、不支持 1；練習題解析 3 頁依作者規則算證據；4 題無答案題各列相關但不足的頁，不計分）；prepare_review.py → evidence-review.md／.json（79 項，附 PDF 頁連結，無系統排名）。所有引文以評估器的 validate_evidence／locate_evidence 逐字核對通過；PDF 私用區字元以解析函式保留原字串，未放寬比對。待作者決定：t16 教材沒寫「列式只讀所需欄位」，草稿把需求縮為「列式格式適合分析、降低 I/O」；17 個需求只有一頁直接支持，應優先確認；長情境題只標正確選項的依據，不標排除干擾選項的依據。下一步：作者判讀 → 產生 human-reviewed 的 cases.json → 凍結 → 執行比較。
+
+目前階段與前進判斷（2026-11-19，修訂後題目的 AI 複查）：Claude Code 重跑全部文字檢查，未執行檢索。30 題全數通過：欄位完整、id 唯一、依據頁存在、同頁最多 2 次、無排除概念詞、與教材最長相同 ≤10 字、與 700 題歷年試題及 8 題開發題最長相同皆 <12 字（原 t27 的 MCP 重疊已消失）。自行核對 Codex 的說法：t27 教材只在中級科目 2 的 4-11／4-12 提到多副本容錯，「機架」零命中，`rack` 的 3 處命中都是 Tracking；t28 教材只在 5-5 提到 Benjamini–Hochberg 的用途，沒有計算步驟；題目設定的 BH 校正會觸發單調修正（最小兩個值都變成 0.022），前提正確。兩題都是「教材有相關主題但沒有細節」的較難無答案題。Codex 查詢了外部官方文件，只用於確認題目前提。下一步：作者確認 30 題都已審閱，再由 Claude Code 起草證據。
+
+目前階段與前進判斷（2026-11-19，新測試集 v1 審查後修訂完成，待作者審閱）：依作者回饋在 `data/evaluation/testset-v1/questions.json` 以 HDFS 三副本跨機架放置替換 t27，並將 t28 改為 Benjamini–Hochberg 校正後 p 值計算。指定索引五科 680 頁的純文字比對找到兩題的相關教材背景，23 個細節關鍵詞零命中。對照 Apache Hadoop 與 R 官方資料確認兩題前提，另以 [Qwen 官方 Voice Design 說明](https://github.com/QwenLM/Qwen3-TTS#voice-design) 查核 t29，明確寫成已有旁白稿後生成試音。t25、t30 沿用。JSON 讀回驗證 30 題、ID 唯一、預填配置一致。未執行專案檢索或評估。下一步由作者審閱，再進入證據標註與凍結。
+
+目前階段與前進判斷（2026-11-19，Codex 題目草稿的 AI 檢查）：Claude Code 以純文字比對檢查 30 題，未執行任何檢索或評估。通過：JSON 與欄位完整、id 唯一、source_hint 30 題的頁皆存在、跨頁題至少 2 頁且 t08 跨科、同頁最多用 2 次、題目與答案要點不含 8 題開發集排除概念的關鍵詞、題目與五科教材最長連續相同 ≤10 字、與 8 題開發題最長相同 ≤5 字、改寫題 6 題都沒有出現教材術語或其英文。需處理：t27（MCP）與歷年試題（共 700 題）有 27 字相同（「Model Context Protocol（MCP）」），屬已分析過的概念，建議換題。建議：無答案 4 題都是「新技術名稱」型，可改 1–2 題為「教材有相關主題但沒有該細節」；t29 的產品功能前提 AI 無法查證，若之後用於回答評估需作者確認；t30 教材有 Masked 語言模型等相近概念，可當作較難的無答案題，標註時記為相關但不足；t25（泛化）與開發題差分隱私同節，概念不同，暫保留。Codex 依 AGENTS 讀了 brief／progress，其中有開發結果摘要，屬輕度接觸，記錄於此。Codex 紀錄中的 data/ 連結已改為純路徑。下一步：作者逐題審閱並決定 t27 與無答案題調整，再由 Claude Code 起草證據。
+
+目前階段與前進判斷（2026-11-19，新測試集 v1 題目草稿已交付審查）：依 AGENTS、流程指南、review 規則、brief、progress、出題規劃及 testset-v1 README 與範本，以指定教材索引 ce5090f4… 的 chunks 起草 30 題（`data/evaluation/testset-v1/questions.json`，不進版控），全部標為 Codex 撰寫。預填科目、章與題型皆沿用。已讀回驗證 JSON、必填欄位、唯一 ID、跨頁／跨科與頁面使用次數。無答案題 48 個關鍵詞在五科 680 頁的可擷取文字均零命中。未執行任何檢索或評估程式。下一步由作者逐題審閱修改，再進入證據標註與凍結。
+
+目前階段與前進判斷（2026-11-19，新測試集準備）：作者確認第 3 題 intermediate2 5-26、第 4 題 intermediate3 6-21 為直接支持，另存 `data/evaluation/retrieval-dev-evidence-v3.json`（判定與 v2 相同，只更新 review；分數不變，未重跑），44 項已確認 4 項。作者同意先寫新測試題。新增規劃 [retrieval-test-set-v1](design/retrieval-test-set-v1.md)；`data/evaluation/testset-v1/questions.json` 預填 30 格（26 格可回答依頁數分配五科、題型交錯，第一題跨頁格標跨科；4 格無答案）與撰寫說明 README.md；`data/evaluation/freeze_testset.py` 只接受 split=test、human-reviewed、有 review_record 的 cases.json，並拒絕重複凍結。題目文字尚未撰寫，AI 未代寫、未執行任何檢索。階段：測試設計，等待作者出題。下一步：作者填題 → AI 檢查格式與排除概念 → AI 起草證據、作者確認 → 凍結 → 執行比較。
+
+目前階段與前進判斷（2026-11-19，作者確認三項判讀後重評）：作者在對話確認：練習題解析可作證據；第 40 題 subject1 3-59 算支持；第 3、32 題維持兩個必須同時滿足的需求（來源：使用者本輪訊息，2026-11-19）。產生 `data/evaluation/retrieval-dev-evidence-v2.json`（build_evidence_v2.py；逐項 review 為 author-confirmed／ai-draft，整體仍 ai-provisional，因其餘 42 項未確認），判讀材料 JSON 改 partially-reviewed。以 v2 重評輸出 `data/evaluation/retrieval-evidence-v2-20261119/`，公開摘要 `examples/ipas/eval/retrieval-evidence-v2-2026-11-19.json`；指紋 d4718b71…、案例 a094c61c…、evaluator 35cacc0b…（LF 版）。20／20 單元 top-5 與 11-18 相同；所有計數與 MRR 與草稿版完全相同（3-59 未在任何方案 top-5 中排在定義頁前）。未改正式設定、未提交。下一步：作者判讀其餘項目（優先新增的中級頁），或先撰寫新測試題；需作者決定出題者。
+
+目前階段與前進判斷（2026-11-19，檢索實驗審查與證據層級重評，結束）：階段為審查與交付；工具、AI 標註草稿與重評完成，**等待作者判讀標註**，正式選型未驗收。被測版本 07d635e＋前輪未提交變更＋本輪 diff。
+
+- 程式：`retrieval_eval.py` 新增 `evidence`（requirement 全部須滿足、alternatives 等價替代、逐字引文與四種判定，只計 direct）、片段位移還原與 complete／intact、固定字元預算 `budgets`、保存前 20 名排名、`--reuse-vectors`（核對片段全文、模型 revision／前綴、向量雜湊）、指紋納入 Python／套件版本。測試：先寫 8 個新測試並在既有續跑測試加版本檢查，執行觀察到 9 項失敗（函式未實作／版本未入指紋），實作後通過；再補 1 個完整流程證據測試。evaluator 測試 23 個；全套 196 passed／7 skipped（PG_TEST_DSN 未設），ruff check／format 通過。
+- 資料（皆在 data/，未進版控）：`data/evaluation/retrieval-dev-evidence-draft.json`（AI 草稿，build_evidence_draft.py 產生）；作者判讀材料 `data/evaluation/evidence-review-20261119/evidence-review-batch1.md`／`.json`（44 項，無模型排名）；重評輸出 `data/evaluation/retrieval-evidence-20261119/`。公開無原文摘要 `examples/ipas/eval/retrieval-evidence-2026-11-19.json`，計畫 `examples/ipas/eval/retrieval-plan-evidence.json`（預算 1,000／2,000 字元）。
+- 重評：沿用 11-18 向量（不重新嵌入），20／20 單元的 top-5 頁與舊結果逐題相同。指紋 ee8652d7…；Python 3.14.7、numpy 2.5.5、sentence-transformers 6.3.0、torch 2.15.0。草稿標註 13 需求、5 題需合併；直接支持頁 13→25（新增 17 頁在中級）；v1 13 頁中 6 頁直接支持、2 頁判為不支持。結果：第一輪排名作廢；現行 400／300 BGE 混合 k=5 證據完整 3／8、2,000 字元 3／8；BGE 混合 800／600 k=5 7／8 但 1,000 字元剩 1／8；200／150 方案在小預算較穩。8 題、AI 標註，差距不足以改設定。正式模型、索引、DB、服務均未動。
+- 失敗與修正：引文核對擋下 8 段含 PDF 私用區字元的引文，改為保留原字元而非放寬比對；heredoc／sed 改寫兩次失敗，改用 Write／Python；Python write_text 在 Windows 寫出 CRLF，已轉 LF。evaluator 執行時為 CRLF（SHA 503056dc…），轉 LF 後 35cacc0b…，已核對只差換行。
+- 文件：retrieval-experiments（審查表、證據指標、預算、向量重用、集合安排、第二輪結果；第一輪加作廢註記，原文保留）、interview（四級狀態、chunking 三層、embedding 契約／成本／品質、混合不預設最好、品質四層、幻覺失敗類型表、第四個協作案例）、EVIDENCE、STATUS、README 中英版。135 個本機連結目標存在、無 replacement character、code fence 平衡、git diff --check 通過、`git ls-files data` 無輸出。
+- 未做：作者判讀、新測試集撰寫、無答案題、token 預算、LLM 回答重跑、DB／UI／CI。AI 自查，不是獨立真人審查。未提交、開 PR 或合併。
+- 下一步：作者確認三項關鍵判讀（見本輪回覆）與判讀材料；確認後另存 human-reviewed 版並重評（約數分鐘，重用向量）；再依集合安排撰寫新測試題。
+
+目前階段與前進判斷（2026-11-19，檢索實驗審查與證據層級重評，開始）：使用者要求接續 Codex 未提交成果，審查實驗能否支持結論、先改善評估資料，再串成五個 RAG 主題與 AI 協作說明。授權：審查、補強評估工具與測試、標註草稿、小範圍離線驗證、更新文件；不用付費 API、不改正式模型／索引／DB／服務、不提交或發布。基底 07d635e＋前輪未提交 16 檔（保留，未還原）。階段：審查 → 評估資料設計。審查發現：(1) 舊結果 20 個單元的 top-5 取回頁中 23–38／40 來自中級三科，但 13 個 v1 參考頁全在初級兩科，頁面分數系統性低估且無法區分模型差異；(2) 頁面命中不檢查取回片段是否含支持原文；(3) k=5 的平均上下文從 200／150 約 1,000 字元到 800／600 約 2,900 字元，固定 k 不是固定成本；(4) 實驗指紋未含 Python／套件版本，E5 8 個單元是另一次執行續跑，BGE 與 E5 的延遲屬跨次比較；(5) 分母、去重、MRR 定義與測試一致，E5 snapshot 無 sentence-transformers 預設 prompt，前綴不會重複，token 計數含特殊符號且查詢最長 218 tokens。測法：先寫證據片段、等價替代／必須合併、固定字元預算、向量重用核對與環境指紋測試並觀察失敗，再實作；真實資料只重評排名，重用已記錄雜湊的文件向量，不重算嵌入。
+
+目前階段與前進判斷（2026-11-18，chunking／embedding 比較，實測與文件交付）：審查與交付；本輪工具、有限探索與證據完成，可送作者審閱，正式模型選型尚未驗收。新增 `src/ipas_hub/retrieval_eval.py`、`tests/test_retrieval_eval.py`、`examples/ipas/eval/retrieval-plan.json`、`examples/ipas/eval/retrieval-pilot-2026-11-18.json`；方法與結果主來源 [檢索實驗](../../retrieval-experiments.md)，README 中英版、docs 導覽、面試導覽、evaluation、EVIDENCE、STATUS 與第三方模型清單同步。僅使用目前五科 PDF／勘誤、8 題歷史開發案例（保留原 AI 暫定參考頁），沒有使用既有 243／248 題調參，也沒有新增已確認品質 AC。
+
+實驗：200/150、400/400、400/300、800/600 字元視窗 × 固定 revision 的 BGE-M3／multilingual-e5-small，各跑向量與 RRF 混合，加 4 個 BM25 控制，共 20／20 單元完成。CPU 4 threads、batch 8；暖機後每題重複 3 次、k=1/3/5 以同次 top-5 的前綴計分。使用檔案／記憶體索引，不連 DB／LLM。實驗指紋 `ceac95f246d9a8431c145382fa8dbe397f613e81dc117a5706d33f318cebd800`；被測版為 07d635e＋新增 evaluator，evaluator SHA-256 `0f80a41d9f37623ff9511e54aea57462637c5d9f4340a9367ada4d88b02425ca`，完整程式、模型、來源、lock 與結果雜湊在公開摘要。當次原始資料保存在 `data/evaluation/retrieval-study-20261118/`，工具／彙總／複核輔助腳本在 `data/evaluation/`；權重在既有 HF 快取及 `data/models/hub`，未進版控。
+
+結果：四切法重建相同 680 個已解析頁、380,235 不重複字元；片段數 2,657／1,292／1,389／713。現行 400/300 的片段與 ce5090f4 原索引相同，BGE 向量最大絕對差 0。400/300 混合：BGE p50 392.9 ms、MRR@5 0.1875；E5 p50 73.8 ms、MRR@5 0.15，兩者暫定頁 Hit@5 都 2/8。E5 200/150 混合 Hit 4/8、MRR 約 0.223，對現行基線逐題 MRR 改善 2／退步 1／相同 5；BGE 400/300 純向量 MRR 約 0.354，不能挑混合有利列來報告。E5 800/600 截斷 8/713 文件片段，其餘候選文件及全部查詢未超限。結果只對有限、有爭議的 AI 參考頁成立，沒有人工 gold、無答案題、新測試集或固定生成 token budget，不聲稱回答正確率或新模型勝出。正式 400/300＋BGE、資料庫、服務與既有索引皆未更動。
+
+測試／review：先寫的 8 個 evaluator 測試在模組未建立時 import 失敗，實作後通過；再補 6 個測試（含四種視窗參數化、完整替身流程、混合指紋拒絕）。本輪完整測試 187 passed／7 skipped（PG_TEST_DSN 未設），4.05 秒；ruff check／format 通過，CLI help 與 HF download 參數核對。逐筆重算 20 單元的 480 筆題目／k 指標及彙總、原始結果雜湊、目前 src 雜湊、排名穩定性皆通過；480 筆不是 480 個獨立問題。12 份文件 198 個相對連結目標存在，無 replacement character、code fences 平衡，git diff --check 通過，git ls-files data 無輸出。公開 JSON 不含八題題目原文；已審閱實際新模組／測試及文件差異。未重跑真實 LLM、DB 整合、UI、Docker 或 hosted CI，AI review 不作真人批准。
+
+失敗與復原：初次網路受 sandbox 限制，取得工具核准後下載公開固定模型；下載腳本起初把 cache 放 repo/models，核對絕對路徑後移至 data/models，未納入版控。首次 E5 僅下載部分檔案，BGE 完成後遇 IncompleteSnapshotError；補齊同 revision、與載入相同排除清單的附檔，離線檢查通過，以同指紋 --model e5-small 續跑，保留原 12 單元、完成另 8 單元。下載與評估程序皆正常結束。沒有將失敗填 0 或改用另一版本。
+
+未達條件與下一步：已準備 `data/evaluation/retrieval-study-20261118/reference-review.md`／`reference-review-template.json`，8 題、13 個參考頁附原文與 PDF 連結，未顯示模型勝負、仍待作者判讀；之後另存人工標註版、設計新測試題，再比較固定上下文成本下的回答支持度。E5 前綴只在 evaluator，正式採用需另加生產契約與重建索引。此次未提交、開 PR、合併或部署；前輪未提交文件仍保留。回復只需還原本輪新增模組／測試／設定／摘要及文件改動，實驗資料留 data/，無須回滾正式服務。
+
+目前階段與前進判斷（2026-11-18，chunking／embedding 比較，開始）：使用者授權在專案補上測試與選型，並明確選擇先比較 chunking 與 embedding，排除生成模型。階段：探索與測試規劃；基底 07d635e＋前輪未提交面試文件，保留既有變更。已有 8 題開發檢索案例，但參考頁為 AI 探索標註且有歷史爭議，不能冒充人工 gold；既有 243／248 題不得再作選型後的全新保留集。計畫新增獨立離線 evaluator，四種固定視窗（200/150、400/400、400/300、800/600）× BGE-M3／multilingual-e5-small，含 BM25 控制；不改正式索引、DB、serve。測法先以合成案例驗證頁碼去重、Hit／Recall／MRR、不可回答分母、輸入／版本核對、模型前綴與失敗不出假結果，再跑本機探索。品質不設捏造門檻；完成條件為可重跑工具、當次版本／結果／限制與人工複核材料。候選 E5 須依官方模型卡加 query／passage 前綴並記截斷；僅下載本機開源權重，不使用付費 API。下一步完成實驗設計與測試。
+
+目前階段與前進判斷（2026-11-18，面試官視角 RAG／AI 協作審查，完成文件）：階段為審查與交付，可送作者審閱。新增主來源 `docs/interview.md`，六項問題各列現況、取捨、限制與程式／測試／歷史證據；README 中英版、docs/README、architecture 加入口，README 將「自己寫」改為專案工程範圍並揭露 AI 協助。AI review 發現並修正 EVIDENCE「零分不回傳」未限定 BM25 的敘述；向量無相似度拒答門檻，不能延伸成離題皆拒答。審查結論：文件可送審，chunking／embedding 最優性與頁碼召回證據不足，改善建議未當成新 AC。既有 243 題與局部重跑合成 248 題、模型核對未包含在舊延遲、局部 TDD 與非全程 TDD 均分開說明。
+
+本輪驗證版本：07d635e＋上述文件 diff。8 份變更文件的 163 個本機相對連結目標存在，無 Unicode replacement character；六項主題與 code fence 檢查通過，EVIDENCE 74 個測試名稱皆在 tests 存在，git diff --check 通過。首次主題檢查因 PowerShell 管線傳遞全形標點導致 assertion 失敗，改以 ASCII Unicode escape 後通過，文件未因此更動；未冒稱第一次即通過。已讀實際 diff 並核對新文件參數／歷史數字／案例。純文件未跑 pytest、真實模型評估、DB、容器或 hosted CI，沒有新增實驗結果。未提交、開 PR、合併或重啟服務。下一步由作者審閱面試說明，確認能現場解釋程式與個人參與範圍；模型／切塊比較和標註集為後續候選工作。本輪文件可逆，回復只需還原本批文件變更並移除新導覽，不影響索引或服務。
+
+目前階段與前進判斷（2026-11-18，面試官視角 RAG／AI 協作審查，開始）：使用者提供朋友建議，授權審查與補充 chunking、embedding 選型、檢索、品質評估、幻覺處理與 AI 協作。基底 07d635e，開始工作樹乾淨。階段：探索 → 文件設計；已核對程式與公開評估，採公開面試導覽串接既有主來源，避免複製完整評估結果。測法：逐項核對程式參數、測試名稱、歷史紀錄與數字，檢查相對連結及 diff；純文件不新增應用測試。未知：embedding／chunking 最佳參數、作者能否現場解釋與修改程式；不得由文件推定。下一步完成導覽、README 入口及 AI 自查。網頁與 shell 讀模板失敗，已改由 GitHub connector 讀取固定 commit 的指南與參考規則。
+
+目前階段與前進判斷（2026-11-18，PR #36 合併）：PR #36 已由使用者合併（d12e4b3），CI run 44295433062 通過；pull 後工作目錄無變更檔案。目前沒有進行中的任務；使用者確認後刪除 fresh-ipas 測試 volume 3 個（pg-data 75 MB、ui-storage 1.8 MB、hf-cache 空），刪除前確認無容器使用；ipas-learning-hub_* 與模型 volume 未動，端點 rag／labor-law 仍可用。之後依使用者要求刪除暫存資料夾內的 fresh-ipas clone 與其測試暫存（約 1 GB，含測試下載的教材 PDF、測試索引與測試 .env）。本筆隨下一個分支一起提交。
 
 目前階段與前進判斷（2026-11-18，PR #35 合併後確認）：PR #35 已由使用者合併（90fea39），CI run 44285782256 通過。使用者已在 .env 加入 HF_CACHE_DIR 與 RAG_ROUTES（AI 只確認鍵存在、RAG_ROUTES 為 config/rag-routes.json，未讀出路徑值）。不帶 shell 環境變數執行 docker compose --profile serve --profile ui up -d：serve、ui、db、vllm 皆維持 Running、未重建，代表 .env 設定與先前帶入的值一致；/v1/models 回 rag 與 labor-law。使用者選擇做 .gitattributes 並一起送出本筆。分支 chore/gitattributes：新增 .gitattributes（* text=auto eol=lf；gif、png、jpg、pdf 為 binary）。測法：git add --renormalize 後索引無任何變更（93 個文字檔原本就是 LF）；確認工作目錄無未提交修改後，以 git rm --cached -r 加 git reset --hard 重新 checkout，工作目錄 94 個檔案皆為 LF，未追蹤的 .env 與 data/ 不受影響；修改 README 後 git add 不再出現 CRLF 警告；ruff、pytest、demo 皆通過。fresh-ipas 測試 volume 是否刪除仍待使用者決定。下一步：開 PR、等 CI，等使用者合併。
 
