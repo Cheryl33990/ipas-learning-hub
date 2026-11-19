@@ -970,3 +970,54 @@ def test_markdown_puts_the_model_verification_summary_in_its_own_paragraph():
     assert "仍可能有誤）。\n\n提醒：" in md
     plain = render_text(result)
     assert "未引用的句子不檢查）。\n模型核對 2 句：" in plain
+
+
+# ---- 來源宣稱：無引用句與不實的外部來源（2026-11-19 凍結測試集 t02 案例） ----
+
+
+def test_uncited_sentence_in_supported_answer_is_warned_but_choice_line_is_not():
+    result = answer(
+        OPTIONS,
+        BOOK,
+        [],
+        reply(
+            status="supported", segments=[seg("迴歸預測連續數值", "subject1:3-36:0"), seg("這是推論"), seg("答案：B")]
+        ),
+    )
+    cited, uncited, choice = result["segments"]
+    assert cited["warnings"] == [] and choice["warnings"] == []
+    assert uncited["warnings"] == ["此句沒有引用，未經核對"]
+    assert result["uncited_segments"] == 1
+    text = render_text(result)
+    assert "⚠ 此句沒有引用，未經核對" in text and "另有 1 句沒有引用" in text
+
+
+def test_claiming_external_basis_without_an_external_citation_is_warned():
+    result = answer(
+        "題目",
+        BOOK,
+        [],
+        reply(
+            status="supported",
+            segments=[seg("迴歸預測連續數值", "subject1:3-36:0"), seg("教材未涵蓋，依外部資料：偶數筆取中間兩數平均")],
+        ),
+    )
+    claim = result["segments"][1]
+    assert "宣稱依外部資料，但此句沒有外部引用" in claim["warnings"]
+    assert "⚠ 宣稱依外部資料，但此句沒有外部引用" in render_text(result)
+
+
+def test_external_claim_backed_by_an_external_citation_is_not_warned():
+    result = answer(
+        "題目",
+        BOOK,
+        WEB,
+        reply(status="supported", segments=[seg("教材未涵蓋，依外部資料：MAE 是絕對誤差平均", "wiki:1")]),
+    )
+    assert result["segments"][0]["warnings"] == [] and result["uncited_segments"] == 0
+
+
+def test_insufficient_explanations_are_not_warned_as_uncited():
+    result = answer("題目", BOOK, [], reply(status="insufficient", segments=[seg("教材沒有提到此概念")]))
+    assert result["segments"][0]["warnings"] == [] and result["uncited_segments"] == 0
+    assert "沒有引用" not in render_text(result)

@@ -4,6 +4,8 @@
 
 | 想了解什麼 | 文件 |
 |---|---|
+| 面試如何說明 RAG 選型、品質、幻覺處理與 AI 協作 | [面試導覽](interview.md) |
+| 如何測 chunking、比較 embedding，以及本機探索結果 | [檢索實驗](retrieval-experiments.md) |
 | 系統如何運作、設計取捨與程式位置 | [架構](architecture.md) |
 | 作者實際硬體、模型配置與執行需求 | [執行環境](environment.md) |
 | iPAS 範例由哪些檔案組成 | [examples/ipas](../examples/ipas/README.md) |

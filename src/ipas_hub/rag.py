@@ -349,6 +349,25 @@ def _mark_segments(raw_segments: list[dict], by_id: dict, question: str) -> tupl
     return segments, markers
 
 
+EXTERNAL_CLAIM = "依外部資料"
+
+
+def provenance_warnings(segments: list[dict], by_id: dict, status: str) -> None:
+    """程式層的來源檢查，寫入 segment["warnings"]，只警告不改寫：
+
+    - 有依據的回答中，沒有引用的句子（選項行「答案：X」除外）不會經過字詞或模型核對；
+    - 句子宣稱「依外部資料」卻沒有引用任何外部片段（例如外搜關閉時）是不實的來源說法。
+    """
+    for s in segments:
+        warnings = []
+        choice_only = not STRAY_CHOICE.sub("", s["text"]).strip()
+        if status == "supported" and not s["citations"] and not choice_only:
+            warnings.append("此句沒有引用，未經核對")
+        if EXTERNAL_CLAIM in s["text"] and not any(by_id[c]["source_type"] == "external" for c in s["citations"]):
+            warnings.append("宣稱依外部資料，但此句沒有外部引用")
+        s["warnings"] = warnings
+
+
 def _build_sources(markers: dict, by_id: dict, located: dict, licensed: set) -> list[dict]:
     """每個被引用的片段一筆來源；來源類型、網址、授權與 PDF 頁都由程式依片段資料填入。"""
     sources = [
@@ -396,11 +415,12 @@ def answer(
         return {
             "status": "insufficient",
             "answer": text,
-            "segments": [{"text": text, "citations": [], "markers": [], "check": None}],
+            "segments": [{"text": text, "citations": [], "markers": [], "check": None, "warnings": []}],
             "citations": [],
             "sources": [],
             "basis": "none",
             "flagged_segments": 0,
+            "uncited_segments": 0,
             "validation": "no_evidence",
             "verification": {"status": "off"},
             "prompt_sha256": None,
@@ -426,6 +446,7 @@ def answer(
         }
 
     segments, markers = _mark_segments(output["segments"], by_id, question)
+    provenance_warnings(segments, by_id, output["status"])
     verification = verify_segments(segments, by_id, generate) if verify else {"status": "off"}
     sources = _build_sources(markers, by_id, located, licensed)
     lines = [s["text"] + (" " + "".join(f"[{m}]" for m in s["markers"]) if s["markers"] else "") for s in segments]
@@ -439,6 +460,7 @@ def answer(
         "sources": sources,
         "basis": _basis(sources),
         "flagged_segments": sum(1 for s in segments if s["check"] and s["check"]["flagged"]),
+        "uncited_segments": sum(1 for s in segments if "此句沒有引用，未經核對" in s["warnings"]),
         "model": generated.get("model"),
         "usage": generated.get("usage"),
         "llm_elapsed_ms": generated.get("elapsed_ms"),
@@ -493,6 +515,8 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
             body.append(indent + "⚠ 模型核對：" + SUPPORT_WARNINGS[support["verdict"]] + note)
         if s["check"] and s["check"]["flagged"]:
             body.append(indent + "⚠ 引用可能不支持此句：" + "；".join(s["check"]["reasons"]))
+        for warning in s.get("warnings", []):  # 舊結果檔沒有此欄位
+            body.append(indent + "⚠ " + warning)
     verification = result.get("verification") or {"status": "off"}
     if verification["status"] == "error":
         body.append(f"⚠ 模型核對未完成：{verification['error']}；標為未核對的句子沒有經過語意核對。")
@@ -520,7 +544,8 @@ def render_text(result: dict, link_for=None, markdown: bool = False) -> str:
     lines += [
         "",
         f"核對：{cited} 句有引用，其中 {result['flagged_segments']} 句可能不支持"
-        "（字詞比對，非語意驗證；未引用的句子不檢查）。",
+        + (f"；另有 {result['uncited_segments']} 句沒有引用" if result.get("uncited_segments") else "")
+        + "（字詞比對，非語意驗證；未引用的句子不檢查）。",
         # Markdown 版另起一段：聊天介面會把單一換行併成同一段
         *(([""] if markdown else []) + [line] if (line := _verification_line(verification, cited)) else []),
         *([""] if markdown else []),

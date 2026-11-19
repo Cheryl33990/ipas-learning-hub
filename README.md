@@ -86,7 +86,11 @@ flowchart LR
 
 The file index can be used on its own or loaded into PostgreSQL + pgvector: the database handles vector distance queries, while BM25 and fusion run in Python. AnythingLLM is only the chat UI; no documents are uploaded to it. With Docker Compose, `--profile serve` starts the database, vLLM and the RAG endpoint together (see the [setup guide](docs/setup.md), Chinese). Module locations, data flow and design trade-offs are in the [architecture doc](docs/architecture.md) (Chinese).
 
-**What I wrote myself:** document parsing and errata, the versioned index, retrieval fusion, citation checking, domain profiles, the OpenAI-compatible endpoint and knowledge-base routing. The chat UI (AnythingLLM), model server (vLLM), embedding model (BGE-M3) and generation model (Qwen3) are third-party work.
+**Project-specific engineering (developed with AI assistance):** document parsing and errata, the versioned index, retrieval fusion, citation checking, domain profiles, the OpenAI-compatible endpoint and knowledge-base routing. The chat UI (AnythingLLM), model server (vLLM), embedding model (BGE-M3) and generation model (Qwen3) are third-party work.
+
+**For technical interviews:** the [RAG design and AI collaboration guide](docs/interview.md) (Chinese) explains character-based chunking (400 characters, stride 300), embedding selection and its evidence gaps, Python BM25 + pgvector + RRF (no Elasticsearch), quality evaluation, hallucination controls, and concrete Claude Code / Codex development and verification examples. It distinguishes implemented behavior from untested choices and partial TDD evidence.
+
+The separate [chunking and embedding experiment](docs/retrieval-experiments.md) provides a reproducible offline comparison of four window settings and two models. Its eight development queries have provisional relevance labels; these exploratory results do not establish a production winner. A 2026-11-19 review found the first-round reference pages omitted equivalent evidence in the intermediate textbooks, so that ranking was withdrawn and the runs were re-scored on evidence-span coverage under fixed context budgets (AI-drafted labels, pending author review).
 
 ## The example and your own data
 

@@ -1,0 +1,3440 @@
+{
+  "status": "exploratory-not-a-selection-decision",
+  "date": "2026-11-18",
+  "signature": "ceac95f246d9a8431c145382fa8dbe397f613e81dc117a5706d33f318cebd800",
+  "cases_sha256": "cd1022c3e59196a05d9fec7010279c48ace13146bca021b506485d8fd16984f3",
+  "parent_cases_sha256": "197e8aa3e7e5725ba720ea1a3b34b790e5034cb92e26ef85ffb5b9b3572eca86",
+  "label_status": "ai-provisional",
+  "split": "development",
+  "case_count": 8,
+  "baseline_reproduction": {
+    "existing_index_id": "ce5090f4da274f3e80ce91701e0dae39948674a58e6485de4e69d54ada96a5cc",
+    "chunks_equal": true,
+    "vectors_max_absolute_difference": 0.0
+  },
+  "source_hashes": {
+    "subject1": {
+      "pdf": "11eec1f79617aee49989e9e2f1c54c7a33dcaedc5f21d375a9dba5a393ca216c",
+      "patch": "cc0cedb86afb844d459f97999bf0e63cba779097d3333f21341d89ba7f22056a"
+    },
+    "subject2": {
+      "pdf": "142d9dadbbfd35020875a640beaa15f6e7ad86b3fe91920048df59123fd7ea5f",
+      "patch": "0a018221733c647b96c53f1631b42e84e4fbacdd5ef7a77f3a52fee0981cc757"
+    },
+    "intermediate1": {
+      "pdf": "7b1c67e3280600fbeca893bc1c13421d5aa44841272c34b456f1346731bf3812",
+      "patch": "91bbdb8ee3f2d9aea850a8cf179778d09f3d6df4155a1d3eebc57170f39d2209"
+    },
+    "intermediate2": {
+      "pdf": "cae491470cb756ed4323b11e19459465383e2d93ee5f0e4abfcd8f4983b49933",
+      "patch": null
+    },
+    "intermediate3": {
+      "pdf": "cc4300a4133276509f34750313f65fd02e4bd1960366fc604f236f057719247a",
+      "patch": "975f20f0a8cb22e3cea8f7e6fe4c3f7886667af795e36f6ad2631cfb949981d3"
+    }
+  },
+  "chunk_integrity": [
+    {
+      "chunk": "c200-s150",
+      "pages": 680,
+      "chunks": 2657,
+      "unique_chars": 380235,
+      "indexed_chars": 479085,
+      "overlap_extra_chars": 98850,
+      "page_texts_equal_across_variants": true,
+      "page_map_sha256": "ac490436f74d74ef2b620a4fba92df9490e388936ee23a395a3668136038ab3e"
+    },
+    {
+      "chunk": "c400-s300",
+      "pages": 680,
+      "chunks": 1389,
+      "unique_chars": 380235,
+      "indexed_chars": 451135,
+      "overlap_extra_chars": 70900,
+      "page_texts_equal_across_variants": true,
+      "page_map_sha256": "ac490436f74d74ef2b620a4fba92df9490e388936ee23a395a3668136038ab3e"
+    },
+    {
+      "chunk": "c400-s400",
+      "pages": 680,
+      "chunks": 1292,
+      "unique_chars": 380235,
+      "indexed_chars": 380235,
+      "overlap_extra_chars": 0,
+      "page_texts_equal_across_variants": true,
+      "page_map_sha256": "ac490436f74d74ef2b620a4fba92df9490e388936ee23a395a3668136038ab3e"
+    },
+    {
+      "chunk": "c800-s600",
+      "pages": 680,
+      "chunks": 713,
+      "unique_chars": 380235,
+      "indexed_chars": 386835,
+      "overlap_extra_chars": 6600,
+      "page_texts_equal_across_variants": true,
+      "page_map_sha256": "ac490436f74d74ef2b620a4fba92df9490e388936ee23a395a3668136038ab3e"
+    }
+  ],
+  "plan": {
+    "source_config": "examples/ipas/knowledge-base.json",
+    "chunks": [
+      {
+        "id": "c200-s150",
+        "size": 200,
+        "stride": 150
+      },
+      {
+        "id": "c400-s400",
+        "size": 400,
+        "stride": 400
+      },
+      {
+        "id": "c400-s300",
+        "size": 400,
+        "stride": 300
+      },
+      {
+        "id": "c800-s600",
+        "size": 800,
+        "stride": 600
+      }
+    ],
+    "models": [
+      {
+        "id": "bge-m3",
+        "name": "BAAI/bge-m3",
+        "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+        "query_prefix": "",
+        "document_prefix": ""
+      },
+      {
+        "id": "e5-small",
+        "name": "intfloat/multilingual-e5-small",
+        "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+        "cache_dir": "data/models/hub",
+        "query_prefix": "query: ",
+        "document_prefix": "passage: "
+      }
+    ],
+    "ks": [
+      1,
+      3,
+      5
+    ],
+    "repeats": 3,
+    "cpu_threads": 4
+  },
+  "code_sha256": {
+    "bm25.py": "98865a614a900945e7c956f6e7a46b6bc7ce8143303f7c1cadb5ce6e71122538",
+    "cli.py": "651e35e8af9cc5180a65680e4ac5a1f4d825e6a77329b7b9fa3ee04952bd6ea7",
+    "demo.py": "deb6c3ce5b8ad0952fda66cd392509412a2436fafd2d4802fcc3e392a83e9478",
+    "exam.py": "98338942631433c5903ebbfe5ef5fa6cd21c66c808752c47c42c7f215fabc60f",
+    "exam_eval.py": "bf8636981710322445f90c0b9ad5617f10c4ef3072aec4ed09003999a41168b4",
+    "fetch.py": "cdf0b1c1726d75c8a5b9d7b6c54584c512a522d0f5810ef508f39177bbc913fb",
+    "guide.py": "5e932b7d60af6eb1ecf6441f6f1b1a6d10812f643e7664b866f5f16cfdde273a",
+    "knowledge.py": "4f761d45fb8e9954c3683146a17911a4ce539c0a2879680e5e9149fe62216e85",
+    "llm.py": "69748194a7431c59bf3d52e2d441ad050ba3f1f6e496d73086512b806bbbd0ec",
+    "pgstore.py": "88463de2518c39031b7428ca83465f320f3d5808f842ed7faa004eb3bbe88b38",
+    "profile.py": "9da67b8b8bcaeea18534565873bfe0585c7e36c71449387e0547fabe03d1a364",
+    "rag.py": "b4679cdb7c5645a1f96914a48d0a5a5cd9010446ce08e550e80747150d46e02d",
+    "retrieval_eval.py": "0f80a41d9f37623ff9511e54aea57462637c5d9f4340a9367ada4d88b02425ca",
+    "server.py": "fe4f112a4a8132afa55d15d4c7fca421c468cf7286f9bbe4dabe6660cd76a5c4",
+    "text.py": "f06dfaeadbd7218d28e2bc52a12b624c6edef662de617e0212e506b01472205f",
+    "websearch.py": "17fe9ff4fda7259146f7502b52cd29a20991ca9f07db2d0935e04e3e3a381b9a",
+    "__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "lock_sha256": "a11c2e06634b5765f6dd19a1d17cdbab293218afb92a3765033de5d3c64ffe2e",
+  "environment": {
+    "python": "3.14.7",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "packages": {
+      "numpy": "2.5.5",
+      "sentence-transformers": "6.3.0",
+      "torch": "2.15.0"
+    }
+  },
+  "limitations": [
+    "AI reference pages are incomplete and historically disputed.",
+    "These are not held-out questions or final selection evidence.",
+    "All eight queries are answerable by the provisional page labels; no no-answer test.",
+    "Page labels do not establish support by the retrieved chunk.",
+    "Fixed k does not control context token budget.",
+    "Methods and models ran in fixed order on an active workstation.",
+    "No generation evaluation, no peak memory measurement, no production change."
+  ],
+  "results": [
+    {
+      "cell": "c200-s150/bge-m3-hybrid",
+      "result_sha256": "35e9de2cbd2871ac43474741dfc301dc87219b0a4d8dbf129323c8e0f766c0af",
+      "chunk": {
+        "id": "c200-s150",
+        "size": 200,
+        "stride": 150
+      },
+      "chunks": 2657,
+      "dimensions": 1024,
+      "vector_bytes": 10883072,
+      "vector_sha256": "b838e0ffca03033966142fa69faccd0170170ad930c61745a25559ac0c9aea49",
+      "model_load_ms": 1804.5422000577673,
+      "parse_chunk_ms": 10390.509200049564,
+      "document_embedding_ms": 660973.3007999603,
+      "document_tokens": {
+        "max_seq_length": 8192,
+        "texts": 2657,
+        "max_tokens": 166,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 8192,
+        "texts": 8,
+        "max_tokens": 215,
+        "truncated_texts": 0
+      },
+      "method": "hybrid",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 200.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.04166666666666667,
+          "context_chars": 600.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.25,
+          "reciprocal_rank": 0.15625,
+          "duplicate_page_fraction": 0.024999999999999994,
+          "context_chars": 1000.0,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 400.71584994439036,
+        "p95": 461.5126400196459,
+        "samples": 24
+      },
+      "model_id": "bge-m3",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1000,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 1,
+        "unchanged": 6,
+        "mean_difference": -0.03125
+      }
+    },
+    {
+      "cell": "c200-s150/bge-m3-vector",
+      "result_sha256": "700a20468950b235bcfbe09dd08b02bceed7e29fb3d51f8a0b29aeed27a4fa82",
+      "chunk": {
+        "id": "c200-s150",
+        "size": 200,
+        "stride": 150
+      },
+      "chunks": 2657,
+      "dimensions": 1024,
+      "vector_bytes": 10883072,
+      "vector_sha256": "b838e0ffca03033966142fa69faccd0170170ad930c61745a25559ac0c9aea49",
+      "model_load_ms": 1804.5422000577673,
+      "parse_chunk_ms": 10390.509200049564,
+      "document_embedding_ms": 660973.3007999603,
+      "document_tokens": {
+        "max_seq_length": 8192,
+        "texts": 2657,
+        "max_tokens": 166,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 8192,
+        "texts": 8,
+        "max_tokens": 215,
+        "truncated_texts": 0
+      },
+      "method": "vector",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 200.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.04166666666666667,
+          "context_chars": 595.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.5,
+          "page_recall": 0.3125,
+          "reciprocal_rank": 0.30625,
+          "duplicate_page_fraction": 0.075,
+          "context_chars": 990.5,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 404.38890003133565,
+        "p95": 480.6170199590269,
+        "samples": 24
+      },
+      "model_id": "bge-m3",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 964,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 970,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 990,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.4,
+          "context_chars": 1000,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 2,
+        "regressed": 1,
+        "unchanged": 5,
+        "mean_difference": 0.11875
+      }
+    },
+    {
+      "cell": "c200-s150/bm25",
+      "result_sha256": "e2f8c16350aa68da0c6c5901008fcb9786e791c8ad593a0a2a27fad1144d8512",
+      "chunk": {
+        "id": "c200-s150",
+        "size": 200,
+        "stride": 150
+      },
+      "chunks": 2657,
+      "parse_chunk_ms": 10390.509200049564,
+      "method": "bm25",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 200.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.0625,
+          "duplicate_page_fraction": 0.08333333333333334,
+          "context_chars": 587.25,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.0625,
+          "duplicate_page_fraction": 0.09999999999999999,
+          "context_chars": 958.75,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 20.450799958780408,
+        "p95": 31.339499994646758,
+        "samples": 24
+      },
+      "model_id": null,
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.5,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 889,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 898,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.6,
+          "context_chars": 883,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 0,
+        "regressed": 2,
+        "unchanged": 6,
+        "mean_difference": -0.125
+      }
+    },
+    {
+      "cell": "c200-s150/e5-small-hybrid",
+      "result_sha256": "cf5f812b448988e225d8a27c33c8c1aa6fc908829318be05754b2d46e3e8fd81",
+      "chunk": {
+        "id": "c200-s150",
+        "size": 200,
+        "stride": 150
+      },
+      "chunks": 2657,
+      "dimensions": 384,
+      "vector_bytes": 4081152,
+      "vector_sha256": "1af43276f15fc668c10b8f17937af582db292e1feee915e6baf53ca72b9775ba",
+      "model_load_ms": 2647.5559999234974,
+      "parse_chunk_ms": 13536.164299934171,
+      "document_embedding_ms": 64918.23479998857,
+      "document_tokens": {
+        "max_seq_length": 512,
+        "texts": 2657,
+        "max_tokens": 168,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 512,
+        "texts": 8,
+        "max_tokens": 218,
+        "truncated_texts": 0
+      },
+      "method": "hybrid",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 200.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.16666666666666666,
+          "duplicate_page_fraction": 0.08333333333333334,
+          "context_chars": 600.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.5,
+          "page_recall": 0.3125,
+          "reciprocal_rank": 0.22291666666666665,
+          "duplicate_page_fraction": 0.07499999999999998,
+          "context_chars": 999.375,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 88.88355002272874,
+        "p95": 107.34877004870214,
+        "samples": 24
+      },
+      "model_id": "e5-small",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 995,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1000,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 2,
+        "regressed": 1,
+        "unchanged": 5,
+        "mean_difference": 0.035416666666666666
+      }
+    },
+    {
+      "cell": "c200-s150/e5-small-vector",
+      "result_sha256": "dba3f223d3aed26c35538d196ef1fe47d5bb6503c1e58bddd7e09d3ec4c11f76",
+      "chunk": {
+        "id": "c200-s150",
+        "size": 200,
+        "stride": 150
+      },
+      "chunks": 2657,
+      "dimensions": 384,
+      "vector_bytes": 4081152,
+      "vector_sha256": "1af43276f15fc668c10b8f17937af582db292e1feee915e6baf53ca72b9775ba",
+      "model_load_ms": 2647.5559999234974,
+      "parse_chunk_ms": 13536.164299934171,
+      "document_embedding_ms": 64918.23479998857,
+      "document_tokens": {
+        "max_seq_length": 512,
+        "texts": 2657,
+        "max_tokens": 168,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 512,
+        "texts": 8,
+        "max_tokens": 218,
+        "truncated_texts": 0
+      },
+      "method": "vector",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 200.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.10416666666666666,
+          "duplicate_page_fraction": 0.16666666666666669,
+          "context_chars": 597.5,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.10416666666666666,
+          "duplicate_page_fraction": 0.175,
+          "context_chars": 997.5,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 87.09569997154176,
+        "p95": 105.9305199771188,
+        "samples": 24
+      },
+      "model_id": "e5-small",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 980,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.5,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.4,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1000,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.4,
+          "context_chars": 1000,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 2,
+        "unchanged": 5,
+        "mean_difference": -0.08333333333333334
+      }
+    },
+    {
+      "cell": "c400-s300/bge-m3-hybrid",
+      "result_sha256": "3e5bc35f035c65eb454030cb5d9d961b5046d230ff52be060f775bfc83a5b76e",
+      "chunk": {
+        "id": "c400-s300",
+        "size": 400,
+        "stride": 300
+      },
+      "chunks": 1389,
+      "dimensions": 1024,
+      "vector_bytes": 5689344,
+      "vector_sha256": "5940aa8111068f78d90f0cbeb88993e1f6d72e0adb6730bbd6c9c98905b7a5ad",
+      "model_load_ms": 1804.5422000577673,
+      "parse_chunk_ms": 10884.723199997097,
+      "document_embedding_ms": 574725.1748999115,
+      "document_tokens": {
+        "max_seq_length": 8192,
+        "texts": 1389,
+        "max_tokens": 313,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 8192,
+        "texts": 8,
+        "max_tokens": 215,
+        "truncated_texts": 0
+      },
+      "method": "hybrid",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 359.5,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.1875,
+          "duplicate_page_fraction": 0.04166666666666667,
+          "context_chars": 1098.375,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.1875,
+          "duplicate_page_fraction": 0.04999999999999999,
+          "context_chars": 1854.5,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 392.93875003932044,
+        "p95": 464.70725997351104,
+        "samples": 24
+      },
+      "model_id": "bge-m3",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1750,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2000,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1619,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1958,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.5,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 2000,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1588,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2000,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1921,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 0,
+        "regressed": 0,
+        "unchanged": 8,
+        "mean_difference": 0.0
+      }
+    },
+    {
+      "cell": "c400-s300/bge-m3-vector",
+      "result_sha256": "78a442540636d91ad8e831506af0db3190439cc9126377f7ae33506a2b24433e",
+      "chunk": {
+        "id": "c400-s300",
+        "size": 400,
+        "stride": 300
+      },
+      "chunks": 1389,
+      "dimensions": 1024,
+      "vector_bytes": 5689344,
+      "vector_sha256": "5940aa8111068f78d90f0cbeb88993e1f6d72e0adb6730bbd6c9c98905b7a5ad",
+      "model_load_ms": 1804.5422000577673,
+      "parse_chunk_ms": 10884.723199997097,
+      "document_embedding_ms": 574725.1748999115,
+      "document_tokens": {
+        "max_seq_length": 8192,
+        "texts": 1389,
+        "max_tokens": 313,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 8192,
+        "texts": 8,
+        "max_tokens": 215,
+        "truncated_texts": 0
+      },
+      "method": "vector",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 372.125,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.5,
+          "page_recall": 0.3125,
+          "reciprocal_rank": 0.35416666666666663,
+          "duplicate_page_fraction": 0.125,
+          "context_chars": 986.625,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.5,
+          "page_recall": 0.3125,
+          "reciprocal_rank": 0.35416666666666663,
+          "duplicate_page_fraction": 0.07499999999999998,
+          "context_chars": 1649.625,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 392.1623000060208,
+        "p95": 490.48828001250513,
+        "samples": 24
+      },
+      "model_id": "bge-m3",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1626,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1435,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1502,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1673,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1982,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1569,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1410,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.5,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 2000,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 3,
+        "regressed": 0,
+        "unchanged": 5,
+        "mean_difference": 0.16666666666666666
+      }
+    },
+    {
+      "cell": "c400-s300/bm25",
+      "result_sha256": "04e97b10102e423d4600ee5792c44210060c8df79f70dbea9cc95df06f5ac885",
+      "chunk": {
+        "id": "c400-s300",
+        "size": 400,
+        "stride": 300
+      },
+      "chunks": 1389,
+      "parse_chunk_ms": 10884.723199997097,
+      "method": "bm25",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 395.75,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.0625,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1138.625,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.0875,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1870.375,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 11.009199952241033,
+        "p95": 18.388240050990127,
+        "samples": 24
+      },
+      "model_id": null,
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.5,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1750,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1958,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1622,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1875,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1962,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1835,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1983,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1978,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 2,
+        "unchanged": 5,
+        "mean_difference": -0.1
+      }
+    },
+    {
+      "cell": "c400-s300/e5-small-hybrid",
+      "result_sha256": "4e0ab7bddd82adbf622162c07c8fd35dbac1e2230cd564a1cff302c4ddbb9eb4",
+      "chunk": {
+        "id": "c400-s300",
+        "size": 400,
+        "stride": 300
+      },
+      "chunks": 1389,
+      "dimensions": 384,
+      "vector_bytes": 2133504,
+      "vector_sha256": "2d6ea5615e657ad0cc736b6825c883b170fb946ba987e4eafc81671503578b87",
+      "model_load_ms": 2647.5559999234974,
+      "parse_chunk_ms": 13517.2035000287,
+      "document_embedding_ms": 63527.27149997372,
+      "document_tokens": {
+        "max_seq_length": 512,
+        "texts": 1389,
+        "max_tokens": 315,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 512,
+        "texts": 8,
+        "max_tokens": 218,
+        "truncated_texts": 0
+      },
+      "method": "hybrid",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 339.25,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.04166666666666667,
+          "context_chars": 1112.875,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.15,
+          "duplicate_page_fraction": 0.04999999999999999,
+          "context_chars": 1828.25,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 73.7939000246115,
+        "p95": 83.57309501734562,
+        "samples": 24
+      },
+      "model_id": "e5-small",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1614,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1930,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1839,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1759,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1962,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1944,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1837,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1741,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 1,
+        "unchanged": 6,
+        "mean_difference": -0.0375
+      }
+    },
+    {
+      "cell": "c400-s300/e5-small-vector",
+      "result_sha256": "a7a851f7eac778883b8545b403c681fda9967d1876a911041e6febb06d055915",
+      "chunk": {
+        "id": "c400-s300",
+        "size": 400,
+        "stride": 300
+      },
+      "chunks": 1389,
+      "dimensions": 384,
+      "vector_bytes": 2133504,
+      "vector_sha256": "2d6ea5615e657ad0cc736b6825c883b170fb946ba987e4eafc81671503578b87",
+      "model_load_ms": 2647.5559999234974,
+      "parse_chunk_ms": 13517.2035000287,
+      "document_embedding_ms": 63527.27149997372,
+      "document_tokens": {
+        "max_seq_length": 512,
+        "texts": 1389,
+        "max_tokens": 315,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 512,
+        "texts": 8,
+        "max_tokens": 218,
+        "truncated_texts": 0
+      },
+      "method": "vector",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 362.75,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.041666666666666664,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1056.5,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.06666666666666667,
+          "duplicate_page_fraction": 0.07499999999999998,
+          "context_chars": 1711.625,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 73.18480004323646,
+        "p95": 88.64582992391661,
+        "samples": 24
+      },
+      "model_id": "e5-small",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1468,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1501,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1818,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1486,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1982,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1893,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1600,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1945,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 2,
+        "unchanged": 5,
+        "mean_difference": -0.12083333333333335
+      }
+    },
+    {
+      "cell": "c400-s400/bge-m3-hybrid",
+      "result_sha256": "cc4f1b8679fc1346a482e095ea0b4d3151baa0182f02f90c3bb0d7bb1020dade",
+      "chunk": {
+        "id": "c400-s400",
+        "size": 400,
+        "stride": 400
+      },
+      "chunks": 1292,
+      "dimensions": 1024,
+      "vector_bytes": 5292032,
+      "vector_sha256": "36cf218a2057c4a38287dcfbaeaabfc9cfd311684e698c81197c3fd6ec4b5cc9",
+      "model_load_ms": 1804.5422000577673,
+      "parse_chunk_ms": 10479.052699985914,
+      "document_embedding_ms": 492083.0448999768,
+      "document_tokens": {
+        "max_seq_length": 8192,
+        "texts": 1292,
+        "max_tokens": 313,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 8192,
+        "texts": 8,
+        "max_tokens": 215,
+        "truncated_texts": 0
+      },
+      "method": "hybrid",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 367.125,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.1875,
+          "duplicate_page_fraction": 0.04166666666666667,
+          "context_chars": 1104.875,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.1875,
+          "duplicate_page_fraction": 0.04999999999999999,
+          "context_chars": 1864.25,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 380.3443500655703,
+        "p95": 449.2973099753726,
+        "samples": 24
+      },
+      "model_id": "bge-m3",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1550,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2000,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1844,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1914,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.5,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1983,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1791,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1892,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1940,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 0,
+        "regressed": 0,
+        "unchanged": 8,
+        "mean_difference": 0.0
+      }
+    },
+    {
+      "cell": "c400-s400/bge-m3-vector",
+      "result_sha256": "21ce19c65f0b931fdb343cdcc2b070b839963eb35c2ce9dbfd18aba9b91cb161",
+      "chunk": {
+        "id": "c400-s400",
+        "size": 400,
+        "stride": 400
+      },
+      "chunks": 1292,
+      "dimensions": 1024,
+      "vector_bytes": 5292032,
+      "vector_sha256": "36cf218a2057c4a38287dcfbaeaabfc9cfd311684e698c81197c3fd6ec4b5cc9",
+      "model_load_ms": 1804.5422000577673,
+      "parse_chunk_ms": 10479.052699985914,
+      "document_embedding_ms": 492083.0448999768,
+      "document_tokens": {
+        "max_seq_length": 8192,
+        "texts": 1292,
+        "max_tokens": 313,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 8192,
+        "texts": 8,
+        "max_tokens": 215,
+        "truncated_texts": 0
+      },
+      "method": "vector",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 380.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.5,
+          "page_recall": 0.3125,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.08333333333333334,
+          "context_chars": 1122.625,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.5,
+          "page_recall": 0.3125,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.04999999999999999,
+          "context_chars": 1815.75,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 379.19579999288544,
+        "p95": 451.0477900272235,
+        "samples": 24
+      },
+      "model_id": "bge-m3",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2000,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2000,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1487,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1840,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1882,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1844,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1678,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1795,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 3,
+        "regressed": 0,
+        "unchanged": 5,
+        "mean_difference": 0.14583333333333331
+      }
+    },
+    {
+      "cell": "c400-s400/bm25",
+      "result_sha256": "560b8499b72a46e8ced783b419f21b9b1bc84a801d00f7e54b46a70f240efffb",
+      "chunk": {
+        "id": "c400-s400",
+        "size": 400,
+        "stride": 400
+      },
+      "chunks": 1292,
+      "parse_chunk_ms": 10479.052699985914,
+      "method": "bm25",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 395.75,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.0625,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1111.375,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.375,
+          "page_recall": 0.25,
+          "reciprocal_rank": 0.11875,
+          "duplicate_page_fraction": 0.024999999999999994,
+          "context_chars": 1829.625,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 13.861200015526265,
+        "p95": 17.48101500561461,
+        "samples": 24
+      },
+      "model_id": null,
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.5,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1737,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1858,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1583,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1914,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1862,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1791,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1909,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1983,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 2,
+        "unchanged": 5,
+        "mean_difference": -0.06875
+      }
+    },
+    {
+      "cell": "c400-s400/e5-small-hybrid",
+      "result_sha256": "9d630536d8b427584d6369d32dbe9f0a931a383084c894e883a4bef70a40ab3f",
+      "chunk": {
+        "id": "c400-s400",
+        "size": 400,
+        "stride": 400
+      },
+      "chunks": 1292,
+      "dimensions": 384,
+      "vector_bytes": 1984512,
+      "vector_sha256": "b63f45d0e0bc789f8c2ef7125e449e097c15b6f0d85fc6720d7bc1cfbf3a0efe",
+      "model_load_ms": 2647.5559999234974,
+      "parse_chunk_ms": 13634.46249999106,
+      "document_embedding_ms": 54515.29729994945,
+      "document_tokens": {
+        "max_seq_length": 512,
+        "texts": 1292,
+        "max_tokens": 315,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 512,
+        "texts": 8,
+        "max_tokens": 218,
+        "truncated_texts": 0
+      },
+      "method": "hybrid",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 371.375,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.041666666666666664,
+          "duplicate_page_fraction": 0.04166666666666667,
+          "context_chars": 1090.625,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.06666666666666667,
+          "duplicate_page_fraction": 0.024999999999999994,
+          "context_chars": 1825.25,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 67.45914998464286,
+        "p95": 81.87076004687697,
+        "samples": 24
+      },
+      "model_id": "e5-small",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1515,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1930,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1900,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1914,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1865,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1791,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1892,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1795,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 2,
+        "unchanged": 5,
+        "mean_difference": -0.12083333333333335
+      }
+    },
+    {
+      "cell": "c400-s400/e5-small-vector",
+      "result_sha256": "ee2d9931dcb8ea42ecbce0c2784dee79958ecac41e16951a9fda6244503dcca3",
+      "chunk": {
+        "id": "c400-s400",
+        "size": 400,
+        "stride": 400
+      },
+      "chunks": 1292,
+      "dimensions": 384,
+      "vector_bytes": 1984512,
+      "vector_sha256": "b63f45d0e0bc789f8c2ef7125e449e097c15b6f0d85fc6720d7bc1cfbf3a0efe",
+      "model_load_ms": 2647.5559999234974,
+      "parse_chunk_ms": 13634.46249999106,
+      "document_embedding_ms": 54515.29729994945,
+      "document_tokens": {
+        "max_seq_length": 512,
+        "texts": 1292,
+        "max_tokens": 315,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 512,
+        "texts": 8,
+        "max_tokens": 218,
+        "truncated_texts": 0
+      },
+      "method": "vector",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 334.125,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 967.125,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.024999999999999994,
+          "context_chars": 1632.75,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 68.7314499518834,
+        "p95": 82.12752503459342,
+        "samples": 24
+      },
+      "model_id": "e5-small",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1479,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1720,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1145,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1659,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 1891,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1484,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1892,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1792,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 0,
+        "regressed": 2,
+        "unchanged": 6,
+        "mean_difference": -0.1875
+      }
+    },
+    {
+      "cell": "c800-s600/bge-m3-hybrid",
+      "result_sha256": "9602494a8f6edf790f999aa9317b26931c602f453a903f292dbf2e53d4f55f1e",
+      "chunk": {
+        "id": "c800-s600",
+        "size": 800,
+        "stride": 600
+      },
+      "chunks": 713,
+      "dimensions": 1024,
+      "vector_bytes": 2920448,
+      "vector_sha256": "d3f6e0e290cdcf7f7e55d135beba296e15504fb34b593315add37b40959a5d99",
+      "model_load_ms": 1804.5422000577673,
+      "parse_chunk_ms": 10606.120100012049,
+      "document_embedding_ms": 619649.6190000325,
+      "document_tokens": {
+        "max_seq_length": 8192,
+        "texts": 713,
+        "max_tokens": 529,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 8192,
+        "texts": 8,
+        "max_tokens": 215,
+        "truncated_texts": 0
+      },
+      "method": "hybrid",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 594.5,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1722.125,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.375,
+          "page_recall": 0.25,
+          "reciprocal_rank": 0.18125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2963.375,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 465.44944995548576,
+        "p95": 544.6136249986012,
+        "samples": 24
+      },
+      "model_id": "bge-m3",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2953,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2782,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3082,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2649,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3375,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3272,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2567,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3027,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 1,
+        "unchanged": 6,
+        "mean_difference": -0.006249999999999999
+      }
+    },
+    {
+      "cell": "c800-s600/bge-m3-vector",
+      "result_sha256": "c1d29f57e9bc87992d6171ef684e0a57688b6318dfc621c55679e0e2c828a737",
+      "chunk": {
+        "id": "c800-s600",
+        "size": 800,
+        "stride": 600
+      },
+      "chunks": 713,
+      "dimensions": 1024,
+      "vector_bytes": 2920448,
+      "vector_sha256": "d3f6e0e290cdcf7f7e55d135beba296e15504fb34b593315add37b40959a5d99",
+      "model_load_ms": 1804.5422000577673,
+      "parse_chunk_ms": 10606.120100012049,
+      "document_embedding_ms": 619649.6190000325,
+      "document_tokens": {
+        "max_seq_length": 8192,
+        "texts": 713,
+        "max_tokens": 529,
+        "truncated_texts": 0
+      },
+      "query_tokens": {
+        "max_seq_length": 8192,
+        "texts": 8,
+        "max_tokens": 215,
+        "truncated_texts": 0
+      },
+      "method": "vector",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 631.5,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1765.875,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.375,
+          "page_recall": 0.25,
+          "reciprocal_rank": 0.28125,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2915.125,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 462.54419995239004,
+        "p95": 542.0856150332838,
+        "samples": 24
+      },
+      "model_id": "bge-m3",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2904,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2644,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2818,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2883,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 1.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3276,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3384,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2219,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3193,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 2,
+        "regressed": 0,
+        "unchanged": 6,
+        "mean_difference": 0.09375
+      }
+    },
+    {
+      "cell": "c800-s600/bm25",
+      "result_sha256": "4ea165fddfa48f3be7188b7b40be405746aecda8b5a8eb50ce22dbeb3cdc458f",
+      "chunk": {
+        "id": "c800-s600",
+        "size": 800,
+        "stride": 600
+      },
+      "chunks": 713,
+      "parse_chunk_ms": 10606.120100012049,
+      "method": "bm25",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 584.25,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.125,
+          "page_recall": 0.125,
+          "reciprocal_rank": 0.0625,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1736.5,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.09375,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2924.375,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 5.510100047104061,
+        "p95": 9.23881500493735,
+        "samples": 24
+      },
+      "model_id": null,
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.5,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2929,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3026,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3059,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2507,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3101,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3619,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2586,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2568,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 2,
+        "unchanged": 5,
+        "mean_difference": -0.09375
+      }
+    },
+    {
+      "cell": "c800-s600/e5-small-hybrid",
+      "result_sha256": "1e09a1f2432fb41ff85e9c69f0c4d0882e1aded2ea1a6bccd57c655957608099",
+      "chunk": {
+        "id": "c800-s600",
+        "size": 800,
+        "stride": 600
+      },
+      "chunks": 713,
+      "dimensions": 384,
+      "vector_bytes": 1095168,
+      "vector_sha256": "585f152c4d460399311213b9f77a4c37b10e6e2e2161d2d864525f6d94c96495",
+      "model_load_ms": 2647.5559999234974,
+      "parse_chunk_ms": 13669.019700028002,
+      "document_embedding_ms": 55849.45930005051,
+      "document_tokens": {
+        "max_seq_length": 512,
+        "texts": 713,
+        "max_tokens": 531,
+        "truncated_texts": 8
+      },
+      "query_tokens": {
+        "max_seq_length": 512,
+        "texts": 8,
+        "max_tokens": 218,
+        "truncated_texts": 0
+      },
+      "method": "hybrid",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 572.875,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1735.25,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.25,
+          "page_recall": 0.1875,
+          "reciprocal_rank": 0.05625,
+          "duplicate_page_fraction": 0.024999999999999994,
+          "context_chars": 2811.0,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 61.97944999439642,
+        "p95": 73.82832004805095,
+        "samples": 24
+      },
+      "model_id": "e5-small",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 1.0,
+          "reciprocal_rank": 0.2,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2743,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2782,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2976,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2359,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3093,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3466,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 2445,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 1,
+          "page_recall": 0.5,
+          "reciprocal_rank": 0.25,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2624,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 1,
+        "regressed": 2,
+        "unchanged": 5,
+        "mean_difference": -0.13125
+      }
+    },
+    {
+      "cell": "c800-s600/e5-small-vector",
+      "result_sha256": "abe1f36376011927a75f1b18ba12d027abd2902fec872523ceb1e4ab193e96d6",
+      "chunk": {
+        "id": "c800-s600",
+        "size": 800,
+        "stride": 600
+      },
+      "chunks": 713,
+      "dimensions": 384,
+      "vector_bytes": 1095168,
+      "vector_sha256": "585f152c4d460399311213b9f77a4c37b10e6e2e2161d2d864525f6d94c96495",
+      "model_load_ms": 2647.5559999234974,
+      "parse_chunk_ms": 13669.019700028002,
+      "document_embedding_ms": 55849.45930005051,
+      "document_tokens": {
+        "max_seq_length": 512,
+        "texts": 713,
+        "max_tokens": 531,
+        "truncated_texts": 8
+      },
+      "query_tokens": {
+        "max_seq_length": 512,
+        "texts": 8,
+        "max_tokens": 218,
+        "truncated_texts": 0
+      },
+      "method": "vector",
+      "rankings_stable": true,
+      "summary": {
+        "1": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 509.0,
+          "unanswerable_returned_any_rate": null
+        },
+        "3": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 1641.875,
+          "unanswerable_returned_any_rate": null
+        },
+        "5": {
+          "cases": 8,
+          "answerable_cases": 8,
+          "unanswerable_cases": 0,
+          "hit": 0.0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.024999999999999994,
+          "context_chars": 2901.5,
+          "unanswerable_returned_any_rate": null
+        }
+      },
+      "retrieval_ms": {
+        "p50": 61.717750038951635,
+        "p95": 71.66801504208706,
+        "samples": 24
+      },
+      "model_id": "e5-small",
+      "case_metrics": [
+        {
+          "case": "3",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2874,
+          "returned_any": true
+        },
+        {
+          "case": "4",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2777,
+          "returned_any": true
+        },
+        {
+          "case": "18",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2893,
+          "returned_any": true
+        },
+        {
+          "case": "23",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2346,
+          "returned_any": true
+        },
+        {
+          "case": "28",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3080,
+          "returned_any": true
+        },
+        {
+          "case": "32",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 3789,
+          "returned_any": true
+        },
+        {
+          "case": "40",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.19999999999999996,
+          "context_chars": 2655,
+          "returned_any": true
+        },
+        {
+          "case": "49",
+          "k": 5,
+          "answerable": true,
+          "hit": 0,
+          "page_recall": 0.0,
+          "reciprocal_rank": 0.0,
+          "duplicate_page_fraction": 0.0,
+          "context_chars": 2798,
+          "returned_any": true
+        }
+      ],
+      "paired_mrr5_vs_current_hybrid": {
+        "improved": 0,
+        "regressed": 2,
+        "unchanged": 6,
+        "mean_difference": -0.1875
+      }
+    }
+  ]
+}
