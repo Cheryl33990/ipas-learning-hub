@@ -14,7 +14,7 @@ updated: 2026-11-18
 | 領域設定：助理角色、文件名稱、領域專屬規則 | [examples/ipas/profile.json](../examples/ipas/profile.json) | 第 3 步建立；不指定則用通用設定 |
 | 聊天端點的路由：model 名稱對應到哪個庫、是否外搜、用哪個 profile | [config/rag-routes.json](../config/rag-routes.json) | 第 4 步，可選 |
 
-iPAS 範例的完整說明見 [examples/ipas](../examples/ipas/README.md)。
+iPAS 範例的完整說明見 [examples/ipas](../examples/ipas/README.md)。自己的 PDF 可先直接走下方 CPU 路徑。想先操作教材和聊天服務，請看 [iPAS 完整架設](setup.md)。
 
 以下先用自己的可擷取文字 PDF 跑通「匯入 → 檢索 → 頁碼」，不需要 GPU、資料庫或外部服務。以下在 repo 根目錄的 Windows PowerShell 執行；需已安裝 uv。請先把一份可使用的 PDF 放在 `data/raw/my-docs/manual.pdf`。這是使用者自備輸入，不附範例原文。
 
@@ -113,7 +113,9 @@ uv run python -m ipas_hub.cli serve --index $documentIndex --kb my-docs --web no
 
 聊天介面選 model `my-docs` 就只查 my-docs 庫；未設定的 model 名稱一律拒絕。使用 `--routes` 時，profile 寫在路由裡，不另加 `--profile`。
 
-用 Docker Compose 的 serve 容器（見[操作手冊](setup.md#方法-a全部用-docker-啟動建議)）時，路由檔與其中的 profile 都要放在 `config/`（容器唯讀掛入），並在 `.env` 設 `RAG_ROUTES=config/<路由檔>`，再執行 `docker compose restart serve`；放在 `data/` 的 profile 容器讀不到。
+可參考[勞基法分庫案例](internal/project/examples/labor-law.md)的重現步驟與測試結果。
+
+用 Docker Compose 的 serve 容器時，把自訂路由檔與 profile 放在唯讀掛入的 `config/`，並同步路由內的 profile 路徑。第一次在 `.env` 設定或變更 `RAG_ROUTES=config/<路由檔>` 後，執行 `docker compose --profile serve up -d serve` 套用容器設定，再用 [模型清單](setup.md#方法-a全部用-docker-啟動建議)確認 `my-docs` 已列出。自訂設定若含非公開文件名稱或業務規則，請留在本機。
 
 換領域後的回答品質需要用自己的題目驗證；測試只證明管線與設定正確，不代表新領域已驗收。外搜先關閉，模型仍只能依提供證據回答。PDF、索引和含片段的執行紀錄都保留在 data/，測試題及預期答案應另外存放，不能加入檢索文件。
 
